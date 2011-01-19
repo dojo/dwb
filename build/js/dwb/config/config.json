@@ -1,0 +1,5 @@
+{
+	"packagesApi" : "./api/packages",
+	"buildApi" : "./api/build",
+	"dependenciesApi" : "./api/dependencies"
+}

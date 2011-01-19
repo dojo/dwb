@@ -1,0 +1,47 @@
+<div class="helpPanelContainer">
+	<ul>
+		<li id="question_1">
+			<h1>Dojo already has a fantastic build system, why do we need a "Web Builder"?</h1>
+			<p>This tool aims to lower the learning curve for novice users, providing a simple and intuitive 
+			user interface to generate Dojo builds, without having to download the Dojo SDK and 
+			understand the documentation. Using a custom build of the Dojo Toolkit can dramatically speed up your application. 
+			Unfortunately, some users that aren't comfortable with command line tools may be put off from performing this step. 
+			The tool also provides the capability to analyse existing Dojo applications for module dependencies, removing the need for
+			any manual configuration.</p>
+		</li>
+		<li id="question_2">
+			<h1>How do I switch between "Simple" and "Advanced" display modes?</h1>
+			<p>In the top right hand corner on the application, there is a button marked "Display Mode". 
+			Clicking this button will drop down a menu with two items, "Simple" and "Advanced". You can change between modes by
+			selecting the appropriate menu item. The application will automatically modify the display based upon your choice.</p>
+		</li>
+		<li id="question_3">
+			<h1>What is the difference between the "Simple" and "Advanced" display modes?</h1>
+			<p>Simple mode is designing for novice users of the Dojo toolkit, who don't have prior experience with the current
+			Dojo build system. It provides an intuitive interface for finding modules, selecting those required and generating a 
+			build containing the results with minimal effort. Advanced mode mirrors the Dojo build system more closely, allowing the 
+			user to construct module layers and have complete control over the individual build parameters. In simple mode, these controls are 
+			hidden from the user, with sane defaults used instead.</p>
+		</li>
+		<li id="question_4">
+			<h1>How can I generate a custom Dojo build in "Simple" Mode?</h1>
+			<p>Select the "Modules" tab to display the list of all available Dojo modules. Find the modules you require by manually 
+			scrolling the list or searching for modules that match a query. Search queries will match both the name and 
+			description fields by default. This can be modified using the "Search Options" panel on the right-hand side. You can also
+			exclude all modules from the Dojo, Dijit or DojoX packages using this panel. When you find modules you require, select them by 
+			clicking the module's row in the list. The "Module Overview" panel will show all the modules selected as you browse the module list. 
+			To remove a module, click the selected row in the list or the remove icon in the "Module Overview" panel. When you have selected 
+			all required modules, click the "Build" button in the bottom right hand corner. The tool will contact the server to generate your 
+			custom build and return a zip for you to download.</p>
+		</li>
+		<li id="question_5">
+			<h1>How can I generate a custom Dojo build in "Advanced" mode?</h1>
+			<p>The process of finding modules for a custom build follows the steps outlined above for "Simple" mode. Instead of building 
+			selected modules directly, those modules will be added to a module layer. The right-hand panel "Module Layer Options" allows 
+			you to add the modules to an existing or create a new layer. Clicking the "Add Modules" button will transfer the selected modules
+			to that chosen layer. The "Layers" panel contains a tab for each custom layer, which displays that layer's modules. When the module 
+			layers have been created, select the "Layers" panel and click the "Build" button in the bottom right-hand corner. The tool will
+			contact the server to generate your custom build and return a zip for you to download.</p>
+		</li>
+	</ul>
+</div>

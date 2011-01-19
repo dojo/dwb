@@ -1,0 +1,19 @@
+/* IE specific CSS rule */
+
+/* Fix fieldset position, padding comes above element on IE. */
+.titlePaneConfig fieldset {
+	padding-top: 0px;
+}
+
+/* Add 4px gap to bottom of legend instead of fieldset */
+.titlePaneConfig fieldset legend {
+	padding-bottom: 4px;
+	color: black;
+}
+
+/* IE hack to have alpha transparency on config panels */
+.titlePaneConfig .dijitTitlePaneContentInner {
+	background:transparent;
+    filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#4CE0EEFB,endColorstr=#4CE0EEFB);
+    zoom: 1;
+}

@@ -1,0 +1,36 @@
+/* IE 7 specific CSS rule */
+
+/* Remove mystery indent on legend elements */
+.titlePaneConfig fieldset legend {
+	margin-left: -7px;
+}
+
+/* Decrease padding on title panels, IE adds its own
+   massive gap... */
+.claro .bottomPadding .dijitTitlePaneContentInner {
+    padding-bottom: 0px;
+}
+
+/* Remove margin around UL element */
+.titlePaneConfig .Help .dijitTitlePaneContentInner ul {
+	margin-top: 12px;
+	margin-left: 2px;
+}
+
+/* Remove padding on button bottom to make search
+   box and button line up horizontally. Increase space
+   between button and search box. */
+.searchBox .searchButton {
+	margin-bottom: 0px;
+	margin-left: 6px;
+}
+
+/* Add a spacer between label and checkbox */
+.introDialog .footer .confirmation .label {
+	margin-right: 4px;
+}
+
+/* Need larger table for five rows */
+.buildProgressContainer {
+	height:110px; 
+}

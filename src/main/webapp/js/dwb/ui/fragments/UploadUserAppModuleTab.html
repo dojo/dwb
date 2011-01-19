@@ -1,0 +1,14 @@
+<div class="analyse_container">
+	<div>Choose a zip file containing your local Dojo application to analyse for Dojo modules.</div>
+	<div style="padding-top: 50px">
+		<form enctype="multipart/form-data" method="post" action="./api/packages">
+			<input name="user_app" type="file"></input>
+			<div class="build" style="padding-top: 40px">
+				<button dojoType="dojox.form.BusyButton" type="submit" busyLabel="Analysing..." label="Analyse" timeout="100000">
+					<span style="font-size: 1em"></span>
+				</button>
+			</div>
+		</form>
+	</div>
+</div>		
+		

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+JAVA_CMD="/usr/bin/java"
+JAVA_OPTS=""
+JAVA_CLASSPATH="/opt/local/share/java/rhino/js.jar:/Users/james/Code/DTK/dojotoolkit/util/shrinksafe/shrinksafe.jar:/Users/james/IBM/Code/dwb/WebContent/WEB-INF/lib/compiler.jar"
+JAVA_MAIN="org.mozilla.javascript.tools.shell.Main"
+
+$JAVA_CMD $JAVA_OPTS -classpath $JAVA_CLASSPATH $JAVA_MAIN $@

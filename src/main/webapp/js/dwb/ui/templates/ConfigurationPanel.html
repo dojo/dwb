@@ -1,0 +1,136 @@
+<div>
+	<div class="titlePaneConfig">
+		<div dojoType="dijit.TitlePane" title="Search Options" dojoAttachEvent="onPreToggleOpen:_titlePaneOpen,onPreToggleClose:_titlePaneClose" class="tp Modules simple advanced bottomPadding">
+   			<form class="optionsForm" dojoAttachPoint="formValues" dojoType="dijit.form.Form">
+	   			<fieldset>
+	    			<legend>Search against module fields</legend>
+	    			<label>
+	    				<input type="checkbox" name="name" checked=true dojoAttachEvent="onChange:_onOptionChanged" dojoType="dijit.form.CheckBox"></input>
+	    				Name 
+	    			</label>
+	    			<label class="lastChild">
+	    				<input type="checkbox" name="desc" checked=true dojoAttachEvent="onChange:_onOptionChanged" dojoType="dijit.form.CheckBox"></input>
+	    				Description 
+	    			</label>
+	    		</fieldset>
+	    		<fieldset class="lastChild">
+	    			<legend>Exclude modules from package</legend>
+	    			<label>
+	    				<input type="checkbox" name="dojo" dojoAttachEvent="onChange:_onOptionChanged" dojoType="dijit.form.CheckBox"></input>
+	    				Dojo 
+	    			</label>
+	    			<label>
+	    				<input type="checkbox" name="dijit" dojoAttachEvent="onChange:_onOptionChanged" dojoType="dijit.form.CheckBox"></input>
+	    				Dijit 
+	    			</label>
+	    			<label class="lastChild">
+	    				<input type="checkbox" name="dojox" dojoAttachEvent="onChange:_onOptionChanged" dojoType="dijit.form.CheckBox"></input>
+	    				Dojox 
+	    			</label>
+	    		</fieldset>
+    		</form>
+    	</div>
+    	<div class="Modules Auto-Analyse advanced" dojoAttachEvent="onPreToggleOpen:_titlePaneOpen,onPreToggleClose:_titlePaneClose" dojoType="dijit.TitlePane" title="Module Layers Options">
+	    	<fieldset class="lastChild">
+			<legend>Choose layer for selected modules</legend>
+			<div>
+		 		<label class="formLabel">Layer Name</label>
+				<select dojoAttachPoint="layerNameSelect" class="titlePanelDropDown" dojotype="dijit.form.FilteringSelect">			
+				</select>	
+		   	</div>					
+			</fieldset>
+    	</div>
+    	<div dojoAttachPoint="modulesSelectedView" class="Modules simple advanced moduleOverviewTitlePane" dojoType="dijit.TitlePane" title="Modules Selected (0)">
+    	</div>
+    	<div class="Layers simple advanced" dojoAttachPoint="layerDetailsPane" dojoType="dijit.TitlePane" title="Module Layer Details">
+    	<fieldset class="lastChild">
+	  		<legend>Choose a layer name</legend>
+		   	<div>
+		    	<label class="formLabel">Layer name</label>							
+				<input disabled="true" dojoAttachPoint="layerNameTextBox" dojoAttachEvent="onKeyUp:_onLayerTitleChange" type="text" value="dojo.js" class="titlePanelDropDown" dojotype="dijit.form.TextBox">
+				</input>
+		   	</div>
+		</fieldset>
+    	</div>
+    	<div class="Layers simple advanced" dojoType="dijit.TitlePane" title="Build Parameters">
+    		<form dojoAttachPoint="buildParameterForm" dojoType="dijit.form.Form">
+		    	<fieldset class="lastChild">
+					<legend>Configure Build Parameters</legend>
+				    <div>
+				    	<label class="formLabel">Optimisation Level</label>
+				    	<!-- dijit.form.Select widgets wont pick up width from class label -->
+						<select dojoAttachPoint="optimiseBuildParam" name="optimise" style="width: 90%;" class="titlePanelDropDown" dojotype="dijit.form.Select"></select>	
+			    	</div>	        
+					<div>
+				    	<label class="formLabel">Cross Domain Build</label>
+						<select dojoAttachPoint="crossDomainBuildParam" name="cdn" style="width:90%;" class="titlePanelDropDown" dojotype="dijit.form.Select"></select>	
+			    	</div>
+			    	<div>
+				    	<label class="formLabel">Target Platforms</label>
+						<select dojoAttachPoint="targetPlatformsParam" name="platforms" style="width:90%;" class="titlePanelDropDown" dojotype="dijit.form.Select"></select>	
+			    	</div>						
+				</fieldset>	
+			</form>
+    	</div>
+    	<div class="Layers simple advanced" dojoType="dijit.TitlePane" title="Theme Parameters">
+    		<form dojoAttachPoint="themeParameterForm" dojoType="dijit.form.Form">
+		    	<fieldset class="lastChild">
+					<legend>Configure Theme Parameters</legend>
+				    <div>
+				    	<label class="formLabel">Include Dijit Theme</label>
+				    	<!-- dijit.form.Select widgets wont pick up width from class label -->
+						<select dojoAttachPoint="includeThemeParam" name="themes" style="width: 90%;" class="titlePanelDropDown" dojotype="dijit.form.Select"></select>	
+			    	</div>
+			    	 <div>
+				    	<label class="formLabel">CSS Optimisations</label>
+				    	<!-- dijit.form.Select widgets wont pick up width from class label -->
+						<select dojoAttachPoint="cssOptimiseParam" name="cssOptimise" style="width: 90%;" class="titlePanelDropDown" dojotype="dijit.form.Select"></select>	
+			    	</div>	        						
+				</fieldset>
+			</form>
+    	</div>
+    	<div class="analysisSourceType Auto-Analyse advanced simple bottomPadding" dojoType="dijit.TitlePane" title="Auto-Analysis Options">
+    		<form dojoAttachPoint="analyseModulesSourceForm" dojoType="dijit.form.Form">
+	    		<fieldset class="lastChild">
+	    			<legend>Analyse modules from source type</legend>
+	    			<label>
+	    				<input type="radio" name="source" value="web_app" checked="true" dojoAttachEvent="onChange:_analyseSourceChange" dojoType="dijit.form.RadioButton"></input>
+	    				Web Application
+	    			</label>
+	    			<label>
+	    				<input type="radio" name="source" value="html_file" dojoAttachEvent="onChange:_analyseSourceChange" dojoType="dijit.form.RadioButton"></input>
+	    				HTML File  
+	    			</label>
+	    			<label>
+	    				<input type="radio" name="source" value="dojo_app" dojoAttachEvent="onChange:_analyseSourceChange" dojoType="dijit.form.RadioButton"></input>
+	    				Dojo Application Archive
+	    			</label>
+	    			<label class="lastChild">
+	    				<input type="radio" name="source" value="profile" dojoAttachEvent="onChange:_analyseSourceChange" dojoType="dijit.form.RadioButton"></input>
+	    				Existing Profile
+	    			</label>
+	    		</fieldset>
+    		</form>
+    	</div>
+    	<div class="Help advanced simple" dojoType="dijit.TitlePane" title="Help Topics">
+    	<p>Select a help topic to display the associated answer</p>
+    	<ul>
+    	<li><a href='#question_1'>Dojo already has a fantastic build system, why do we need a "Web Builder"?</a></li>
+    		<li><a href='#question_2'>How do I switch between simple and advanced mode?</a></li>
+    		<li><a href='#question_3'>What is the difference between the "Simple" and "Advanced" display modes?</a></li>
+    		<li><a href='#question_4'>How can I generate a custom Dojo build in "Simple" Mode?</a></li>
+    		<li><a href='#question_5'>How can I generate a custom Dojo build in "Advanced" mode?</a></li>
+    	</ul>
+    	</div>
+	</div>  
+	<div class="buttonPanels">				    	
+		<button class="Modules simple" label="Build" busyLabel="Building..." timeout="100000" dojoType="dojox.form.BusyButton" dojoAttachPoint="modulesBuildBtn" dojoAttachEvent="onClick:_onBuild">								
+		</button>
+		<button class="Layers advanced" label="Build" busyLabel="Building..." timeout="100000" dojoType="dojox.form.BusyButton" dojoAttachPoint="layersBuildBtn" dojoAttachEvent="onClick:_onBuild">								
+		</button>
+		<button class="Auto-Analyse simple advanced" dojoAttachEvent="onClick:_onAddAnalysisModules" label="Add Modules" dojoType="dijit.form.Button" >								
+		</button>
+		<button class="Modules advanced" label="Add Modules" dojoAttachEvent="onClick:_onAddModuleSelection"  dojoType="dijit.form.Button" >								
+		</button>	
+	</div>
+</div>
