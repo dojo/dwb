@@ -94,7 +94,6 @@
 				<version>2.1.1</version>
 				<configuration>
 					<warName>${project.build.finalName}-${project.version}</warName>
-					<warSourceExcludes>js/**</warSourceExcludes>
 				</configuration>
 			</plugin>
 		<plugin>
