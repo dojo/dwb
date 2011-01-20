@@ -48,7 +48,8 @@ public class ContextListener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent contextEvent) {
 		ServletContext servletContext = contextEvent.getServletContext();
 		
-		String cachePath = getDirectoryPathParam(cachePathParam, servletContext);
+		//String cachePath = getDirectoryPathParam(cachePathParam, servletContext);
+		String cachePath = "/tmp/dwb";
 		String packagePath = servletContext.getRealPath(packageRepoPath);
 		String buildScript = servletContext.getRealPath(buildPathScript);
 		
