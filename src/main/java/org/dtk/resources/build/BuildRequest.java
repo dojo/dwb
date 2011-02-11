@@ -1,5 +1,6 @@
 package org.dtk.resources.build;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -41,7 +42,7 @@ public class BuildRequest {
 	String buildReference;
 
 	/** File path format for cached build results, base_dir/build_id/dojo.zip */
-	protected static final String cachedBuildPathFormat = "%1$s%2$s/dojo.zip";
+	protected static final String cachedBuildFileFormat = "%1$s/dojo.zip";
 	
 	/**
 	 * Create a new build request from constructor parameters.
@@ -197,7 +198,13 @@ public class BuildRequest {
 		BuildStatusManager buildStatusManager = BuildStatusManager.getInstance();
 		String buildCacheRepository = buildStatusManager.getBuildResultCachePath();
 		
-		return String.format(cachedBuildPathFormat, buildCacheRepository, buildReference);
+		// Generate the unique path for this build cache result
+		String buildCachePath = String.format(cachedBuildFileFormat, buildReference);
+		
+		// Generate the full file cache path from cache directory and build result file
+		File buildResultFile = new File(buildCacheRepository, buildCachePath);
+		
+		return buildResultFile.getAbsolutePath();
 	}
 	
 	/**

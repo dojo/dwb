@@ -171,8 +171,6 @@ public class FileUtil {
 
 	public static File createTempDirectory() throws IOException {
 		final File temp = File.createTempFile("dojo_web_builder", null);
-		// TODO: Use correct logging for this
-		System.out.println(temp.getAbsolutePath());
 
 		if(!(temp.delete())) {
 			throw new IOException("Could not delete temp file: " + temp.getAbsolutePath());

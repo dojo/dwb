@@ -20,13 +20,13 @@ import org.dtk.resources.packages.PackageRepository;
 
 public class ContextListener implements ServletContextListener {
 
-	/** Init parameter key for build result cache path */
-	protected static final String cachePathParam = "cachePath";
+	/** System property for fixed build result cache path */
+	protected static final String cachePathParam = "dwb.cachepath";
 
 	/** Relative path to custom Dojo build script */
 	protected static final String buildPathScript = "/js/build.js";
 
-	/** Relative path to custom build parameters configurtion */
+	/** Relative path to custom build parameters configuration */
 	protected static final String buildParametersConfig = "/WEB-INF/config/build_options.json";
 
 	/** Relative directory path for package details */
@@ -48,8 +48,7 @@ public class ContextListener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent contextEvent) {
 		ServletContext servletContext = contextEvent.getServletContext();
 		
-		//String cachePath = getDirectoryPathParam(cachePathParam, servletContext);
-		String cachePath = "/tmp/dwb";
+		String cachePath = getCacheDirectoryPath();
 		String packagePath = servletContext.getRealPath(packageRepoPath);
 		String buildScript = servletContext.getRealPath(buildPathScript);
 		
@@ -62,30 +61,33 @@ public class ContextListener implements ServletContextListener {
 		buildStatusManager.setBuildScriptPath(buildScript);
 	}
 	
-	/**
-	 * Retrieve a context parameter that must point to a valid
-	 * directory path. Checks are performed to confirm directory
-	 * exists. 
-	 * 
-	 * @param param - Parameter name
-	 * @param servletContext - Handle to context
-	 * @return Full directory path
-	 * @throws NullPointerException - Invalid parameter value
-	 */
-	protected String getDirectoryPathParam(String param, ServletContext servletContext) throws NullPointerException {
-		String dirPath = servletContext.getInitParameter(param);
-		
-		// Sanity check retrieved path, shouldn't be null or empty.
+    /**
+     * Retrieve the cache directory for build results. By default, create a new temporary
+     * directory to hold the build results unless the user has manually specified the location
+     * using the system property, dwb.cachepath.
+     * 
+     * @return Directory path for built result cache
+     */
+    protected String getCacheDirectoryPath() {
+    	String dirPath = System.getProperty(cachePathParam);
+
+    	// If parameter wasn't specified or it's an empty string, create a new temporary
+    	// cache path.
 		if (dirPath == null || dirPath.isEmpty()) {
-			throw new NullPointerException("Init param, "+param+", was null or empty. Please check web.xml.");
+			try {
+				dirPath = FileUtil.createTempDirectory().getAbsolutePath();
+			} catch (IOException ioe) {
+				throw new NullPointerException("Fatal error create temporary cache path, try to specify this " +
+					"manually using system property: dwb.cachepath");
+			}
 		}
-
-		// Sanity check path exists and is a directory...
-		File dirPathFile = new File(dirPath);		
+    	
+		// Sanity check the path value to ensure it exists and is a directory.
+		File dirPathFile = new File(dirPath);
 		if (!dirPathFile.exists() || !dirPathFile.isDirectory()) {
-			throw new NullPointerException("Init param, "+param+", does not exist or is not a directory.");
+			throw new NullPointerException("Init param, "+ dirPath +", does not exist or is not a directory.");
 		}
-		return dirPath;
-	}
-
+        
+        return dirPath;
+    }
 }
