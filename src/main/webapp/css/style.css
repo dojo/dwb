@@ -179,6 +179,47 @@ body.claro {
 	padding-bottom: 4px;
 }
 
+/* Hide failure message by default and all other panels
+   when we have failure state. */
+.modulesPanel .failureMessage,
+.modulesPanel.failure > div {
+	display:none; 
+}
+
+/* Center failure message box */
+.modulesPanel .failureMessage {
+	text-align: center; 
+	width: 450px; 
+	margin: 60px auto;
+}
+
+/* Offset image to align with h2 text */
+.modulesPanel .failureMessage > img {
+	position: relative; 
+	top: 6px;
+}
+
+/* Display header next to failure image */
+.modulesPanel .failureMessage > h2 {
+	display: inline; 
+	width: 100px; 
+	font-size: 4em;
+	margin: 0 0 0 20px;  
+}
+
+/* Format failure message text */
+.modulesPanel .failureMessage > p {
+	font-size: 1.95em; 
+	font-style: italic; 
+	text-align: center; 
+	margin-top: 40px;
+}
+
+/* Display failure message when in failed state */
+.modulesPanel.failure .failureMessage {
+	display:block; 
+}
+
 /* Right hand panel should be take most of visible screen. */
 .buildConfigPanel {
 	height: 95%;
@@ -267,8 +308,9 @@ body.claro {
 /* CSS hovering and style for module overview table*/
 .moduleOverviewTitlePane table {
 	border-spacing: 0; 
-	width: 220px;
+	width: 230px;
 	padding-left: 10px;
+	table-layout: fixed;
 }
 
 /* Highlight selected row */
@@ -285,6 +327,8 @@ body.claro {
 .moduleOverviewTitlePane table tr td.moduleLabel {
 	padding-left:5px;
 	padding-right:1px;
+	width: 87%;
+	overflow: hidden;
 }
 
 .moduleOverviewTitlePane table tr td.moduleRemoval {
@@ -498,6 +542,42 @@ body.claro {
 	margin-top: 70px;
 }
 
+
+/* Styling for the failure message on the analyse container */
+.analyse_container.failureMessage {
+	text-align:left;
+}
+
+/* Offset image slight to align with heading */
+.analyse_container.failureMessage > img {
+	position: relative; 
+	top: 10px; 
+	margin-left: 8px;
+}
+
+/* Display heading next to image */
+.analyse_container.failureMessage > h2 {
+	display: inline; 
+	width: 217px; 
+	font-size: 1.2em; 
+	margin-left: 14px;
+}
+
+/* Justify failure text.... */
+.analyse_container.failureMessage > p {
+	font-size: 0.75em;
+	text-align: justify;
+	margin-top: 45px;
+}
+
+
+/* Fix validation highlight on enlarged text boxes, normal image is too small */
+.claro .dijitTextBox .dijitValidationContainer {
+	padding: 4px 2px;
+	background-image: none;
+	color: white;
+}
+
 /* Container for the display mode button, between header and main module grid. */
 .displayModeContainer {
 	height: 43px;
@@ -512,7 +592,23 @@ body.claro {
 	padding-top: 10px;
 }
 
-.buildProgressContainer {
+/* 
+ * Build Progress Dialog styles. Showing build status and success/failure results 
+ */
+
+/* Hide build progress when we have a success/failure event */
+.buildProgressDialog.success .buildProgressMessage,
+.buildProgressDialog.failure .buildProgressMessage {
+	display: none;
+}
+
+/* Show corresponding success/failure messages */
+.buildProgressDialog.success .successMessage,
+.buildProgressDialog.failure .failureMessage {
+	display:block;
+}
+
+.buildProgressDialog .buildProgressContainer {
 	table-layout:fixed; 
 	height:100px; 
 	width: 434px; 
@@ -520,6 +616,40 @@ body.claro {
 	overflow: hidden; 
 	margin-top: 10px;
 }
+
+/* Set up message layout */
+.buildProgressDialog .endMessages {
+	display: none;
+	padding-left: 0px; 
+	padding-top: 0px; 
+	height: 85px; 
+	margin-left: 10px; 
+	margin-top: 5px;
+}
+
+.buildProgressDialog .endMessages > img {
+	float: left; 
+	padding: 0px;
+}
+
+.buildProgressDialog .endMessages > div {
+	float: left; 
+	margin-left: 16px;
+}
+
+.buildProgressDialog .endMessages > div > h2 {
+	display: inline; 
+	margin-top: 0px; 
+	margin-bottom: 0px; 
+	font-size: 2.2em;
+}
+
+.buildProgressDialog .endMessages > div > p {
+	font-size: 1.3em; 
+	margin-top: 8px; 
+	margin-bottom: 0px;
+}
+
 
 /* Used to cover screen while application is loading. */
 #preloader {

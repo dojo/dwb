@@ -54,7 +54,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			url: this.packageEndPoint,
 			handleAs: "json"
 		});
-		d.then(dojo.hitch(this, "_handlePackagesResponse"));
+		d.then(dojo.hitch(this, "_handlePackagesResponse"), dojo.hitch(this, "_moduleLoadingError"));
 
 		dojo.subscribe("dwb/search/updateFilter", dojo.hitch(this, "updateModuleFilter"));
 		dojo.subscribe("dwb/build/request", dojo.hitch(this, "triggerBuildRequest"));
@@ -212,7 +212,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 		d.then(dojo.hitch(this, function(response) {
 			this._modulesAvailable(response.modules);
-		}));
+		}), dojo.hitch(this, "_moduleLoadingError"));
 	},
 
 	triggerBuildRequest: function () {
@@ -231,18 +231,23 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 				headers: {"Content-Type":"application/json"},
 				postData: dojo.toJson(completeProfile)
 			});
-
+			
+			// If either of the XHR requests fails, tell user and cancel
+			// build progress dialog.
+			var errorHandling = dojo.hitch(this, function() {
+				this._buildProgressFinished("failure");
+			});
+			
 			// Once complete, cancel build button animation 
 			// and forward user to response location
-			// TODO: Need error handling if this stage fails!
 			d.then(dojo.hitch(this, function (response) {
 				var d = dojo.xhrGet({
 					url: response.buildStatusLink,
 					handleAs: "json"
 				});
 
-				d.then(dojo.hitch(this, "buildStatusPoller", response.buildStatusLink));
-			}));
+				d.then(dojo.hitch(this, "buildStatusPoller", response.buildStatusLink), errorHandling);
+			}), errorHandling);
 
 			// Clear any previous log lines and show progress indicator
 			this._updateLogView([]);
@@ -265,7 +270,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			baseLayer.modules.push(this.store.getValue(item, "name"));
 		}));
 
-		return {"layers":[baseLayer]};
+		return {"layers":[baseLayer], "userPackages": this.temporaryPackages};
 	},
 
 	// User has triggered a build request. Construct build profile
@@ -388,9 +393,9 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 		// If the build has completed, redirect to package URL to force download.
 		if (response.state === "COMPLETED") {
-			this.buildProgress.hide();
-			dojo.publish("dwb/build/finished");
-			window.location.assign(response.result);
+			this._buildProgressFinished("success", function () {
+				window.location.assign(response.result);
+			});
 			// Otherwise, keep polling for log changes.
 		} else if (response.state === "BUILDING" || response.state === "NOT_STARTED") {
 			setTimeout(dojo.hitch(this, function () {
@@ -399,15 +404,35 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 					handleAs: "json"
 				});
 
-				d.then(dojo.hitch(this, "buildStatusPoller", statusUrl));	
+				d.then(dojo.hitch(this, "buildStatusPoller", statusUrl), function () {
+					this._buildProgressFinished("failure")
+				});	
 			}), 500);
-			// TODO: Something has failed, show user error message
+		// An error occurred, indicate this.
 		} else {
-			this.buildOptionsContent.get("build").cancel();
-			this.buildProgress.hide();
+			this._buildProgressFinished("failure");
 		}
 	},
 
+	_buildProgressFinished : function(status, callback) {
+		// Show associated status message
+		dojo.addClass(this.buildProgress.domNode, status);
+		
+		// After brief period, hide the dialog and remove message
+		setTimeout(dojo.hitch(this, function () {
+			this.buildProgress.hide();
+			dojo.removeClass(this.buildProgress.domNode, status);
+			
+			// If the user has asked for notification, execute callback.
+			if (callback) {
+				callback();
+			}
+		}), 500);
+		
+		// Inform all listeners we have finished building.
+		dojo.publish("dwb/build/finished");
+	},
+	
 	// Packages modules have been retrieved and can be rendered 
 	// using the module grid. 
 	_modulesAvailable : function(modules) {		
@@ -591,6 +616,19 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		this.buildOptionsContent.layerNameUpdate.onClick();
 	},
 
+	// When any path of the module loading process
+	// fails, lock down UI to stop further interaction
+	// and display error message.
+	_moduleLoadingError : function () {
+		dojo.addClass(this.modulesPane.domNode, "failure");
+		
+		// Disable all action buttons, radio buttons, select boxes. Don't want
+		// user triggered that interact with the module list.
+		dojo.query(".dijitButton, .dijitRadio, .dijitCheckBox, .dijitSelect, .dijitComboBox").forEach(function (node) {
+			dijit.byNode(node).set("disabled", true)
+		});
+	},
+	
 	_handlePackagesResponse: function (response) {
 		// TODO: Just use first Dojo package until 
 		// we can handle switching versions.
@@ -602,7 +640,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		});
 
 		
-		d.then(dojo.hitch(this, "_handlePackageVersionsResponse"));
+		d.then(dojo.hitch(this, "_handlePackageVersionsResponse"), dojo.hitch(this, "_moduleLoadingError"));
 
 		// Store result to use when building
 		this.baseProfile["package"] = packageObj.name;

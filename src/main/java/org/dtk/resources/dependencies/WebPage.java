@@ -121,9 +121,9 @@ public class WebPage {
 	}
 
 	protected String customModuleLocation(String moduleName) {
-		// If no custom module path is found, use parent
-		// location of DTK modules.
-		String moduleLocation = this.modulePaths.get("dojo") + "..";
+		// Custom module locations are relevant to base Dojo path. Find parent
+		// location of core DTK modules.
+		String moduleLocation = this.modulePaths.get("dojo");
 
 		// Search through defined paths for match, specific to generic. 
 		String[] moduleSearchPaths = moduleName.split("\\.");
@@ -137,7 +137,7 @@ public class WebPage {
 
 			// Check if this path has a registered location...
 			if (this.modulePaths.containsKey(currentSearchpath)) {
-				moduleLocation = this.modulePaths.get(currentSearchpath);
+				moduleLocation += this.modulePaths.get(currentSearchpath);
 				break;
 			}
 

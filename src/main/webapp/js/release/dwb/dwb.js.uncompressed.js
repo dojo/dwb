@@ -7218,6 +7218,1893 @@ dojo.declare("dwb.ui.BuildConfigPanel", [dijit._Widget, dijit._Templated], {
 
 }
 
+if(!dojo._hasResource["dijit._CssStateMixin"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit._CssStateMixin"] = true;
+dojo.provide("dijit._CssStateMixin");
+
+
+dojo.declare("dijit._CssStateMixin", [], {
+	// summary:
+	//		Mixin for widgets to set CSS classes on the widget DOM nodes depending on hover/mouse press/focus
+	//		state changes, and also higher-level state changes such becoming disabled or selected.
+	//
+	// description:
+	//		By mixing this class into your widget, and setting the this.baseClass attribute, it will automatically
+	//		maintain CSS classes on the widget root node (this.domNode) depending on hover,
+	//		active, focus, etc. state.   Ex: with a baseClass of dijitButton, it will apply the classes
+	//		dijitButtonHovered and dijitButtonActive, as the user moves the mouse over the widget and clicks it.
+	//
+	//		It also sets CSS like dijitButtonDisabled based on widget semantic state.
+	//
+	//		By setting the cssStateNodes attribute, a widget can also track events on subnodes (like buttons
+	//		within the widget).
+
+	// cssStateNodes: [protected] Object
+	//		List of sub-nodes within the widget that need CSS classes applied on mouse hover/press and focus
+	//.
+	//		Each entry in the hash is a an attachpoint names (like "upArrowButton") mapped to a CSS class names
+	//		(like "dijitUpArrowButton"). Example:
+	//	|		{
+	//	|			"upArrowButton": "dijitUpArrowButton",
+	//	|			"downArrowButton": "dijitDownArrowButton"
+	//	|		}
+	//		The above will set the CSS class dijitUpArrowButton to the this.upArrowButton DOMNode when it
+	//		is hovered, etc.
+	cssStateNodes: {},
+
+	postCreate: function(){
+		this.inherited(arguments);
+
+		// Automatically monitor mouse events (essentially :hover and :active) on this.domNode
+		dojo.forEach(["onmouseenter", "onmouseleave", "onmousedown"], function(e){
+			this.connect(this.domNode, e, "_cssMouseEvent");
+		}, this);
+		
+		// Monitoring changes to disabled, readonly, etc. state, and update CSS class of root node
+		this.connect(this, "set", function(name, value){
+			if(arguments.length >= 2 && {disabled: true, readOnly: true, checked:true, selected:true}[name]){
+				this._setStateClass();
+			}
+		});
+
+		// The widget coming in/out of the focus change affects it's state
+		dojo.forEach(["_onFocus", "_onBlur"], function(ap){
+			this.connect(this, ap, "_setStateClass");
+		}, this);
+
+		// Events on sub nodes within the widget
+		for(var ap in this.cssStateNodes){
+			this._trackMouseState(this[ap], this.cssStateNodes[ap]);
+		}
+		// Set state initially; there's probably no hover/active/focus state but widget might be
+		// disabled/readonly so we want to set CSS classes for those conditions.
+		this._setStateClass();
+	},
+
+	_cssMouseEvent: function(/*Event*/ event){
+		// summary:
+		//	Sets _hovering and _active properties depending on mouse state,
+		//	then calls _setStateClass() to set appropriate CSS classes for this.domNode.
+
+		if(!this.disabled){
+			switch(event.type){
+				case "mouseenter":
+				case "mouseover":	// generated on non-IE browsers even though we connected to mouseenter
+					this._hovering = true;
+					this._active = this._mouseDown;
+					break;
+
+				case "mouseleave":
+				case "mouseout":	// generated on non-IE browsers even though we connected to mouseleave
+					this._hovering = false;
+					this._active = false;
+					break;
+
+				case "mousedown" :
+					this._active = true;
+					this._mouseDown = true;
+					// Set a global event to handle mouseup, so it fires properly
+					// even if the cursor leaves this.domNode before the mouse up event.
+					// Alternately could set active=false on mouseout.
+					var mouseUpConnector = this.connect(dojo.body(), "onmouseup", function(){
+						this._active = false;
+						this._mouseDown = false;
+						this._setStateClass();
+						this.disconnect(mouseUpConnector);
+					});
+					break;
+			}
+			this._setStateClass();
+		}
+	},
+
+	_setStateClass: function(){
+		// summary:
+		//		Update the visual state of the widget by setting the css classes on this.domNode
+		//		(or this.stateNode if defined) by combining this.baseClass with
+		//		various suffixes that represent the current widget state(s).
+		//
+		// description:
+		//		In the case where a widget has multiple
+		//		states, it sets the class based on all possible
+		//	 	combinations.  For example, an invalid form widget that is being hovered
+		//		will be "dijitInput dijitInputInvalid dijitInputHover dijitInputInvalidHover".
+		//
+		//		The widget may have one or more of the following states, determined
+		//		by this.state, this.checked, this.valid, and this.selected:
+		//			- Error - ValidationTextBox sets this.state to "Error" if the current input value is invalid
+		//			- Checked - ex: a checkmark or a ToggleButton in a checked state, will have this.checked==true
+		//			- Selected - ex: currently selected tab will have this.selected==true
+		//
+		//		In addition, it may have one or more of the following states,
+		//		based on this.disabled and flags set in _onMouse (this._active, this._hovering, this._focused):
+		//			- Disabled	- if the widget is disabled
+		//			- Active		- if the mouse (or space/enter key?) is being pressed down
+		//			- Focused		- if the widget has focus
+		//			- Hover		- if the mouse is over the widget
+
+		// Compute new set of classes
+		var newStateClasses = this.baseClass.split(" ");
+
+		function multiply(modifier){
+			newStateClasses = newStateClasses.concat(dojo.map(newStateClasses, function(c){ return c+modifier; }), "dijit"+modifier);
+		}
+
+		if(!this.isLeftToRight()){
+			// For RTL mode we need to set an addition class like dijitTextBoxRtl.
+			multiply("Rtl");
+		}
+
+		if(this.checked){
+			multiply("Checked");
+		}
+		if(this.state){
+			multiply(this.state);
+		}
+		if(this.selected){
+			multiply("Selected");
+		}
+
+		if(this.disabled){
+			multiply("Disabled");
+		}else if(this.readOnly){
+			multiply("ReadOnly");
+		}else{
+			if(this._active){
+				multiply("Active");
+			}else if(this._hovering){
+				multiply("Hover");
+			}
+		}
+
+		if(this._focused){
+			multiply("Focused");
+		}
+
+		// Remove old state classes and add new ones.
+		// For performance concerns we only write into domNode.className once.
+		var tn = this.stateNode || this.domNode,
+			classHash = {};	// set of all classes (state and otherwise) for node
+
+		dojo.forEach(tn.className.split(" "), function(c){ classHash[c] = true; });
+
+		if("_stateClasses" in this){
+			dojo.forEach(this._stateClasses, function(c){ delete classHash[c]; });
+		}
+
+		dojo.forEach(newStateClasses, function(c){ classHash[c] = true; });
+
+		var newClasses = [];
+		for(var c in classHash){
+			newClasses.push(c);
+		}
+		tn.className = newClasses.join(" ");
+
+		this._stateClasses = newStateClasses;
+	},
+
+	_trackMouseState: function(/*DomNode*/ node, /*String*/ clazz){
+		// summary:
+		//		Track mouse/focus events on specified node and set CSS class on that node to indicate
+		//		current state.   Usually not called directly, but via cssStateNodes attribute.
+		// description:
+		//		Given class=foo, will set the following CSS class on the node
+		//			- fooActive: if the user is currently pressing down the mouse button while over the node
+		//			- fooHover: if the user is hovering the mouse over the node, but not pressing down a button
+		//			- fooFocus: if the node is focused
+		//
+		//		Note that it won't set any classes if the widget is disabled.
+		// node: DomNode
+		//		Should be a sub-node of the widget, not the top node (this.domNode), since the top node
+		//		is handled specially and automatically just by mixing in this class.
+		// clazz: String
+		//		CSS class name (ex: dijitSliderUpArrow).
+
+		// Current state of node (initially false)
+		// NB: setting specifically to false because dojo.toggleClass() needs true boolean as third arg
+		var hovering=false, active=false, focused=false;
+
+		var self = this,
+			cn = dojo.hitch(this, "connect", node);
+
+		function setClass(){
+			var disabled = ("disabled" in self && self.disabled) || ("readonly" in self && self.readonly);
+			dojo.toggleClass(node, clazz+"Hover", hovering && !active && !disabled);
+			dojo.toggleClass(node, clazz+"Active", active && !disabled);
+			dojo.toggleClass(node, clazz+"Focused", focused && !disabled);
+		}
+
+		// Mouse
+		cn("onmouseenter", function(){
+			hovering = true;
+			setClass();
+		});
+		cn("onmouseleave", function(){
+			hovering = false;
+			active = false;
+			setClass();
+		});
+		cn("onmousedown", function(){
+			active = true;
+			setClass();
+		});
+		cn("onmouseup", function(){
+			active = false;
+			setClass();
+		});
+
+		// Focus
+		cn("onfocus", function(){
+			focused = true;
+			setClass();
+		});
+		cn("onblur", function(){
+			focused = false;
+			setClass();
+		});
+
+		// Just in case widget is enabled/disabled while it has focus/hover/active state.
+		// Maybe this is overkill.
+		this.connect(this, "set", function(name, value){
+			if(name == "disabled" || name == "readOnly"){
+				setClass();
+			}
+		});
+	}
+});
+
+}
+
+if(!dojo._hasResource["dijit.form._FormWidget"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit.form._FormWidget"] = true;
+dojo.provide("dijit.form._FormWidget");
+
+
+
+
+
+
+
+dojo.declare("dijit.form._FormWidget", [dijit._Widget, dijit._Templated, dijit._CssStateMixin],
+	{
+	// summary:
+	//		Base class for widgets corresponding to native HTML elements such as <checkbox> or <button>,
+	//		which can be children of a <form> node or a `dijit.form.Form` widget.
+	//
+	// description:
+	//		Represents a single HTML element.
+	//		All these widgets should have these attributes just like native HTML input elements.
+	//		You can set them during widget construction or afterwards, via `dijit._Widget.attr`.
+	//
+	//		They also share some common methods.
+
+	// name: String
+	//		Name used when submitting form; same as "name" attribute or plain HTML elements
+	name: "",
+
+	// alt: String
+	//		Corresponds to the native HTML <input> element's attribute.
+	alt: "",
+
+	// value: String
+	//		Corresponds to the native HTML <input> element's attribute.
+	value: "",
+
+	// type: String
+	//		Corresponds to the native HTML <input> element's attribute.
+	type: "text",
+
+	// tabIndex: Integer
+	//		Order fields are traversed when user hits the tab key
+	tabIndex: "0",
+
+	// disabled: Boolean
+	//		Should this widget respond to user input?
+	//		In markup, this is specified as "disabled='disabled'", or just "disabled".
+	disabled: false,
+
+	// intermediateChanges: Boolean
+	//		Fires onChange for each value change or only on demand
+	intermediateChanges: false,
+
+	// scrollOnFocus: Boolean
+	//		On focus, should this widget scroll into view?
+	scrollOnFocus: true,
+
+	// These mixins assume that the focus node is an INPUT, as many but not all _FormWidgets are.
+	attributeMap: dojo.delegate(dijit._Widget.prototype.attributeMap, {
+		value: "focusNode",
+		id: "focusNode",
+		tabIndex: "focusNode",
+		alt: "focusNode",
+		title: "focusNode"
+	}),
+
+	postMixInProperties: function(){
+		// Setup name=foo string to be referenced from the template (but only if a name has been specified)
+		// Unfortunately we can't use attributeMap to set the name due to IE limitations, see #8660
+		// Regarding escaping, see heading "Attribute values" in
+		// http://www.w3.org/TR/REC-html40/appendix/notes.html#h-B.3.2
+		this.nameAttrSetting = this.name ? ('name="' + this.name.replace(/'/g, "&quot;") + '"') : '';
+		this.inherited(arguments);
+	},
+
+	postCreate: function(){
+		this.inherited(arguments);
+		this.connect(this.domNode, "onmousedown", "_onMouseDown");
+	},
+
+	_setDisabledAttr: function(/*Boolean*/ value){
+		this.disabled = value;
+		dojo.attr(this.focusNode, 'disabled', value);
+		if(this.valueNode){
+			dojo.attr(this.valueNode, 'disabled', value);
+		}
+		dijit.setWaiState(this.focusNode, "disabled", value);
+
+		if(value){
+			// reset these, because after the domNode is disabled, we can no longer receive
+			// mouse related events, see #4200
+			this._hovering = false;
+			this._active = false;
+
+			// clear tab stop(s) on this widget's focusable node(s)  (ComboBox has two focusable nodes)
+			var attachPointNames = "tabIndex" in this.attributeMap ? this.attributeMap.tabIndex : "focusNode";
+			dojo.forEach(dojo.isArray(attachPointNames) ? attachPointNames : [attachPointNames], function(attachPointName){
+				var node = this[attachPointName];
+				// complex code because tabIndex=-1 on a <div> doesn't work on FF
+				if(dojo.isWebKit || dijit.hasDefaultTabStop(node)){	// see #11064 about webkit bug
+					node.setAttribute('tabIndex', "-1");
+				}else{
+					node.removeAttribute('tabIndex');				
+				}
+			}, this);
+		}else{
+			this.focusNode.setAttribute('tabIndex', this.tabIndex);
+		}
+	},
+
+	setDisabled: function(/*Boolean*/ disabled){
+		// summary:
+		//		Deprecated.   Use set('disabled', ...) instead.
+		dojo.deprecated("setDisabled("+disabled+") is deprecated. Use set('disabled',"+disabled+") instead.", "", "2.0");
+		this.set('disabled', disabled);
+	},
+
+	_onFocus: function(e){
+		if(this.scrollOnFocus){
+			dojo.window.scrollIntoView(this.domNode);
+		}
+		this.inherited(arguments);
+	},
+
+	isFocusable: function(){
+		// summary:
+		//		Tells if this widget is focusable or not.   Used internally by dijit.
+		// tags:
+		//		protected
+		return !this.disabled && !this.readOnly && this.focusNode && (dojo.style(this.domNode, "display") != "none");
+	},
+
+	focus: function(){
+		// summary:
+		//		Put focus on this widget
+		dijit.focus(this.focusNode);
+	},
+
+	compare: function(/*anything*/val1, /*anything*/val2){
+		// summary:
+		//		Compare 2 values (as returned by attr('value') for this widget).
+		// tags:
+		//		protected
+		if(typeof val1 == "number" && typeof val2 == "number"){
+			return (isNaN(val1) && isNaN(val2)) ? 0 : val1 - val2;
+		}else if(val1 > val2){
+			return 1;
+		}else if(val1 < val2){
+			return -1;
+		}else{
+			return 0;
+		}
+	},
+
+	onChange: function(newValue){
+		// summary:
+		//		Callback when this widget's value is changed.
+		// tags:
+		//		callback
+	},
+
+	// _onChangeActive: [private] Boolean
+	//		Indicates that changes to the value should call onChange() callback.
+	//		This is false during widget initialization, to avoid calling onChange()
+	//		when the initial value is set.
+	_onChangeActive: false,
+
+	_handleOnChange: function(/*anything*/ newValue, /* Boolean? */ priorityChange){
+		// summary:
+		//		Called when the value of the widget is set.  Calls onChange() if appropriate
+		// newValue:
+		//		the new value
+		// priorityChange:
+		//		For a slider, for example, dragging the slider is priorityChange==false,
+		//		but on mouse up, it's priorityChange==true.  If intermediateChanges==true,
+		//		onChange is only called form priorityChange=true events.
+		// tags:
+		//		private
+		this._lastValue = newValue;
+		if(this._lastValueReported == undefined && (priorityChange === null || !this._onChangeActive)){
+			// this block executes not for a change, but during initialization,
+			// and is used to store away the original value (or for ToggleButton, the original checked state)
+			this._resetValue = this._lastValueReported = newValue;
+		}
+		if((this.intermediateChanges || priorityChange || priorityChange === undefined) &&
+			((typeof newValue != typeof this._lastValueReported) ||
+				this.compare(newValue, this._lastValueReported) != 0)){
+			this._lastValueReported = newValue;
+			if(this._onChangeActive){
+				if(this._onChangeHandle){
+					clearTimeout(this._onChangeHandle);
+				}
+				// setTimout allows hidden value processing to run and
+				// also the onChange handler can safely adjust focus, etc
+				this._onChangeHandle = setTimeout(dojo.hitch(this,
+					function(){
+						this._onChangeHandle = null;
+						this.onChange(newValue);
+					}), 0); // try to collapse multiple onChange's fired faster than can be processed
+			}
+		}
+	},
+
+	create: function(){
+		// Overrides _Widget.create()
+		this.inherited(arguments);
+		this._onChangeActive = true;
+	},
+
+	destroy: function(){
+		if(this._onChangeHandle){ // destroy called before last onChange has fired
+			clearTimeout(this._onChangeHandle);
+			this.onChange(this._lastValueReported);
+		}
+		this.inherited(arguments);
+	},
+
+	setValue: function(/*String*/ value){
+		// summary:
+		//		Deprecated.   Use set('value', ...) instead.
+		dojo.deprecated("dijit.form._FormWidget:setValue("+value+") is deprecated.  Use set('value',"+value+") instead.", "", "2.0");
+		this.set('value', value);
+	},
+
+	getValue: function(){
+		// summary:
+		//		Deprecated.   Use get('value') instead.
+		dojo.deprecated(this.declaredClass+"::getValue() is deprecated. Use get('value') instead.", "", "2.0");
+		return this.get('value');
+	},
+	
+	_onMouseDown: function(e){
+		// If user clicks on the button, even if the mouse is released outside of it,
+		// this button should get focus (to mimics native browser buttons).
+		// This is also needed on chrome because otherwise buttons won't get focus at all,
+		// which leads to bizarre focus restore on Dialog close etc.
+		if(!e.ctrlKey && this.isFocusable()){ // !e.ctrlKey to ignore right-click on mac
+			// Set a global event to handle mouseup, so it fires properly
+			// even if the cursor leaves this.domNode before the mouse up event.
+			var mouseUpConnector = this.connect(dojo.body(), "onmouseup", function(){
+				if (this.isFocusable()) {
+					this.focus();
+				}
+				this.disconnect(mouseUpConnector);
+			});
+		}
+	}
+});
+
+dojo.declare("dijit.form._FormValueWidget", dijit.form._FormWidget,
+{
+	// summary:
+	//		Base class for widgets corresponding to native HTML elements such as <input> or <select> that have user changeable values.
+	// description:
+	//		Each _FormValueWidget represents a single input value, and has a (possibly hidden) <input> element,
+	//		to which it serializes it's input value, so that form submission (either normal submission or via FormBind?)
+	//		works as expected.
+
+	// Don't attempt to mixin the 'type', 'name' attributes here programatically -- they must be declared
+	// directly in the template as read by the parser in order to function. IE is known to specifically
+	// require the 'name' attribute at element creation time.   See #8484, #8660.
+	// TODO: unclear what that {value: ""} is for; FormWidget.attributeMap copies value to focusNode,
+	// so maybe {value: ""} is so the value *doesn't* get copied to focusNode?
+	// Seems like we really want value removed from attributeMap altogether
+	// (although there's no easy way to do that now)
+
+	// readOnly: Boolean
+	//		Should this widget respond to user input?
+	//		In markup, this is specified as "readOnly".
+	//		Similar to disabled except readOnly form values are submitted.
+	readOnly: false,
+
+	attributeMap: dojo.delegate(dijit.form._FormWidget.prototype.attributeMap, {
+		value: "",
+		readOnly: "focusNode"
+	}),
+
+	_setReadOnlyAttr: function(/*Boolean*/ value){
+		this.readOnly = value;
+		dojo.attr(this.focusNode, 'readOnly', value);
+		dijit.setWaiState(this.focusNode, "readonly", value);
+	},
+
+	postCreate: function(){
+		this.inherited(arguments);
+
+		if(dojo.isIE){ // IE won't stop the event with keypress
+			this.connect(this.focusNode || this.domNode, "onkeydown", this._onKeyDown);
+		}
+		// Update our reset value if it hasn't yet been set (because this.set()
+		// is only called when there *is* a value)
+		if(this._resetValue === undefined){
+			this._resetValue = this.value;
+		}
+	},
+
+	_setValueAttr: function(/*anything*/ newValue, /*Boolean, optional*/ priorityChange){
+		// summary:
+		//		Hook so attr('value', value) works.
+		// description:
+		//		Sets the value of the widget.
+		//		If the value has changed, then fire onChange event, unless priorityChange
+		//		is specified as null (or false?)
+		this.value = newValue;
+		this._handleOnChange(newValue, priorityChange);
+	},
+
+	_getValueAttr: function(){
+		// summary:
+		//		Hook so attr('value') works.
+		return this._lastValue;
+	},
+
+	undo: function(){
+		// summary:
+		//		Restore the value to the last value passed to onChange
+		this._setValueAttr(this._lastValueReported, false);
+	},
+
+	reset: function(){
+		// summary:
+		//		Reset the widget's value to what it was at initialization time
+		this._hasBeenBlurred = false;
+		this._setValueAttr(this._resetValue, true);
+	},
+
+	_onKeyDown: function(e){
+		if(e.keyCode == dojo.keys.ESCAPE && !(e.ctrlKey || e.altKey || e.metaKey)){
+			var te;
+			if(dojo.isIE){
+				e.preventDefault(); // default behavior needs to be stopped here since keypress is too late
+				te = document.createEventObject();
+				te.keyCode = dojo.keys.ESCAPE;
+				te.shiftKey = e.shiftKey;
+				e.srcElement.fireEvent('onkeypress', te);
+			}
+		}
+	},
+
+	_layoutHackIE7: function(){
+		// summary:
+		//		Work around table sizing bugs on IE7 by forcing redraw
+
+		if(dojo.isIE == 7){ // fix IE7 layout bug when the widget is scrolled out of sight
+			var domNode = this.domNode;
+			var parent = domNode.parentNode;
+			var pingNode = domNode.firstChild || domNode; // target node most unlikely to have a custom filter
+			var origFilter = pingNode.style.filter; // save custom filter, most likely nothing
+			var _this = this;
+			while(parent && parent.clientHeight == 0){ // search for parents that haven't rendered yet
+				(function ping(){
+					var disconnectHandle = _this.connect(parent, "onscroll",
+						function(e){
+							_this.disconnect(disconnectHandle); // only call once
+							pingNode.style.filter = (new Date()).getMilliseconds(); // set to anything that's unique
+							setTimeout(function(){ pingNode.style.filter = origFilter }, 0); // restore custom filter, if any
+						}
+					);
+				})();
+				parent = parent.parentNode;
+			}
+		}
+	}
+});
+
+}
+
+if(!dojo._hasResource["dijit.form.TextBox"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit.form.TextBox"] = true;
+dojo.provide("dijit.form.TextBox");
+
+
+
+dojo.declare(
+	"dijit.form.TextBox",
+	dijit.form._FormValueWidget,
+	{
+		// summary:
+		//		A base class for textbox form inputs
+
+		// trim: Boolean
+		//		Removes leading and trailing whitespace if true.  Default is false.
+		trim: false,
+
+		// uppercase: Boolean
+		//		Converts all characters to uppercase if true.  Default is false.
+		uppercase: false,
+
+		// lowercase: Boolean
+		//		Converts all characters to lowercase if true.  Default is false.
+		lowercase: false,
+
+		// propercase: Boolean
+		//		Converts the first character of each word to uppercase if true.
+		propercase: false,
+
+		//	maxLength: String
+		//		HTML INPUT tag maxLength declaration.
+		maxLength: "",
+
+		//	selectOnClick: [const] Boolean
+		//		If true, all text will be selected when focused with mouse
+		selectOnClick: false,
+
+		//	placeHolder: String
+		//		Defines a hint to help users fill out the input field (as defined in HTML 5).
+		//		This should only contain plain text (no html markup).
+		placeHolder: "",
+		
+		templateString: dojo.cache("dijit.form", "templates/TextBox.html", "<div class=\"dijit dijitReset dijitInline dijitLeft\" id=\"widget_${id}\" waiRole=\"presentation\"\n\t><div class=\"dijitReset dijitInputField dijitInputContainer\"\n\t\t><input class=\"dijitReset dijitInputInner\" dojoAttachPoint='textbox,focusNode' autocomplete=\"off\"\n\t\t\t${!nameAttrSetting} type='${type}'\n\t/></div\n></div>\n"),
+		_singleNodeTemplate: '<input class="dijit dijitReset dijitLeft dijitInputField" dojoAttachPoint="textbox,focusNode" autocomplete="off" type="${type}" ${!nameAttrSetting} />',
+
+		_buttonInputDisabled: dojo.isIE ? "disabled" : "", // allows IE to disallow focus, but Firefox cannot be disabled for mousedown events
+
+		baseClass: "dijitTextBox",
+
+		attributeMap: dojo.delegate(dijit.form._FormValueWidget.prototype.attributeMap, {
+			maxLength: "focusNode"
+		}),
+		
+		postMixInProperties: function(){
+			var type = this.type.toLowerCase();
+			if(this.templateString.toLowerCase() == "input" || ((type == "hidden" || type == "file") && this.templateString == dijit.form.TextBox.prototype.templateString)){
+				this.templateString = this._singleNodeTemplate;
+			}
+			this.inherited(arguments);
+		},
+
+		_setPlaceHolderAttr: function(v){
+			this.placeHolder = v;
+			if(!this._phspan){
+				this._attachPoints.push('_phspan');
+				/* dijitInputField class gives placeHolder same padding as the input field
+				 * parent node already has dijitInputField class but it doesn't affect this <span>
+				 * since it's position: absolute.
+				 */
+				this._phspan = dojo.create('span',{className:'dijitPlaceHolder dijitInputField'},this.textbox,'after');
+			}
+			this._phspan.innerHTML="";
+			this._phspan.appendChild(document.createTextNode(v));
+			
+			this._updatePlaceHolder();
+		},
+		
+		_updatePlaceHolder: function(){
+			if(this._phspan){
+				this._phspan.style.display=(this.placeHolder&&!this._focused&&!this.textbox.value)?"":"none";
+			}
+		},
+
+		_getValueAttr: function(){
+			// summary:
+			//		Hook so attr('value') works as we like.
+			// description:
+			//		For `dijit.form.TextBox` this basically returns the value of the <input>.
+			//
+			//		For `dijit.form.MappedTextBox` subclasses, which have both
+			//		a "displayed value" and a separate "submit value",
+			//		This treats the "displayed value" as the master value, computing the
+			//		submit value from it via this.parse().
+			return this.parse(this.get('displayedValue'), this.constraints);
+		},
+
+		_setValueAttr: function(value, /*Boolean?*/ priorityChange, /*String?*/ formattedValue){
+			// summary:
+			//		Hook so attr('value', ...) works.
+			//
+			// description:
+			//		Sets the value of the widget to "value" which can be of
+			//		any type as determined by the widget.
+			//
+			// value:
+			//		The visual element value is also set to a corresponding,
+			//		but not necessarily the same, value.
+			//
+			// formattedValue:
+			//		If specified, used to set the visual element value,
+			//		otherwise a computed visual value is used.
+			//
+			// priorityChange:
+			//		If true, an onChange event is fired immediately instead of
+			//		waiting for the next blur event.
+
+			var filteredValue;
+			if(value !== undefined){
+				// TODO: this is calling filter() on both the display value and the actual value.
+				// I added a comment to the filter() definition about this, but it should be changed.
+				filteredValue = this.filter(value);
+				if(typeof formattedValue != "string"){
+					if(filteredValue !== null && ((typeof filteredValue != "number") || !isNaN(filteredValue))){
+						formattedValue = this.filter(this.format(filteredValue, this.constraints));
+					}else{ formattedValue = ''; }
+				}
+			}
+			if(formattedValue != null && formattedValue != undefined && ((typeof formattedValue) != "number" || !isNaN(formattedValue)) && this.textbox.value != formattedValue){
+				this.textbox.value = formattedValue;
+			}
+
+			this._updatePlaceHolder();
+
+			this.inherited(arguments, [filteredValue, priorityChange]);
+		},
+
+		// displayedValue: String
+		//		For subclasses like ComboBox where the displayed value
+		//		(ex: Kentucky) and the serialized value (ex: KY) are different,
+		//		this represents the displayed value.
+		//
+		//		Setting 'displayedValue' through attr('displayedValue', ...)
+		//		updates 'value', and vice-versa.  Otherwise 'value' is updated
+		//		from 'displayedValue' periodically, like onBlur etc.
+		//
+		//		TODO: move declaration to MappedTextBox?
+		//		Problem is that ComboBox references displayedValue,
+		//		for benefit of FilteringSelect.
+		displayedValue: "",
+
+		getDisplayedValue: function(){
+			// summary:
+			//		Deprecated.   Use set('displayedValue') instead.
+			// tags:
+			//		deprecated
+			dojo.deprecated(this.declaredClass+"::getDisplayedValue() is deprecated. Use set('displayedValue') instead.", "", "2.0");
+			return this.get('displayedValue');
+		},
+
+		_getDisplayedValueAttr: function(){
+			// summary:
+			//		Hook so attr('displayedValue') works.
+			// description:
+			//		Returns the displayed value (what the user sees on the screen),
+			// 		after filtering (ie, trimming spaces etc.).
+			//
+			//		For some subclasses of TextBox (like ComboBox), the displayed value
+			//		is different from the serialized value that's actually
+			//		sent to the server (see dijit.form.ValidationTextBox.serialize)
+
+			return this.filter(this.textbox.value);
+		},
+
+		setDisplayedValue: function(/*String*/value){
+			// summary:
+			//		Deprecated.   Use set('displayedValue', ...) instead.
+			// tags:
+			//		deprecated
+			dojo.deprecated(this.declaredClass+"::setDisplayedValue() is deprecated. Use set('displayedValue', ...) instead.", "", "2.0");
+			this.set('displayedValue', value);
+		},
+
+		_setDisplayedValueAttr: function(/*String*/value){
+			// summary:
+			//		Hook so attr('displayedValue', ...) works.
+			// description:
+			//		Sets the value of the visual element to the string "value".
+			//		The widget value is also set to a corresponding,
+			//		but not necessarily the same, value.
+
+			if(value === null || value === undefined){ value = '' }
+			else if(typeof value != "string"){ value = String(value) }
+			this.textbox.value = value;
+			this._setValueAttr(this.get('value'), undefined, value);
+		},
+
+		format: function(/* String */ value, /* Object */ constraints){
+			// summary:
+			//		Replacable function to convert a value to a properly formatted string.
+			// tags:
+			//		protected extension
+			return ((value == null || value == undefined) ? "" : (value.toString ? value.toString() : value));
+		},
+
+		parse: function(/* String */ value, /* Object */ constraints){
+			// summary:
+			//		Replacable function to convert a formatted string to a value
+			// tags:
+			//		protected extension
+
+			return value;	// String
+		},
+
+		_refreshState: function(){
+			// summary:
+			//		After the user types some characters, etc., this method is
+			//		called to check the field for validity etc.  The base method
+			//		in `dijit.form.TextBox` does nothing, but subclasses override.
+			// tags:
+			//		protected
+		},
+
+		_onInput: function(e){
+			if(e && e.type && /key/i.test(e.type) && e.keyCode){
+				switch(e.keyCode){
+					case dojo.keys.SHIFT:
+					case dojo.keys.ALT:
+					case dojo.keys.CTRL:
+					case dojo.keys.TAB:
+						return;
+				}
+			}
+			if(this.intermediateChanges){
+				var _this = this;
+				// the setTimeout allows the key to post to the widget input box
+				setTimeout(function(){ _this._handleOnChange(_this.get('value'), false); }, 0);
+			}
+			this._refreshState();
+		},
+
+		postCreate: function(){
+			// setting the value here is needed since value="" in the template causes "undefined"
+			// and setting in the DOM (instead of the JS object) helps with form reset actions
+			if(dojo.isIE){ // IE INPUT tag fontFamily has to be set directly using STYLE
+				var s = dojo.getComputedStyle(this.domNode);
+				if(s){
+					var ff = s.fontFamily;
+					if(ff){
+						var inputs = this.domNode.getElementsByTagName("INPUT");
+						if(inputs){
+							for(var i=0; i < inputs.length; i++){
+								inputs[i].style.fontFamily = ff;
+							}
+						}
+					}
+				}
+			}
+			this.textbox.setAttribute("value", this.textbox.value); // DOM and JS values shuld be the same
+			this.inherited(arguments);
+			if(dojo.isMoz || dojo.isOpera){
+				this.connect(this.textbox, "oninput", this._onInput);
+			}else{
+				this.connect(this.textbox, "onkeydown", this._onInput);
+				this.connect(this.textbox, "onkeyup", this._onInput);
+				this.connect(this.textbox, "onpaste", this._onInput);
+				this.connect(this.textbox, "oncut", this._onInput);
+			}
+		},
+
+		_blankValue: '', // if the textbox is blank, what value should be reported
+		filter: function(val){
+			// summary:
+			//		Auto-corrections (such as trimming) that are applied to textbox
+			//		value on blur or form submit.
+			// description:
+			//		For MappedTextBox subclasses, this is called twice
+			// 			- once with the display value
+			//			- once the value as set/returned by attr('value', ...)
+			//		and attr('value'), ex: a Number for NumberTextBox.
+			//
+			//		In the latter case it does corrections like converting null to NaN.  In
+			//		the former case the NumberTextBox.filter() method calls this.inherited()
+			//		to execute standard trimming code in TextBox.filter().
+			//
+			//		TODO: break this into two methods in 2.0
+			//
+			// tags:
+			//		protected extension
+			if(val === null){ return this._blankValue; }
+			if(typeof val != "string"){ return val; }
+			if(this.trim){
+				val = dojo.trim(val);
+			}
+			if(this.uppercase){
+				val = val.toUpperCase();
+			}
+			if(this.lowercase){
+				val = val.toLowerCase();
+			}
+			if(this.propercase){
+				val = val.replace(/[^\s]+/g, function(word){
+					return word.substring(0,1).toUpperCase() + word.substring(1);
+				});
+			}
+			return val;
+		},
+
+		_setBlurValue: function(){
+			this._setValueAttr(this.get('value'), true);
+		},
+
+		_onBlur: function(e){
+			if(this.disabled){ return; }
+			this._setBlurValue();
+			this.inherited(arguments);
+
+			if(this._selectOnClickHandle){
+				this.disconnect(this._selectOnClickHandle);
+			}
+			if(this.selectOnClick && dojo.isMoz){
+				this.textbox.selectionStart = this.textbox.selectionEnd = undefined; // clear selection so that the next mouse click doesn't reselect
+			}
+			
+			this._updatePlaceHolder();
+		},
+
+		_onFocus: function(/*String*/ by){
+			if(this.disabled || this.readOnly){ return; }
+
+			// Select all text on focus via click if nothing already selected.
+			// Since mouse-up will clear the selection need to defer selection until after mouse-up.
+			// Don't do anything on focus by tabbing into the widget since there's no associated mouse-up event.
+			if(this.selectOnClick && by == "mouse"){
+				this._selectOnClickHandle = this.connect(this.domNode, "onmouseup", function(){
+					// Only select all text on first click; otherwise users would have no way to clear
+					// the selection.
+					this.disconnect(this._selectOnClickHandle);
+
+					// Check if the user selected some text manually (mouse-down, mouse-move, mouse-up)
+					// and if not, then select all the text
+					var textIsNotSelected;
+					if(dojo.isIE){
+						var range = dojo.doc.selection.createRange();
+						var parent = range.parentElement();
+						textIsNotSelected = parent == this.textbox && range.text.length == 0;
+					}else{
+						textIsNotSelected = this.textbox.selectionStart == this.textbox.selectionEnd;
+					}
+					if(textIsNotSelected){
+						dijit.selectInputText(this.textbox);
+					}
+				});
+			}
+
+			this._updatePlaceHolder();
+			
+			this._refreshState();
+			this.inherited(arguments);
+		},
+
+		reset: function(){
+			// Overrides dijit._FormWidget.reset().
+			// Additionally resets the displayed textbox value to ''
+			this.textbox.value = '';
+			this.inherited(arguments);
+		}
+	}
+);
+
+dijit.selectInputText = function(/*DomNode*/element, /*Number?*/ start, /*Number?*/ stop){
+	// summary:
+	//		Select text in the input element argument, from start (default 0), to stop (default end).
+
+	// TODO: use functions in _editor/selection.js?
+	var _window = dojo.global;
+	var _document = dojo.doc;
+	element = dojo.byId(element);
+	if(isNaN(start)){ start = 0; }
+	if(isNaN(stop)){ stop = element.value ? element.value.length : 0; }
+	dijit.focus(element);
+	if(_document["selection"] && dojo.body()["createTextRange"]){ // IE
+		if(element.createTextRange){
+			var range = element.createTextRange();
+			with(range){
+				collapse(true);
+				moveStart("character", -99999); // move to 0
+				moveStart("character", start); // delta from 0 is the correct position
+				moveEnd("character", stop-start);
+				select();
+			}
+		}
+	}else if(_window["getSelection"]){
+		if(element.setSelectionRange){
+			element.setSelectionRange(start, stop);
+		}
+	}
+};
+
+}
+
+if(!dojo._hasResource["dijit.Tooltip"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit.Tooltip"] = true;
+dojo.provide("dijit.Tooltip");
+
+
+
+
+dojo.declare(
+	"dijit._MasterTooltip",
+	[dijit._Widget, dijit._Templated],
+	{
+		// summary:
+		//		Internal widget that holds the actual tooltip markup,
+		//		which occurs once per page.
+		//		Called by Tooltip widgets which are just containers to hold
+		//		the markup
+		// tags:
+		//		protected
+
+		// duration: Integer
+		//		Milliseconds to fade in/fade out
+		duration: dijit.defaultDuration,
+
+		templateString: dojo.cache("dijit", "templates/Tooltip.html", "<div class=\"dijitTooltip dijitTooltipLeft\" id=\"dojoTooltip\">\n\t<div class=\"dijitTooltipContainer dijitTooltipContents\" dojoAttachPoint=\"containerNode\" waiRole='alert'></div>\n\t<div class=\"dijitTooltipConnector\"></div>\n</div>\n"),
+
+		postCreate: function(){
+			dojo.body().appendChild(this.domNode);
+
+			this.bgIframe = new dijit.BackgroundIframe(this.domNode);
+
+			// Setup fade-in and fade-out functions.
+			this.fadeIn = dojo.fadeIn({ node: this.domNode, duration: this.duration, onEnd: dojo.hitch(this, "_onShow") });
+			this.fadeOut = dojo.fadeOut({ node: this.domNode, duration: this.duration, onEnd: dojo.hitch(this, "_onHide") });
+
+		},
+
+		show: function(/*String*/ innerHTML, /*DomNode*/ aroundNode, /*String[]?*/ position, /*Boolean*/ rtl){
+			// summary:
+			//		Display tooltip w/specified contents to right of specified node
+			//		(To left if there's no space on the right, or if rtl == true)
+
+			if(this.aroundNode && this.aroundNode === aroundNode){
+				return;
+			}
+
+			if(this.fadeOut.status() == "playing"){
+				// previous tooltip is being hidden; wait until the hide completes then show new one
+				this._onDeck=arguments;
+				return;
+			}
+			this.containerNode.innerHTML=innerHTML;
+
+			var pos = dijit.placeOnScreenAroundElement(this.domNode, aroundNode, dijit.getPopupAroundAlignment((position && position.length) ? position : dijit.Tooltip.defaultPosition, !rtl), dojo.hitch(this, "orient"));
+
+			// show it
+			dojo.style(this.domNode, "opacity", 0);
+			this.fadeIn.play();
+			this.isShowingNow = true;
+			this.aroundNode = aroundNode;
+		},
+
+		orient: function(/* DomNode */ node, /* String */ aroundCorner, /* String */ tooltipCorner){
+			// summary:
+			//		Private function to set CSS for tooltip node based on which position it's in.
+			//		This is called by the dijit popup code.
+			// tags:
+			//		protected
+
+			node.className = "dijitTooltip " +
+				{
+					"BL-TL": "dijitTooltipBelow dijitTooltipABLeft",
+					"TL-BL": "dijitTooltipAbove dijitTooltipABLeft",
+					"BR-TR": "dijitTooltipBelow dijitTooltipABRight",
+					"TR-BR": "dijitTooltipAbove dijitTooltipABRight",
+					"BR-BL": "dijitTooltipRight",
+					"BL-BR": "dijitTooltipLeft"
+				}[aroundCorner + "-" + tooltipCorner];
+		},
+
+		_onShow: function(){
+			// summary:
+			//		Called at end of fade-in operation
+			// tags:
+			//		protected
+			if(dojo.isIE){
+				// the arrow won't show up on a node w/an opacity filter
+				this.domNode.style.filter="";
+			}
+		},
+
+		hide: function(aroundNode){
+			// summary:
+			//		Hide the tooltip
+			if(this._onDeck && this._onDeck[1] == aroundNode){
+				// this hide request is for a show() that hasn't even started yet;
+				// just cancel the pending show()
+				this._onDeck=null;
+			}else if(this.aroundNode === aroundNode){
+				// this hide request is for the currently displayed tooltip
+				this.fadeIn.stop();
+				this.isShowingNow = false;
+				this.aroundNode = null;
+				this.fadeOut.play();
+			}else{
+				// just ignore the call, it's for a tooltip that has already been erased
+			}
+		},
+
+		_onHide: function(){
+			// summary:
+			//		Called at end of fade-out operation
+			// tags:
+			//		protected
+
+			this.domNode.style.cssText="";	// to position offscreen again
+			this.containerNode.innerHTML="";
+			if(this._onDeck){
+				// a show request has been queued up; do it now
+				this.show.apply(this, this._onDeck);
+				this._onDeck=null;
+			}
+		}
+
+	}
+);
+
+dijit.showTooltip = function(/*String*/ innerHTML, /*DomNode*/ aroundNode, /*String[]?*/ position, /*Boolean*/ rtl){
+	// summary:
+	//		Display tooltip w/specified contents in specified position.
+	//		See description of dijit.Tooltip.defaultPosition for details on position parameter.
+	//		If position is not specified then dijit.Tooltip.defaultPosition is used.
+	if(!dijit._masterTT){ dijit._masterTT = new dijit._MasterTooltip(); }
+	return dijit._masterTT.show(innerHTML, aroundNode, position, rtl);
+};
+
+dijit.hideTooltip = function(aroundNode){
+	// summary:
+	//		Hide the tooltip
+	if(!dijit._masterTT){ dijit._masterTT = new dijit._MasterTooltip(); }
+	return dijit._masterTT.hide(aroundNode);
+};
+
+dojo.declare(
+	"dijit.Tooltip",
+	dijit._Widget,
+	{
+		// summary:
+		//		Pops up a tooltip (a help message) when you hover over a node.
+
+		// label: String
+		//		Text to display in the tooltip.
+		//		Specified as innerHTML when creating the widget from markup.
+		label: "",
+
+		// showDelay: Integer
+		//		Number of milliseconds to wait after hovering over/focusing on the object, before
+		//		the tooltip is displayed.
+		showDelay: 400,
+
+		// connectId: [const] String[]
+		//		Id's of domNodes to attach the tooltip to.
+		//		When user hovers over any of the specified dom nodes, the tooltip will appear.
+		//
+		//		Note: Currently connectId can only be specified on initialization, it cannot
+		//		be changed via attr('connectId', ...)
+		//
+		//		Note: in 2.0 this will be renamed to connectIds for less confusion.
+		connectId: [],
+
+		// position: String[]
+		//		See description of `dijit.Tooltip.defaultPosition` for details on position parameter.
+		position: [],
+
+		constructor: function(){
+			// Map id's of nodes I'm connected to to a list of the this.connect() handles
+			this._nodeConnectionsById = {};
+		},
+
+		_setConnectIdAttr: function(newIds){
+			for(var oldId in this._nodeConnectionsById){
+				this.removeTarget(oldId);
+			}
+			dojo.forEach(dojo.isArrayLike(newIds) ? newIds : [newIds], this.addTarget, this);
+		},
+
+		_getConnectIdAttr: function(){
+			var ary = [];
+			for(var id in this._nodeConnectionsById){
+				ary.push(id);
+			}
+			return ary;
+		},
+
+		addTarget: function(/*DOMNODE || String*/ id){
+			// summary:
+			//		Attach tooltip to specified node, if it's not already connected
+			var node = dojo.byId(id);
+			if(!node){ return; }
+			if(node.id in this._nodeConnectionsById){ return; }//Already connected
+
+			this._nodeConnectionsById[node.id] = [
+				this.connect(node, "onmouseenter", "_onTargetMouseEnter"),
+				this.connect(node, "onmouseleave", "_onTargetMouseLeave"),
+				this.connect(node, "onfocus", "_onTargetFocus"),
+				this.connect(node, "onblur", "_onTargetBlur")
+			];
+		},
+
+		removeTarget: function(/*DOMNODE || String*/ node){
+			// summary:
+			//		Detach tooltip from specified node
+
+			// map from DOMNode back to plain id string
+			var id = node.id || node;
+
+			if(id in this._nodeConnectionsById){
+				dojo.forEach(this._nodeConnectionsById[id], this.disconnect, this);
+				delete this._nodeConnectionsById[id];
+			}
+		},
+
+		postCreate: function(){
+			dojo.addClass(this.domNode,"dijitTooltipData");
+		},
+
+		startup: function(){
+			this.inherited(arguments);
+
+			// If this tooltip was created in a template, or for some other reason the specified connectId[s]
+			// didn't exist during the widget's initialization, then connect now.
+			var ids = this.connectId;
+			dojo.forEach(dojo.isArrayLike(ids) ? ids : [ids], this.addTarget, this);
+		},
+
+		_onTargetMouseEnter: function(/*Event*/ e){
+			// summary:
+			//		Handler for mouseenter event on the target node
+			// tags:
+			//		private
+			this._onHover(e);
+		},
+
+		_onTargetMouseLeave: function(/*Event*/ e){
+			// summary:
+			//		Handler for mouseleave event on the target node
+			// tags:
+			//		private
+			this._onUnHover(e);
+		},
+
+		_onTargetFocus: function(/*Event*/ e){
+			// summary:
+			//		Handler for focus event on the target node
+			// tags:
+			//		private
+
+			this._focus = true;
+			this._onHover(e);
+		},
+
+		_onTargetBlur: function(/*Event*/ e){
+			// summary:
+			//		Handler for blur event on the target node
+			// tags:
+			//		private
+
+			this._focus = false;
+			this._onUnHover(e);
+		},
+
+		_onHover: function(/*Event*/ e){
+			// summary:
+			//		Despite the name of this method, it actually handles both hover and focus
+			//		events on the target node, setting a timer to show the tooltip.
+			// tags:
+			//		private
+			if(!this._showTimer){
+				var target = e.target;
+				this._showTimer = setTimeout(dojo.hitch(this, function(){this.open(target)}), this.showDelay);
+			}
+		},
+
+		_onUnHover: function(/*Event*/ e){
+			// summary:
+			//		Despite the name of this method, it actually handles both mouseleave and blur
+			//		events on the target node, hiding the tooltip.
+			// tags:
+			//		private
+
+			// keep a tooltip open if the associated element still has focus (even though the
+			// mouse moved away)
+			if(this._focus){ return; }
+
+			if(this._showTimer){
+				clearTimeout(this._showTimer);
+				delete this._showTimer;
+			}
+			this.close();
+		},
+
+		open: function(/*DomNode*/ target){
+ 			// summary:
+			//		Display the tooltip; usually not called directly.
+			// tags:
+			//		private
+
+			if(this._showTimer){
+				clearTimeout(this._showTimer);
+				delete this._showTimer;
+			}
+			dijit.showTooltip(this.label || this.domNode.innerHTML, target, this.position, !this.isLeftToRight());
+
+			this._connectNode = target;
+			this.onShow(target, this.position);
+		},
+
+		close: function(){
+			// summary:
+			//		Hide the tooltip or cancel timer for show of tooltip
+			// tags:
+			//		private
+
+			if(this._connectNode){
+				// if tooltip is currently shown
+				dijit.hideTooltip(this._connectNode);
+				delete this._connectNode;
+				this.onHide();
+			}
+			if(this._showTimer){
+				// if tooltip is scheduled to be shown (after a brief delay)
+				clearTimeout(this._showTimer);
+				delete this._showTimer;
+			}
+		},
+
+		onShow: function(target, position){
+			// summary:
+			//		Called when the tooltip is shown
+			// tags:
+			//		callback
+		},
+
+		onHide: function(){
+			// summary:
+			//		Called when the tooltip is hidden
+			// tags:
+			//		callback
+		},
+
+		uninitialize: function(){
+			this.close();
+			this.inherited(arguments);
+		}
+	}
+);
+
+// dijit.Tooltip.defaultPosition: String[]
+//		This variable controls the position of tooltips, if the position is not specified to
+//		the Tooltip widget or *TextBox widget itself.  It's an array of strings with the following values:
+//
+//			* before: places tooltip to the left of the target node/widget, or to the right in
+//			  the case of RTL scripts like Hebrew and Arabic
+//			* after: places tooltip to the right of the target node/widget, or to the left in
+//			  the case of RTL scripts like Hebrew and Arabic
+//			* above: tooltip goes above target node
+//			* below: tooltip goes below target node
+//
+//		The list is positions is tried, in order, until a position is found where the tooltip fits
+//		within the viewport.
+//
+//		Be careful setting this parameter.  A value of "above" may work fine until the user scrolls
+//		the screen so that there's no room above the target node.   Nodes with drop downs, like
+//		DropDownButton or FilteringSelect, are especially problematic, in that you need to be sure
+//		that the drop down and tooltip don't overlap, even when the viewport is scrolled so that there
+//		is only room below (or above) the target node, but not both.
+dijit.Tooltip.defaultPosition = ["after", "before"];
+
+}
+
+if(!dojo._hasResource["dijit.form.ValidationTextBox"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit.form.ValidationTextBox"] = true;
+dojo.provide("dijit.form.ValidationTextBox");
+
+
+
+
+
+
+
+
+/*=====
+	dijit.form.ValidationTextBox.__Constraints = function(){
+		// locale: String
+		//		locale used for validation, picks up value from this widget's lang attribute
+		// _flags_: anything
+		//		various flags passed to regExpGen function
+		this.locale = "";
+		this._flags_ = "";
+	}
+=====*/
+
+dojo.declare(
+	"dijit.form.ValidationTextBox",
+	dijit.form.TextBox,
+	{
+		// summary:
+		//		Base class for textbox widgets with the ability to validate content of various types and provide user feedback.
+		// tags:
+		//		protected
+
+		templateString: dojo.cache("dijit.form", "templates/ValidationTextBox.html", "<div class=\"dijit dijitReset dijitInlineTable dijitLeft\"\n\tid=\"widget_${id}\" waiRole=\"presentation\"\n\t><div class='dijitReset dijitValidationContainer'\n\t\t><input class=\"dijitReset dijitInputField dijitValidationIcon dijitValidationInner\" value=\"&Chi; \" type=\"text\" tabIndex=\"-1\" readOnly waiRole=\"presentation\"\n\t/></div\n\t><div class=\"dijitReset dijitInputField dijitInputContainer\"\n\t\t><input class=\"dijitReset dijitInputInner\" dojoAttachPoint='textbox,focusNode' autocomplete=\"off\"\n\t\t\t${!nameAttrSetting} type='${type}'\n\t/></div\n></div>\n"),
+		baseClass: "dijitTextBox dijitValidationTextBox",
+
+		// required: Boolean
+		//		User is required to enter data into this field.
+		required: false,
+
+		// promptMessage: String
+		//		If defined, display this hint string immediately on focus to the textbox, if empty.
+		//		Think of this like a tooltip that tells the user what to do, not an error message
+		//		that tells the user what they've done wrong.
+		//
+		//		Message disappears when user starts typing.
+		promptMessage: "",
+
+		// invalidMessage: String
+		// 		The message to display if value is invalid.
+		//		The translated string value is read from the message file by default.
+		// 		Set to "" to use the promptMessage instead.
+		invalidMessage: "$_unset_$",
+
+		// missingMessage: String
+		// 		The message to display if value is empty and the field is required.
+		//		The translated string value is read from the message file by default.
+		// 		Set to "" to use the invalidMessage instead.
+		missingMessage: "$_unset_$",
+
+		// constraints: dijit.form.ValidationTextBox.__Constraints
+		//		user-defined object needed to pass parameters to the validator functions
+		constraints: {},
+
+		// regExp: [extension protected] String
+		//		regular expression string used to validate the input
+		//		Do not specify both regExp and regExpGen
+		regExp: ".*",
+
+		regExpGen: function(/*dijit.form.ValidationTextBox.__Constraints*/constraints){
+			// summary:
+			//		Overridable function used to generate regExp when dependent on constraints.
+			//		Do not specify both regExp and regExpGen.
+			// tags:
+			//		extension protected
+			return this.regExp; // String
+		},
+
+		// state: [readonly] String
+		//		Shows current state (ie, validation result) of input (Normal, Warning, or Error)
+		state: "",
+
+		// tooltipPosition: String[]
+		//		See description of `dijit.Tooltip.defaultPosition` for details on this parameter.
+		tooltipPosition: [],
+
+		_setValueAttr: function(){
+			// summary:
+			//		Hook so attr('value', ...) works.
+			this.inherited(arguments);
+			this.validate(this._focused);
+		},
+
+		validator: function(/*anything*/value, /*dijit.form.ValidationTextBox.__Constraints*/constraints){
+			// summary:
+			//		Overridable function used to validate the text input against the regular expression.
+			// tags:
+			//		protected
+			return (new RegExp("^(?:" + this.regExpGen(constraints) + ")"+(this.required?"":"?")+"$")).test(value) &&
+				(!this.required || !this._isEmpty(value)) &&
+				(this._isEmpty(value) || this.parse(value, constraints) !== undefined); // Boolean
+		},
+
+		_isValidSubset: function(){
+			// summary:
+			//		Returns true if the value is either already valid or could be made valid by appending characters.
+			//		This is used for validation while the user [may be] still typing.
+			return this.textbox.value.search(this._partialre) == 0;
+		},
+
+		isValid: function(/*Boolean*/ isFocused){
+			// summary:
+			//		Tests if value is valid.
+			//		Can override with your own routine in a subclass.
+			// tags:
+			//		protected
+			return this.validator(this.textbox.value, this.constraints);
+		},
+
+		_isEmpty: function(value){
+			// summary:
+			//		Checks for whitespace
+			return /^\s*$/.test(value); // Boolean
+		},
+
+		getErrorMessage: function(/*Boolean*/ isFocused){
+			// summary:
+			//		Return an error message to show if appropriate
+			// tags:
+			//		protected
+			return (this.required && this._isEmpty(this.textbox.value)) ? this.missingMessage : this.invalidMessage; // String
+		},
+
+		getPromptMessage: function(/*Boolean*/ isFocused){
+			// summary:
+			//		Return a hint message to show when widget is first focused
+			// tags:
+			//		protected
+			return this.promptMessage; // String
+		},
+
+		_maskValidSubsetError: true,
+		validate: function(/*Boolean*/ isFocused){
+			// summary:
+			//		Called by oninit, onblur, and onkeypress.
+			// description:
+			//		Show missing or invalid messages if appropriate, and highlight textbox field.
+			// tags:
+			//		protected
+			var message = "";
+			var isValid = this.disabled || this.isValid(isFocused);
+			if(isValid){ this._maskValidSubsetError = true; }
+			var isEmpty = this._isEmpty(this.textbox.value);
+			var isValidSubset = !isValid && !isEmpty && isFocused && this._isValidSubset();
+			this.state = ((isValid || ((!this._hasBeenBlurred || isFocused) && isEmpty) || isValidSubset) && this._maskValidSubsetError) ? "" : "Error";
+			if(this.state == "Error"){ this._maskValidSubsetError = isFocused; } // we want the error to show up afer a blur and refocus
+			this._setStateClass();
+			dijit.setWaiState(this.focusNode, "invalid", isValid ? "false" : "true");
+			if(isFocused){
+				if(this.state == "Error"){
+					message = this.getErrorMessage(true);
+				}else{
+					message = this.getPromptMessage(true); // show the prompt whever there's no error
+				}
+				this._maskValidSubsetError = true; // since we're focused, always mask warnings
+			}
+			this.displayMessage(message);
+			return isValid;
+		},
+
+		// _message: String
+		//		Currently displayed message
+		_message: "",
+
+		displayMessage: function(/*String*/ message){
+			// summary:
+			//		Overridable method to display validation errors/hints.
+			//		By default uses a tooltip.
+			// tags:
+			//		extension
+			if(this._message == message){ return; }
+			this._message = message;
+			dijit.hideTooltip(this.domNode);
+			if(message){
+				dijit.showTooltip(message, this.domNode, this.tooltipPosition, !this.isLeftToRight());
+			}
+		},
+
+		_refreshState: function(){
+			// Overrides TextBox._refreshState()
+			this.validate(this._focused);
+			this.inherited(arguments);
+		},
+
+		//////////// INITIALIZATION METHODS ///////////////////////////////////////
+
+		constructor: function(){
+			this.constraints = {};
+		},
+
+		_setConstraintsAttr: function(/* Object */ constraints){
+			if(!constraints.locale && this.lang){
+				constraints.locale = this.lang;
+			}
+			this.constraints = constraints;
+			this._computePartialRE();
+		},
+
+		_computePartialRE: function(){
+			var p = this.regExpGen(this.constraints);
+			this.regExp = p;
+			var partialre = "";
+			// parse the regexp and produce a new regexp that matches valid subsets
+			// if the regexp is .* then there's no use in matching subsets since everything is valid
+			if(p != ".*"){ this.regExp.replace(/\\.|\[\]|\[.*?[^\\]{1}\]|\{.*?\}|\(\?[=:!]|./g,
+				function (re){
+					switch(re.charAt(0)){
+						case '{':
+						case '+':
+						case '?':
+						case '*':
+						case '^':
+						case '$':
+						case '|':
+						case '(':
+							partialre += re;
+							break;
+						case ")":
+							partialre += "|$)";
+							break;
+						 default:
+							partialre += "(?:"+re+"|$)";
+							break;
+					}
+				}
+			);}
+			try{ // this is needed for now since the above regexp parsing needs more test verification
+				"".search(partialre);
+			}catch(e){ // should never be here unless the original RE is bad or the parsing is bad
+				partialre = this.regExp;
+				console.warn('RegExp error in ' + this.declaredClass + ': ' + this.regExp);
+			} // should never be here unless the original RE is bad or the parsing is bad
+			this._partialre = "^(?:" + partialre + ")$";
+		},
+
+		postMixInProperties: function(){
+			this.inherited(arguments);
+			this.messages = dojo.i18n.getLocalization("dijit.form", "validate", this.lang);
+			if(this.invalidMessage == "$_unset_$"){ this.invalidMessage = this.messages.invalidMessage; }
+			if(!this.invalidMessage){ this.invalidMessage = this.promptMessage; }
+			if(this.missingMessage == "$_unset_$"){ this.missingMessage = this.messages.missingMessage; }
+			if(!this.missingMessage){ this.missingMessage = this.invalidMessage; }
+			this._setConstraintsAttr(this.constraints); // this needs to happen now (and later) due to codependency on _set*Attr calls attachPoints
+		},
+
+		_setDisabledAttr: function(/*Boolean*/ value){
+			this.inherited(arguments);	// call FormValueWidget._setDisabledAttr()
+			this._refreshState();
+		},
+
+		_setRequiredAttr: function(/*Boolean*/ value){
+			this.required = value;
+			dijit.setWaiState(this.focusNode, "required", value);
+			this._refreshState();
+		},
+
+		reset:function(){
+			// Overrides dijit.form.TextBox.reset() by also
+			// hiding errors about partial matches
+			this._maskValidSubsetError = true;
+			this.inherited(arguments);
+		},
+
+		_onBlur: function(){
+			this.displayMessage('');
+			this.inherited(arguments);
+		}
+	}
+);
+
+dojo.declare(
+	"dijit.form.MappedTextBox",
+	dijit.form.ValidationTextBox,
+	{
+		// summary:
+		//		A dijit.form.ValidationTextBox subclass which provides a base class for widgets that have
+		//		a visible formatted display value, and a serializable
+		//		value in a hidden input field which is actually sent to the server.
+		// description:
+		//		The visible display may
+		//		be locale-dependent and interactive.  The value sent to the server is stored in a hidden
+		//		input field which uses the `name` attribute declared by the original widget.  That value sent
+		//		to the server is defined by the dijit.form.MappedTextBox.serialize method and is typically
+		//		locale-neutral.
+		// tags:
+		//		protected
+
+		postMixInProperties: function(){
+			this.inherited(arguments);
+
+			// we want the name attribute to go to the hidden <input>, not the displayed <input>,
+			// so override _FormWidget.postMixInProperties() setting of nameAttrSetting
+			this.nameAttrSetting = "";
+		},
+
+		serialize: function(/*anything*/val, /*Object?*/options){
+			// summary:
+			//		Overridable function used to convert the attr('value') result to a canonical
+			//		(non-localized) string.  For example, will print dates in ISO format, and
+			//		numbers the same way as they are represented in javascript.
+			// tags:
+			//		protected extension
+			return val.toString ? val.toString() : ""; // String
+		},
+
+		toString: function(){
+			// summary:
+			//		Returns widget as a printable string using the widget's value
+			// tags:
+			//		protected
+			var val = this.filter(this.get('value')); // call filter in case value is nonstring and filter has been customized
+			return val != null ? (typeof val == "string" ? val : this.serialize(val, this.constraints)) : ""; // String
+		},
+
+		validate: function(){
+			// Overrides `dijit.form.TextBox.validate`
+			this.valueNode.value = this.toString();
+			return this.inherited(arguments);
+		},
+
+		buildRendering: function(){
+			// Overrides `dijit._Templated.buildRendering`
+
+			this.inherited(arguments);
+
+			// Create a hidden <input> node with the serialized value used for submit
+			// (as opposed to the displayed value).
+			// Passing in name as markup rather than calling dojo.create() with an attrs argument
+			// to make dojo.query(input[name=...]) work on IE. (see #8660)
+			this.valueNode = dojo.place("<input type='hidden'" + (this.name ? " name='" + this.name + "'" : "") + ">", this.textbox, "after");
+		},
+
+		reset:function(){
+			// Overrides `dijit.form.ValidationTextBox.reset` to
+			// reset the hidden textbox value to ''
+			this.valueNode.value = '';
+			this.inherited(arguments);
+		}
+	}
+);
+
+/*=====
+	dijit.form.RangeBoundTextBox.__Constraints = function(){
+		// min: Number
+		//		Minimum signed value.  Default is -Infinity
+		// max: Number
+		//		Maximum signed value.  Default is +Infinity
+		this.min = min;
+		this.max = max;
+	}
+=====*/
+
+dojo.declare(
+	"dijit.form.RangeBoundTextBox",
+	dijit.form.MappedTextBox,
+	{
+		// summary:
+		//		Base class for textbox form widgets which defines a range of valid values.
+
+		// rangeMessage: String
+		//		The message to display if value is out-of-range
+		rangeMessage: "",
+
+		/*=====
+		// constraints: dijit.form.RangeBoundTextBox.__Constraints
+		constraints: {},
+		======*/
+
+		rangeCheck: function(/*Number*/ primitive, /*dijit.form.RangeBoundTextBox.__Constraints*/ constraints){
+			// summary:
+			//		Overridable function used to validate the range of the numeric input value.
+			// tags:
+			//		protected
+			return	("min" in constraints? (this.compare(primitive,constraints.min) >= 0) : true) &&
+				("max" in constraints? (this.compare(primitive,constraints.max) <= 0) : true); // Boolean
+		},
+
+		isInRange: function(/*Boolean*/ isFocused){
+			// summary:
+			//		Tests if the value is in the min/max range specified in constraints
+			// tags:
+			//		protected
+			return this.rangeCheck(this.get('value'), this.constraints);
+		},
+
+		_isDefinitelyOutOfRange: function(){
+			// summary:
+			//		Returns true if the value is out of range and will remain
+			//		out of range even if the user types more characters
+			var val = this.get('value');
+			var isTooLittle = false;
+			var isTooMuch = false;
+			if("min" in this.constraints){
+				var min = this.constraints.min;
+				min = this.compare(val, ((typeof min == "number") && min >= 0 && val !=0) ? 0 : min);
+				isTooLittle = (typeof min == "number") && min < 0;
+			}
+			if("max" in this.constraints){
+				var max = this.constraints.max;
+				max = this.compare(val, ((typeof max != "number") || max > 0) ? max : 0);
+				isTooMuch = (typeof max == "number") && max > 0;
+			}
+			return isTooLittle || isTooMuch;
+		},
+
+		_isValidSubset: function(){
+			// summary:
+			//		Overrides `dijit.form.ValidationTextBox._isValidSubset`.
+			//		Returns true if the input is syntactically valid, and either within
+			//		range or could be made in range by more typing.
+			return this.inherited(arguments) && !this._isDefinitelyOutOfRange();
+		},
+
+		isValid: function(/*Boolean*/ isFocused){
+			// Overrides dijit.form.ValidationTextBox.isValid to check that the value is also in range.
+			return this.inherited(arguments) &&
+				((this._isEmpty(this.textbox.value) && !this.required) || this.isInRange(isFocused)); // Boolean
+		},
+
+		getErrorMessage: function(/*Boolean*/ isFocused){
+			// Overrides dijit.form.ValidationTextBox.getErrorMessage to print "out of range" message if appropriate
+			var v = this.get('value');
+			if(v !== null && v !== '' && v !== undefined && (typeof v != "number" || !isNaN(v)) && !this.isInRange(isFocused)){ // don't check isInRange w/o a real value
+				return this.rangeMessage; // String
+			}
+			return this.inherited(arguments);
+		},
+
+		postMixInProperties: function(){
+			this.inherited(arguments);
+			if(!this.rangeMessage){
+				this.messages = dojo.i18n.getLocalization("dijit.form", "validate", this.lang);
+				this.rangeMessage = this.messages.rangeMessage;
+			}
+		},
+
+		_setConstraintsAttr: function(/* Object */ constraints){
+			this.inherited(arguments);
+			if(this.focusNode){ // not set when called from postMixInProperties
+				if(this.constraints.min !== undefined){
+					dijit.setWaiState(this.focusNode, "valuemin", this.constraints.min);
+				}else{
+					dijit.removeWaiState(this.focusNode, "valuemin");
+				}
+				if(this.constraints.max !== undefined){
+					dijit.setWaiState(this.focusNode, "valuemax", this.constraints.max);
+				}else{
+					dijit.removeWaiState(this.focusNode, "valuemax");
+				}
+			}
+		},
+
+		_setValueAttr: function(/*Number*/ value, /*Boolean?*/ priorityChange){
+			// summary:
+			//		Hook so attr('value', ...) works.
+
+			dijit.setWaiState(this.focusNode, "valuenow", value);
+			this.inherited(arguments);
+		}
+	}
+);
+
+}
+
+if(!dojo._hasResource["dwb.ui.ValidationTextBox"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dwb.ui.ValidationTextBox"] = true;
+dojo.provide("dwb.ui.ValidationTextBox");
+
+
+
+/* Just override the template to include a character '!', rather than using an image */
+dojo.declare("dwb.ui.ValidationTextBox", dijit.form.ValidationTextBox, {
+	templateString: dojo.cache("dwb.ui", "templates/ValidationTextBox.html", "<div class=\"dijit dijitReset dijitInlineTable dijitLeft\"\n\tid=\"widget_${id}\" role=\"presentation\"\n\t><div class='dijitReset dijitValidationContainer'\n\t\t><input class=\"dijitReset dijitInputField dijitValidationIcon dijitValidationInner\" value=\"&#935;\" type=\"text\" tabIndex=\"-1\" readonly=\"readonly\" role=\"presentation\"\n\t/>!</div\n\t><div class=\"dijitReset dijitInputField dijitInputContainer\"\n\t\t><input class=\"dijitReset dijitInputInner\" dojoAttachPoint='textbox,focusNode' autocomplete=\"off\"\n\t\t\t${!nameAttrSetting} type='${type}'\n\t/></div\n></div>\n"),
+});
+
+}
+
 if(!dojo._hasResource["dojo.DeferredList"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
 dojo._hasResource["dojo.DeferredList"] = true;
 dojo.provide("dojo.DeferredList");
@@ -7295,9 +9182,722 @@ dojo.DeferredList.prototype.gatherResults= function(deferredList){
 
 }
 
+if(!dojo._hasResource["dojo.fx.Toggler"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dojo.fx.Toggler"] = true;
+dojo.provide("dojo.fx.Toggler");
+
+dojo.declare("dojo.fx.Toggler", null, {
+	// summary:
+	//		A simple `dojo.Animation` toggler API.
+	//
+	// description:
+	//		class constructor for an animation toggler. It accepts a packed
+	//		set of arguments about what type of animation to use in each
+	//		direction, duration, etc. All available members are mixed into 
+	//		these animations from the constructor (for example, `node`, 
+	//		`showDuration`, `hideDuration`). 
+	//
+	// example:
+	//	|	var t = new dojo.fx.Toggler({
+	//	|		node: "nodeId",
+	//	|		showDuration: 500,
+	//	|		// hideDuration will default to "200"
+	//	|		showFunc: dojo.fx.wipeIn, 
+	//	|		// hideFunc will default to "fadeOut"
+	//	|	});
+	//	|	t.show(100); // delay showing for 100ms
+	//	|	// ...time passes...
+	//	|	t.hide();
+
+	// node: DomNode
+	//		the node to target for the showing and hiding animations
+	node: null,
+
+	// showFunc: Function
+	//		The function that returns the `dojo.Animation` to show the node
+	showFunc: dojo.fadeIn,
+
+	// hideFunc: Function	
+	//		The function that returns the `dojo.Animation` to hide the node
+	hideFunc: dojo.fadeOut,
+
+	// showDuration:
+	//		Time in milliseconds to run the show Animation
+	showDuration: 200,
+
+	// hideDuration:
+	//		Time in milliseconds to run the hide Animation
+	hideDuration: 200,
+
+	// FIXME: need a policy for where the toggler should "be" the next
+	// time show/hide are called if we're stopped somewhere in the
+	// middle.
+	// FIXME: also would be nice to specify individual showArgs/hideArgs mixed into
+	// each animation individually. 
+	// FIXME: also would be nice to have events from the animations exposed/bridged
+
+	/*=====
+	_showArgs: null,
+	_showAnim: null,
+
+	_hideArgs: null,
+	_hideAnim: null,
+
+	_isShowing: false,
+	_isHiding: false,
+	=====*/
+
+	constructor: function(args){
+		var _t = this;
+
+		dojo.mixin(_t, args);
+		_t.node = args.node;
+		_t._showArgs = dojo.mixin({}, args);
+		_t._showArgs.node = _t.node;
+		_t._showArgs.duration = _t.showDuration;
+		_t.showAnim = _t.showFunc(_t._showArgs);
+
+		_t._hideArgs = dojo.mixin({}, args);
+		_t._hideArgs.node = _t.node;
+		_t._hideArgs.duration = _t.hideDuration;
+		_t.hideAnim = _t.hideFunc(_t._hideArgs);
+
+		dojo.connect(_t.showAnim, "beforeBegin", dojo.hitch(_t.hideAnim, "stop", true));
+		dojo.connect(_t.hideAnim, "beforeBegin", dojo.hitch(_t.showAnim, "stop", true));
+	},
+
+	show: function(delay){
+		// summary: Toggle the node to showing
+		// delay: Integer?
+		//		Ammount of time to stall playing the show animation
+		return this.showAnim.play(delay || 0);
+	},
+
+	hide: function(delay){
+		// summary: Toggle the node to hidden
+		// delay: Integer?
+		//		Ammount of time to stall playing the hide animation
+		return this.hideAnim.play(delay || 0);
+	}
+});
+
+}
+
+if(!dojo._hasResource["dojo.fx"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dojo.fx"] = true;
+dojo.provide("dojo.fx");
+ // FIXME: remove this back-compat require in 2.0 
+/*=====
+dojo.fx = {
+	// summary: Effects library on top of Base animations
+};
+=====*/
+(function(){
+	
+	var d = dojo, 
+		_baseObj = {
+			_fire: function(evt, args){
+				if(this[evt]){
+					this[evt].apply(this, args||[]);
+				}
+				return this;
+			}
+		};
+
+	var _chain = function(animations){
+		this._index = -1;
+		this._animations = animations||[];
+		this._current = this._onAnimateCtx = this._onEndCtx = null;
+
+		this.duration = 0;
+		d.forEach(this._animations, function(a){
+			this.duration += a.duration;
+			if(a.delay){ this.duration += a.delay; }
+		}, this);
+	};
+	d.extend(_chain, {
+		_onAnimate: function(){
+			this._fire("onAnimate", arguments);
+		},
+		_onEnd: function(){
+			d.disconnect(this._onAnimateCtx);
+			d.disconnect(this._onEndCtx);
+			this._onAnimateCtx = this._onEndCtx = null;
+			if(this._index + 1 == this._animations.length){
+				this._fire("onEnd");
+			}else{
+				// switch animations
+				this._current = this._animations[++this._index];
+				this._onAnimateCtx = d.connect(this._current, "onAnimate", this, "_onAnimate");
+				this._onEndCtx = d.connect(this._current, "onEnd", this, "_onEnd");
+				this._current.play(0, true);
+			}
+		},
+		play: function(/*int?*/ delay, /*Boolean?*/ gotoStart){
+			if(!this._current){ this._current = this._animations[this._index = 0]; }
+			if(!gotoStart && this._current.status() == "playing"){ return this; }
+			var beforeBegin = d.connect(this._current, "beforeBegin", this, function(){
+					this._fire("beforeBegin");
+				}),
+				onBegin = d.connect(this._current, "onBegin", this, function(arg){
+					this._fire("onBegin", arguments);
+				}),
+				onPlay = d.connect(this._current, "onPlay", this, function(arg){
+					this._fire("onPlay", arguments);
+					d.disconnect(beforeBegin);
+					d.disconnect(onBegin);
+					d.disconnect(onPlay);
+				});
+			if(this._onAnimateCtx){
+				d.disconnect(this._onAnimateCtx);
+			}
+			this._onAnimateCtx = d.connect(this._current, "onAnimate", this, "_onAnimate");
+			if(this._onEndCtx){
+				d.disconnect(this._onEndCtx);
+			}
+			this._onEndCtx = d.connect(this._current, "onEnd", this, "_onEnd");
+			this._current.play.apply(this._current, arguments);
+			return this;
+		},
+		pause: function(){
+			if(this._current){
+				var e = d.connect(this._current, "onPause", this, function(arg){
+						this._fire("onPause", arguments);
+						d.disconnect(e);
+					});
+				this._current.pause();
+			}
+			return this;
+		},
+		gotoPercent: function(/*Decimal*/percent, /*Boolean?*/ andPlay){
+			this.pause();
+			var offset = this.duration * percent;
+			this._current = null;
+			d.some(this._animations, function(a){
+				if(a.duration <= offset){
+					this._current = a;
+					return true;
+				}
+				offset -= a.duration;
+				return false;
+			});
+			if(this._current){
+				this._current.gotoPercent(offset / this._current.duration, andPlay);
+			}
+			return this;
+		},
+		stop: function(/*boolean?*/ gotoEnd){
+			if(this._current){
+				if(gotoEnd){
+					for(; this._index + 1 < this._animations.length; ++this._index){
+						this._animations[this._index].stop(true);
+					}
+					this._current = this._animations[this._index];
+				}
+				var e = d.connect(this._current, "onStop", this, function(arg){
+						this._fire("onStop", arguments);
+						d.disconnect(e);
+					});
+				this._current.stop();
+			}
+			return this;
+		},
+		status: function(){
+			return this._current ? this._current.status() : "stopped";
+		},
+		destroy: function(){
+			if(this._onAnimateCtx){ d.disconnect(this._onAnimateCtx); }
+			if(this._onEndCtx){ d.disconnect(this._onEndCtx); }
+		}
+	});
+	d.extend(_chain, _baseObj);
+
+	dojo.fx.chain = function(/*dojo.Animation[]*/ animations){
+		// summary: 
+		//		Chain a list of `dojo.Animation`s to run in sequence
+		//
+		// description:
+		//		Return a `dojo.Animation` which will play all passed
+		//		`dojo.Animation` instances in sequence, firing its own
+		//		synthesized events simulating a single animation. (eg:
+		//		onEnd of this animation means the end of the chain, 
+		//		not the individual animations within)
+		//
+		// example:
+		//	Once `node` is faded out, fade in `otherNode`
+		//	|	dojo.fx.chain([
+		//	|		dojo.fadeIn({ node:node }),
+		//	|		dojo.fadeOut({ node:otherNode })
+		//	|	]).play();
+		//
+		return new _chain(animations) // dojo.Animation
+	};
+
+	var _combine = function(animations){
+		this._animations = animations||[];
+		this._connects = [];
+		this._finished = 0;
+
+		this.duration = 0;
+		d.forEach(animations, function(a){
+			var duration = a.duration;
+			if(a.delay){ duration += a.delay; }
+			if(this.duration < duration){ this.duration = duration; }
+			this._connects.push(d.connect(a, "onEnd", this, "_onEnd"));
+		}, this);
+		
+		this._pseudoAnimation = new d.Animation({curve: [0, 1], duration: this.duration});
+		var self = this;
+		d.forEach(["beforeBegin", "onBegin", "onPlay", "onAnimate", "onPause", "onStop", "onEnd"], 
+			function(evt){
+				self._connects.push(d.connect(self._pseudoAnimation, evt,
+					function(){ self._fire(evt, arguments); }
+				));
+			}
+		);
+	};
+	d.extend(_combine, {
+		_doAction: function(action, args){
+			d.forEach(this._animations, function(a){
+				a[action].apply(a, args);
+			});
+			return this;
+		},
+		_onEnd: function(){
+			if(++this._finished > this._animations.length){
+				this._fire("onEnd");
+			}
+		},
+		_call: function(action, args){
+			var t = this._pseudoAnimation;
+			t[action].apply(t, args);
+		},
+		play: function(/*int?*/ delay, /*Boolean?*/ gotoStart){
+			this._finished = 0;
+			this._doAction("play", arguments);
+			this._call("play", arguments);
+			return this;
+		},
+		pause: function(){
+			this._doAction("pause", arguments);
+			this._call("pause", arguments);
+			return this;
+		},
+		gotoPercent: function(/*Decimal*/percent, /*Boolean?*/ andPlay){
+			var ms = this.duration * percent;
+			d.forEach(this._animations, function(a){
+				a.gotoPercent(a.duration < ms ? 1 : (ms / a.duration), andPlay);
+			});
+			this._call("gotoPercent", arguments);
+			return this;
+		},
+		stop: function(/*boolean?*/ gotoEnd){
+			this._doAction("stop", arguments);
+			this._call("stop", arguments);
+			return this;
+		},
+		status: function(){
+			return this._pseudoAnimation.status();
+		},
+		destroy: function(){
+			d.forEach(this._connects, dojo.disconnect);
+		}
+	});
+	d.extend(_combine, _baseObj);
+
+	dojo.fx.combine = function(/*dojo.Animation[]*/ animations){
+		// summary: 
+		//		Combine a list of `dojo.Animation`s to run in parallel
+		//
+		// description:
+		//		Combine an array of `dojo.Animation`s to run in parallel, 
+		//		providing a new `dojo.Animation` instance encompasing each
+		//		animation, firing standard animation events.
+		//
+		// example:
+		//	Fade out `node` while fading in `otherNode` simultaneously
+		//	|	dojo.fx.combine([
+		//	|		dojo.fadeIn({ node:node }),
+		//	|		dojo.fadeOut({ node:otherNode })
+		//	|	]).play();
+		//
+		// example:
+		//	When the longest animation ends, execute a function:
+		//	|	var anim = dojo.fx.combine([
+		//	|		dojo.fadeIn({ node: n, duration:700 }),
+		//	|		dojo.fadeOut({ node: otherNode, duration: 300 })
+		//	|	]);
+		//	|	dojo.connect(anim, "onEnd", function(){
+		//	|		// overall animation is done.
+		//	|	});
+		//	|	anim.play(); // play the animation
+		//
+		return new _combine(animations); // dojo.Animation
+	};
+
+	dojo.fx.wipeIn = function(/*Object*/ args){
+		// summary:
+		//		Expand a node to it's natural height.
+		//
+		// description:
+		//		Returns an animation that will expand the
+		//		node defined in 'args' object from it's current height to
+		//		it's natural height (with no scrollbar).
+		//		Node must have no margin/border/padding.
+		//
+		// args: Object
+		//		A hash-map of standard `dojo.Animation` constructor properties
+		//		(such as easing: node: duration: and so on)
+		//
+		// example:
+		//	|	dojo.fx.wipeIn({
+		//	|		node:"someId"
+		//	|	}).play()
+		var node = args.node = d.byId(args.node), s = node.style, o;
+
+		var anim = d.animateProperty(d.mixin({
+			properties: {
+				height: {
+					// wrapped in functions so we wait till the last second to query (in case value has changed)
+					start: function(){
+						// start at current [computed] height, but use 1px rather than 0
+						// because 0 causes IE to display the whole panel
+						o = s.overflow;
+						s.overflow = "hidden";
+						if(s.visibility == "hidden" || s.display == "none"){
+							s.height = "1px";
+							s.display = "";
+							s.visibility = "";
+							return 1;
+						}else{
+							var height = d.style(node, "height");
+							return Math.max(height, 1);
+						}
+					},
+					end: function(){
+						return node.scrollHeight;
+					}
+				}
+			}
+		}, args));
+
+		d.connect(anim, "onEnd", function(){ 
+			s.height = "auto";
+			s.overflow = o;
+		});
+
+		return anim; // dojo.Animation
+	}
+
+	dojo.fx.wipeOut = function(/*Object*/ args){
+		// summary:
+		//		Shrink a node to nothing and hide it. 
+		//
+		// description:
+		//		Returns an animation that will shrink node defined in "args"
+		//		from it's current height to 1px, and then hide it.
+		//
+		// args: Object
+		//		A hash-map of standard `dojo.Animation` constructor properties
+		//		(such as easing: node: duration: and so on)
+		// 
+		// example:
+		//	|	dojo.fx.wipeOut({ node:"someId" }).play()
+		
+		var node = args.node = d.byId(args.node), s = node.style, o;
+		
+		var anim = d.animateProperty(d.mixin({
+			properties: {
+				height: {
+					end: 1 // 0 causes IE to display the whole panel
+				}
+			}
+		}, args));
+
+		d.connect(anim, "beforeBegin", function(){
+			o = s.overflow;
+			s.overflow = "hidden";
+			s.display = "";
+		});
+		d.connect(anim, "onEnd", function(){
+			s.overflow = o;
+			s.height = "auto";
+			s.display = "none";
+		});
+
+		return anim; // dojo.Animation
+	}
+
+	dojo.fx.slideTo = function(/*Object*/ args){
+		// summary:
+		//		Slide a node to a new top/left position
+		//
+		// description:
+		//		Returns an animation that will slide "node" 
+		//		defined in args Object from its current position to
+		//		the position defined by (args.left, args.top).
+		//
+		// args: Object
+		//		A hash-map of standard `dojo.Animation` constructor properties
+		//		(such as easing: node: duration: and so on). Special args members
+		//		are `top` and `left`, which indicate the new position to slide to.
+		//
+		// example:
+		//	|	dojo.fx.slideTo({ node: node, left:"40", top:"50", units:"px" }).play()
+
+		var node = args.node = d.byId(args.node), 
+			top = null, left = null;
+
+		var init = (function(n){
+			return function(){
+				var cs = d.getComputedStyle(n);
+				var pos = cs.position;
+				top = (pos == 'absolute' ? n.offsetTop : parseInt(cs.top) || 0);
+				left = (pos == 'absolute' ? n.offsetLeft : parseInt(cs.left) || 0);
+				if(pos != 'absolute' && pos != 'relative'){
+					var ret = d.position(n, true);
+					top = ret.y;
+					left = ret.x;
+					n.style.position="absolute";
+					n.style.top=top+"px";
+					n.style.left=left+"px";
+				}
+			};
+		})(node);
+		init();
+
+		var anim = d.animateProperty(d.mixin({
+			properties: {
+				top: args.top || 0,
+				left: args.left || 0
+			}
+		}, args));
+		d.connect(anim, "beforeBegin", anim, init);
+
+		return anim; // dojo.Animation
+	}
+
+})();
+
+}
+
+if(!dojo._hasResource["dojo.NodeList-fx"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dojo.NodeList-fx"] = true;
+dojo.provide("dojo.NodeList-fx");
+
+
+/*=====
+dojo["NodeList-fx"] = {
+	// summary: Adds dojo.fx animation support to dojo.query()
+};
+=====*/
+
+dojo.extend(dojo.NodeList, {
+	_anim: function(obj, method, args){
+		args = args||{};
+		var a = dojo.fx.combine(
+			this.map(function(item){
+				var tmpArgs = { node: item };
+				dojo.mixin(tmpArgs, args);
+				return obj[method](tmpArgs);
+			})
+		); 
+		return args.auto ? a.play() && this : a; // dojo.Animation|dojo.NodeList
+	},
+
+	wipeIn: function(args){
+		//	summary:
+		//		wipe in all elements of this NodeList via `dojo.fx.wipeIn`
+		//
+		//	args: Object?
+		//		Additional dojo.Animation arguments to mix into this set with the addition of 
+		//		an `auto` parameter.
+		//
+		//	returns: dojo.Animation|dojo.NodeList
+		//		A special args member `auto` can be passed to automatically play the animation.
+		//		If args.auto is present, the original dojo.NodeList will be returned for further
+		//		chaining. Otherwise the dojo.Animation instance is returned and must be .play()'ed
+		//
+		//	example:
+		//		Fade in all tables with class "blah":
+		//		|	dojo.query("table.blah").wipeIn().play();
+		//
+		//	example:
+		//		Utilizing `auto` to get the NodeList back:
+		//		|	dojo.query(".titles").wipeIn({ auto:true }).onclick(someFunction);
+		//
+		return this._anim(dojo.fx, "wipeIn", args); // dojo.Animation|dojo.NodeList
+	},
+
+	wipeOut: function(args){
+		//	summary:
+		//		wipe out all elements of this NodeList via `dojo.fx.wipeOut`
+		//
+		//	args: Object?
+		//		Additional dojo.Animation arguments to mix into this set with the addition of 
+		//		an `auto` parameter.
+		//
+		//	returns: dojo.Animation|dojo.NodeList
+		//		A special args member `auto` can be passed to automatically play the animation.
+		//		If args.auto is present, the original dojo.NodeList will be returned for further
+		//		chaining. Otherwise the dojo.Animation instance is returned and must be .play()'ed
+		//
+		//	example:
+		//		Wipe out all tables with class "blah":
+		//		|	dojo.query("table.blah").wipeOut().play();
+		return this._anim(dojo.fx, "wipeOut", args); // dojo.Animation|dojo.NodeList
+	},
+
+	slideTo: function(args){
+		//	summary:
+		//		slide all elements of the node list to the specified place via `dojo.fx.slideTo`
+		//
+		//	args: Object?
+		//		Additional dojo.Animation arguments to mix into this set with the addition of 
+		//		an `auto` parameter.
+		//
+		//	returns: dojo.Animation|dojo.NodeList
+		//		A special args member `auto` can be passed to automatically play the animation.
+		//		If args.auto is present, the original dojo.NodeList will be returned for further
+		//		chaining. Otherwise the dojo.Animation instance is returned and must be .play()'ed
+		//
+		//	example:
+		//		|	Move all tables with class "blah" to 300/300:
+		//		|	dojo.query("table.blah").slideTo({
+		//		|		left: 40,
+		//		|		top: 50
+		//		|	}).play();
+		return this._anim(dojo.fx, "slideTo", args); // dojo.Animation|dojo.NodeList
+	},
+
+
+	fadeIn: function(args){
+		//	summary:
+		//		fade in all elements of this NodeList via `dojo.fadeIn`
+		//
+		//	args: Object?
+		//		Additional dojo.Animation arguments to mix into this set with the addition of 
+		//		an `auto` parameter.
+		//
+		//	returns: dojo.Animation|dojo.NodeList
+		//		A special args member `auto` can be passed to automatically play the animation.
+		//		If args.auto is present, the original dojo.NodeList will be returned for further
+		//		chaining. Otherwise the dojo.Animation instance is returned and must be .play()'ed
+		//
+		//	example:
+		//		Fade in all tables with class "blah":
+		//		|	dojo.query("table.blah").fadeIn().play();
+		return this._anim(dojo, "fadeIn", args); // dojo.Animation|dojo.NodeList
+	},
+
+	fadeOut: function(args){
+		//	summary:
+		//		fade out all elements of this NodeList via `dojo.fadeOut`
+		//
+		//	args: Object?
+		//		Additional dojo.Animation arguments to mix into this set with the addition of 
+		//		an `auto` parameter.
+		//
+		//	returns: dojo.Animation|dojo.NodeList
+		//		A special args member `auto` can be passed to automatically play the animation.
+		//		If args.auto is present, the original dojo.NodeList will be returned for further
+		//		chaining. Otherwise the dojo.Animation instance is returned and must be .play()'ed
+		//
+		//	example:
+		//		Fade out all elements with class "zork":
+		//		|	dojo.query(".zork").fadeOut().play();
+		//	example:
+		//		Fade them on a delay and do something at the end:
+		//		|	var fo = dojo.query(".zork").fadeOut();
+		//		|	dojo.connect(fo, "onEnd", function(){ /*...*/ });
+		//		|	fo.play();
+		//	example:
+		//		Using `auto`:
+		//		|	dojo.query("li").fadeOut({ auto:true }).filter(filterFn).forEach(doit);
+		//
+		return this._anim(dojo, "fadeOut", args); // dojo.Animation|dojo.NodeList
+	},
+
+	animateProperty: function(args){
+		//	summary:
+		//		Animate all elements of this NodeList across the properties specified.
+		//		syntax identical to `dojo.animateProperty`
+		//
+		// returns: dojo.Animation|dojo.NodeList
+		//		A special args member `auto` can be passed to automatically play the animation.
+		//		If args.auto is present, the original dojo.NodeList will be returned for further
+		//		chaining. Otherwise the dojo.Animation instance is returned and must be .play()'ed
+		//
+		//	example:
+		//	|	dojo.query(".zork").animateProperty({
+		//	|		duration: 500,
+		//	|		properties: { 
+		//	|			color:		{ start: "black", end: "white" },
+		//	|			left:		{ end: 300 } 
+		//	|		} 
+		//	|	}).play();
+		//
+		//	example:
+		//	|	dojo.query(".grue").animateProperty({ 
+		//	|		auto:true,
+		//	|		properties: {
+		//	|			height:240
+		//	|		}
+		//	|	}).onclick(handler);
+		return this._anim(dojo, "animateProperty", args); // dojo.Animation|dojo.NodeList
+	},
+
+	anim: function( /*Object*/			properties, 
+					/*Integer?*/		duration, 
+					/*Function?*/		easing, 
+					/*Function?*/		onEnd,
+					/*Integer?*/		delay){
+		//	summary:
+		//		Animate one or more CSS properties for all nodes in this list.
+		//		The returned animation object will already be playing when it
+		//		is returned. See the docs for `dojo.anim` for full details.
+		//	properties: Object
+		//		the properties to animate. does NOT support the `auto` parameter like other 
+		//		NodeList-fx methods. 
+		//	duration: Integer?
+		//		Optional. The time to run the animations for
+		//	easing: Function?
+		//		Optional. The easing function to use.
+		//	onEnd: Function?
+		//		A function to be called when the animation ends
+		//	delay:
+		//		how long to delay playing the returned animation
+		//	example:
+		//		Another way to fade out:
+		//	|	dojo.query(".thinger").anim({ opacity: 0 });
+		//	example:
+		//		animate all elements with the "thigner" class to a width of 500
+		//		pixels over half a second
+		//	|	dojo.query(".thinger").anim({ width: 500 }, 700);
+		var canim = dojo.fx.combine(
+			this.map(function(item){
+				return dojo.animateProperty({
+					node: item,
+					properties: properties,
+					duration: duration||350,
+					easing: easing
+				});
+			})
+		); 
+		if(onEnd){
+			dojo.connect(canim, "onEnd", onEnd);
+		}
+		return canim.play(delay||0); // dojo.Animation
+	}
+});
+
+}
+
 if(!dojo._hasResource["dwb.ui.AutoAnalysisModuleTab"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
 dojo._hasResource["dwb.ui.AutoAnalysisModuleTab"] = true;
 dojo.provide("dwb.ui.AutoAnalysisModuleTab");
+
+
 
 
 
@@ -7307,18 +9907,19 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	// Override ContentPane and default to true
 	closable: false,
 	
+	// Hint tooltip delay till hide timeout reference
+	_timeout: null,
+	
 	analysisContentFragments: {
 		"profile": dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html", "<div class=\"analyse_container\">\n\t<div>Choose an existing build profile to analyse for Dojo modules.</div>\n\t<div style=\"padding-top: 50px\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input name=\"value\" type=\"file\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"PROFILE\"></input>\n\t\t\t<div class=\"build\" style=\"padding-top: 40px\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t\t<span style=\"font-size: 1em\"></span>\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n"),
-		"web_app": dojo.cache("dwb.ui.fragments", "AnalyseRemoteWebAppModuleTab.html", "<div class=\"analyse_container\">\n\t<div>Provide the address for an existing Web Application to analyse Dojo modules.</div>\n\t<div style=\"padding-top: 50px\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input class=\"remoteWebAddr\" name=\"value\" dojoType=\"dijit.form.TextBox\" placeholder=\"Enter the address here...\" type=\"text\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"URL\"></input>\n\t\t\t<div class=\"build\" style=\"padding-top: 38px\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t\t<span style=\"font-size: 1em\"></span>\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n"),
+		"web_app": dojo.cache("dwb.ui.fragments", "AnalyseRemoteWebAppModuleTab.html", "<div class=\"analyse_container\">\n\t<div>Provide the address for an existing Web Application to analyse Dojo modules.</div>\n\t<div style=\"padding-top: 50px\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input class=\"remoteWebAddr\" name=\"value\" dojoType=\"dwb.ui.ValidationTextBox\" required=\"true\" placeholder=\"Enter the address here...\" type=\"text\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"URL\"></input>\n\t\t\t<div class=\"build\" style=\"padding-top: 38px\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t\t<span style=\"font-size: 1em\"></span>\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n"),
 		"dojo_app": dojo.cache("dwb.ui.fragments", "UploadUserAppModuleTab.html", "<div class=\"analyse_container\">\n\t<div>Choose a zip file containing your local Dojo application to analyse for Dojo modules.</div>\n\t<div style=\"padding-top: 50px\">\n\t\t<form enctype=\"multipart/form-data\" method=\"post\" action=\"./api/packages\">\n\t\t\t<input name=\"user_app\" type=\"file\"></input>\n\t\t\t<div class=\"build\" style=\"padding-top: 40px\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" type=\"submit\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t\t<span style=\"font-size: 1em\"></span>\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\t\t\n\t\t\n"),
-		"html_file": dojo.cache("dwb.ui.fragments", "AnalyseHTMLModuleTabLocal.html", "<div class=\"analyse_container\">\n\t<div>Choose a local HTML file to analyse for Dojo modules.</div>\n\t<div style=\"padding-top: 50px\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input name=\"value\" type=\"file\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"WEB_PAGE\"></input>\n\t\t\t<div class=\"build\" style=\"padding-top: 40px\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t\t<span style=\"font-size: 1em\"></span>\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n")
+		"html_file": dojo.cache("dwb.ui.fragments", "AnalyseHTMLModuleTabLocal.html", "<div class=\"analyse_container\">\n\t<div>Choose a local HTML file to analyse for Dojo modules.</div>\n\t<div style=\"padding-top: 50px\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input name=\"value\" type=\"file\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"WEB_PAGE\"></input>\n\t\t\t<div class=\"build\" style=\"padding-top: 40px\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t\t<span style=\"font-size: 1em\"></span>\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n"),
+		"failure": dojo.cache("dwb.ui.fragments", "AnalysisFailureModuleTab.html", "<div class=\"analyse_container failureMessage\">\n\t<img src=\"img/cross_48.png\">\n\t<h2>Something went wrong...</h2>\n\t<p>There was an error during analysis, what did you give us?! We're really sorry, please try again.</p>\t\n</div>\n")
 	},
 	
 	analysisType: "web_app",
 	
-	// Hint text to display when the modules tab is empty
-	//content: dojo.cache("dwb.ui.fragments", "AnalyseHTMLModuleTabLocal.html", "<div class=\"analyse_container\">\n\t<div>Choose a local HTML file to analyse for Dojo modules.</div>\n\t<div style=\"padding-top: 50px\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input name=\"value\" type=\"file\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"WEB_PAGE\"></input>\n\t\t\t<div class=\"build\" style=\"padding-top: 40px\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t\t<span style=\"font-size: 1em\"></span>\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n"),
-
 	analysisURL : dwb.util.Config.get("dependenciesApi"),
 	packageURL : dwb.util.Config.get("packagesApi"),
 	
@@ -7485,25 +10086,27 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	
 	// Background upload of HTML file, returning modules found.
 	_onSubmit : function (e) {		
+		console.log(e);
 		dojo.stopEvent(e);
-			
-		var form = dojo.query("form", this.domNode)[0];
-		// HTML files, web apps and profiles go through dependencies end point. User applications
-		// need turning into temporary packages, must go through package api.
-		var url = (this.analysisType === "dojo_app") ? this.packageURL : this.analysisURL;
 		
-		dojo.io.iframe.send({
-			url: url, 
-			method: "post", 
-			handleAs: "json", 
-			form: form, 
-			handle: dojo.hitch(this, "_handleResponse"), 
-			error: dojo.hitch(this, function (e) {
-				this._cancelBusyBtn();
-				// TODO: Need to support proper error handling.
-				console.log(e);
-			})
-		});			
+		// Check user has filled in form fields before submission
+		if (this._isValid()) {		
+			var form = dojo.query("form", this.domNode)[0];
+			// HTML files, web apps and profiles go through dependencies end point. User applications
+			// need turning into temporary packages, must go through package api.
+			var url = (this.analysisType === "dojo_app") ? this.packageURL : this.analysisURL;
+			
+			dojo.io.iframe.send({
+				url: url, 
+				method: "post", 
+				handleAs: "json", 
+				form: form, 
+				load: dojo.hitch(this, "_handleResponse"), 
+				error: dojo.hitch(this, "_moduleAnalysisError")
+			});	
+		} else {
+			this._cancelBusyBtn();
+		}
 	},
 	
 	// Signal that we want to remove this tab 
@@ -7511,10 +10114,72 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	_onRemove : function () {
 	},
 	
+	// Validate form parameters for auto-analysis module tab, this may be either validation input 
+	// boxes or file input fields. 
+	_isValid : function () {
+		return (this.analysisType === "web_app" ? this._isValidInputText() : this._isValidInputFile());	
+	},
+	
+	// Checking input file field isn't empty, show tooltip with hint
+	// if user hasn't filled it out.
+	_isValidInputFile : function () {
+		var inputField = dojo.query("input[type=file]", this.domNode)[0];
+		var file = dojo.attr(inputField, "value");
+		// Ensure some file has been selected
+		var valid = (file !== "");
+		if (!valid) {
+			// Tooltip not shown at the moment.
+			if (this._timeout === null) {
+				dijit.showTooltip("This value is required", inputField);
+			// Just reset hide timeout for shown tooltip
+			} else {
+				clearTimeout(this._timeout);
+			}
+			
+			// Hide tooltip after a second
+			this._timeout = setTimeout(dojo.hitch(this, function () {
+				dijit.hideTooltip(inputField);
+				this._timeout = null;
+			}), 1000);
+		}
+		
+		return valid;
+	},
+	
+	// Check validation on input text fields in this content pane
+	_isValidInputText : function () {
+		// Find validation text box within content pane.
+		var tb = dijit.byNode(dojo.query(".dijitValidationTextBox", this.domNode)[0]);
+		
+		// Validation messages won't show until user has at 
+		// least focused on field. Fake this behaviour.  
+		tb._hasBeenBlurred = true;
+		
+		// Check for empty field and focus if not valid.
+		var valid = tb.validate();
+		if (!valid) {
+			tb.focus();
+		}
+		
+		return valid;
+	},
+	
 	_cancelBusyBtn : function () {
 		dojo.query(".dijitButton", this.domNode).forEach(function (button) {
 			dijit.byNode(button).cancel();
 		});
+	}, 
+	
+	_moduleAnalysisError : function (timeout) {
+		this.set("content", this.analysisContentFragments.failure);
+		
+		dojo.query(".analyse_container", this.domNode).fadeOut({
+			onEnd: dojo.hitch(this, function () {
+				this._setAnalysisTypeAttr(this.analysisType);
+			}),
+			duration: 750,
+			delay: 1250
+		}).play(); 
 	}
 });
 
@@ -8264,762 +10929,6 @@ dojo.declare("dojo.dnd.__TimedMoveableArgs", [dojo.dnd.__MoveableArgs], {
 		}
 	});
 })();
-
-}
-
-if(!dojo._hasResource["dojo.fx.Toggler"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dojo.fx.Toggler"] = true;
-dojo.provide("dojo.fx.Toggler");
-
-dojo.declare("dojo.fx.Toggler", null, {
-	// summary:
-	//		A simple `dojo.Animation` toggler API.
-	//
-	// description:
-	//		class constructor for an animation toggler. It accepts a packed
-	//		set of arguments about what type of animation to use in each
-	//		direction, duration, etc. All available members are mixed into 
-	//		these animations from the constructor (for example, `node`, 
-	//		`showDuration`, `hideDuration`). 
-	//
-	// example:
-	//	|	var t = new dojo.fx.Toggler({
-	//	|		node: "nodeId",
-	//	|		showDuration: 500,
-	//	|		// hideDuration will default to "200"
-	//	|		showFunc: dojo.fx.wipeIn, 
-	//	|		// hideFunc will default to "fadeOut"
-	//	|	});
-	//	|	t.show(100); // delay showing for 100ms
-	//	|	// ...time passes...
-	//	|	t.hide();
-
-	// node: DomNode
-	//		the node to target for the showing and hiding animations
-	node: null,
-
-	// showFunc: Function
-	//		The function that returns the `dojo.Animation` to show the node
-	showFunc: dojo.fadeIn,
-
-	// hideFunc: Function	
-	//		The function that returns the `dojo.Animation` to hide the node
-	hideFunc: dojo.fadeOut,
-
-	// showDuration:
-	//		Time in milliseconds to run the show Animation
-	showDuration: 200,
-
-	// hideDuration:
-	//		Time in milliseconds to run the hide Animation
-	hideDuration: 200,
-
-	// FIXME: need a policy for where the toggler should "be" the next
-	// time show/hide are called if we're stopped somewhere in the
-	// middle.
-	// FIXME: also would be nice to specify individual showArgs/hideArgs mixed into
-	// each animation individually. 
-	// FIXME: also would be nice to have events from the animations exposed/bridged
-
-	/*=====
-	_showArgs: null,
-	_showAnim: null,
-
-	_hideArgs: null,
-	_hideAnim: null,
-
-	_isShowing: false,
-	_isHiding: false,
-	=====*/
-
-	constructor: function(args){
-		var _t = this;
-
-		dojo.mixin(_t, args);
-		_t.node = args.node;
-		_t._showArgs = dojo.mixin({}, args);
-		_t._showArgs.node = _t.node;
-		_t._showArgs.duration = _t.showDuration;
-		_t.showAnim = _t.showFunc(_t._showArgs);
-
-		_t._hideArgs = dojo.mixin({}, args);
-		_t._hideArgs.node = _t.node;
-		_t._hideArgs.duration = _t.hideDuration;
-		_t.hideAnim = _t.hideFunc(_t._hideArgs);
-
-		dojo.connect(_t.showAnim, "beforeBegin", dojo.hitch(_t.hideAnim, "stop", true));
-		dojo.connect(_t.hideAnim, "beforeBegin", dojo.hitch(_t.showAnim, "stop", true));
-	},
-
-	show: function(delay){
-		// summary: Toggle the node to showing
-		// delay: Integer?
-		//		Ammount of time to stall playing the show animation
-		return this.showAnim.play(delay || 0);
-	},
-
-	hide: function(delay){
-		// summary: Toggle the node to hidden
-		// delay: Integer?
-		//		Ammount of time to stall playing the hide animation
-		return this.hideAnim.play(delay || 0);
-	}
-});
-
-}
-
-if(!dojo._hasResource["dojo.fx"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dojo.fx"] = true;
-dojo.provide("dojo.fx");
- // FIXME: remove this back-compat require in 2.0 
-/*=====
-dojo.fx = {
-	// summary: Effects library on top of Base animations
-};
-=====*/
-(function(){
-	
-	var d = dojo, 
-		_baseObj = {
-			_fire: function(evt, args){
-				if(this[evt]){
-					this[evt].apply(this, args||[]);
-				}
-				return this;
-			}
-		};
-
-	var _chain = function(animations){
-		this._index = -1;
-		this._animations = animations||[];
-		this._current = this._onAnimateCtx = this._onEndCtx = null;
-
-		this.duration = 0;
-		d.forEach(this._animations, function(a){
-			this.duration += a.duration;
-			if(a.delay){ this.duration += a.delay; }
-		}, this);
-	};
-	d.extend(_chain, {
-		_onAnimate: function(){
-			this._fire("onAnimate", arguments);
-		},
-		_onEnd: function(){
-			d.disconnect(this._onAnimateCtx);
-			d.disconnect(this._onEndCtx);
-			this._onAnimateCtx = this._onEndCtx = null;
-			if(this._index + 1 == this._animations.length){
-				this._fire("onEnd");
-			}else{
-				// switch animations
-				this._current = this._animations[++this._index];
-				this._onAnimateCtx = d.connect(this._current, "onAnimate", this, "_onAnimate");
-				this._onEndCtx = d.connect(this._current, "onEnd", this, "_onEnd");
-				this._current.play(0, true);
-			}
-		},
-		play: function(/*int?*/ delay, /*Boolean?*/ gotoStart){
-			if(!this._current){ this._current = this._animations[this._index = 0]; }
-			if(!gotoStart && this._current.status() == "playing"){ return this; }
-			var beforeBegin = d.connect(this._current, "beforeBegin", this, function(){
-					this._fire("beforeBegin");
-				}),
-				onBegin = d.connect(this._current, "onBegin", this, function(arg){
-					this._fire("onBegin", arguments);
-				}),
-				onPlay = d.connect(this._current, "onPlay", this, function(arg){
-					this._fire("onPlay", arguments);
-					d.disconnect(beforeBegin);
-					d.disconnect(onBegin);
-					d.disconnect(onPlay);
-				});
-			if(this._onAnimateCtx){
-				d.disconnect(this._onAnimateCtx);
-			}
-			this._onAnimateCtx = d.connect(this._current, "onAnimate", this, "_onAnimate");
-			if(this._onEndCtx){
-				d.disconnect(this._onEndCtx);
-			}
-			this._onEndCtx = d.connect(this._current, "onEnd", this, "_onEnd");
-			this._current.play.apply(this._current, arguments);
-			return this;
-		},
-		pause: function(){
-			if(this._current){
-				var e = d.connect(this._current, "onPause", this, function(arg){
-						this._fire("onPause", arguments);
-						d.disconnect(e);
-					});
-				this._current.pause();
-			}
-			return this;
-		},
-		gotoPercent: function(/*Decimal*/percent, /*Boolean?*/ andPlay){
-			this.pause();
-			var offset = this.duration * percent;
-			this._current = null;
-			d.some(this._animations, function(a){
-				if(a.duration <= offset){
-					this._current = a;
-					return true;
-				}
-				offset -= a.duration;
-				return false;
-			});
-			if(this._current){
-				this._current.gotoPercent(offset / this._current.duration, andPlay);
-			}
-			return this;
-		},
-		stop: function(/*boolean?*/ gotoEnd){
-			if(this._current){
-				if(gotoEnd){
-					for(; this._index + 1 < this._animations.length; ++this._index){
-						this._animations[this._index].stop(true);
-					}
-					this._current = this._animations[this._index];
-				}
-				var e = d.connect(this._current, "onStop", this, function(arg){
-						this._fire("onStop", arguments);
-						d.disconnect(e);
-					});
-				this._current.stop();
-			}
-			return this;
-		},
-		status: function(){
-			return this._current ? this._current.status() : "stopped";
-		},
-		destroy: function(){
-			if(this._onAnimateCtx){ d.disconnect(this._onAnimateCtx); }
-			if(this._onEndCtx){ d.disconnect(this._onEndCtx); }
-		}
-	});
-	d.extend(_chain, _baseObj);
-
-	dojo.fx.chain = function(/*dojo.Animation[]*/ animations){
-		// summary: 
-		//		Chain a list of `dojo.Animation`s to run in sequence
-		//
-		// description:
-		//		Return a `dojo.Animation` which will play all passed
-		//		`dojo.Animation` instances in sequence, firing its own
-		//		synthesized events simulating a single animation. (eg:
-		//		onEnd of this animation means the end of the chain, 
-		//		not the individual animations within)
-		//
-		// example:
-		//	Once `node` is faded out, fade in `otherNode`
-		//	|	dojo.fx.chain([
-		//	|		dojo.fadeIn({ node:node }),
-		//	|		dojo.fadeOut({ node:otherNode })
-		//	|	]).play();
-		//
-		return new _chain(animations) // dojo.Animation
-	};
-
-	var _combine = function(animations){
-		this._animations = animations||[];
-		this._connects = [];
-		this._finished = 0;
-
-		this.duration = 0;
-		d.forEach(animations, function(a){
-			var duration = a.duration;
-			if(a.delay){ duration += a.delay; }
-			if(this.duration < duration){ this.duration = duration; }
-			this._connects.push(d.connect(a, "onEnd", this, "_onEnd"));
-		}, this);
-		
-		this._pseudoAnimation = new d.Animation({curve: [0, 1], duration: this.duration});
-		var self = this;
-		d.forEach(["beforeBegin", "onBegin", "onPlay", "onAnimate", "onPause", "onStop", "onEnd"], 
-			function(evt){
-				self._connects.push(d.connect(self._pseudoAnimation, evt,
-					function(){ self._fire(evt, arguments); }
-				));
-			}
-		);
-	};
-	d.extend(_combine, {
-		_doAction: function(action, args){
-			d.forEach(this._animations, function(a){
-				a[action].apply(a, args);
-			});
-			return this;
-		},
-		_onEnd: function(){
-			if(++this._finished > this._animations.length){
-				this._fire("onEnd");
-			}
-		},
-		_call: function(action, args){
-			var t = this._pseudoAnimation;
-			t[action].apply(t, args);
-		},
-		play: function(/*int?*/ delay, /*Boolean?*/ gotoStart){
-			this._finished = 0;
-			this._doAction("play", arguments);
-			this._call("play", arguments);
-			return this;
-		},
-		pause: function(){
-			this._doAction("pause", arguments);
-			this._call("pause", arguments);
-			return this;
-		},
-		gotoPercent: function(/*Decimal*/percent, /*Boolean?*/ andPlay){
-			var ms = this.duration * percent;
-			d.forEach(this._animations, function(a){
-				a.gotoPercent(a.duration < ms ? 1 : (ms / a.duration), andPlay);
-			});
-			this._call("gotoPercent", arguments);
-			return this;
-		},
-		stop: function(/*boolean?*/ gotoEnd){
-			this._doAction("stop", arguments);
-			this._call("stop", arguments);
-			return this;
-		},
-		status: function(){
-			return this._pseudoAnimation.status();
-		},
-		destroy: function(){
-			d.forEach(this._connects, dojo.disconnect);
-		}
-	});
-	d.extend(_combine, _baseObj);
-
-	dojo.fx.combine = function(/*dojo.Animation[]*/ animations){
-		// summary: 
-		//		Combine a list of `dojo.Animation`s to run in parallel
-		//
-		// description:
-		//		Combine an array of `dojo.Animation`s to run in parallel, 
-		//		providing a new `dojo.Animation` instance encompasing each
-		//		animation, firing standard animation events.
-		//
-		// example:
-		//	Fade out `node` while fading in `otherNode` simultaneously
-		//	|	dojo.fx.combine([
-		//	|		dojo.fadeIn({ node:node }),
-		//	|		dojo.fadeOut({ node:otherNode })
-		//	|	]).play();
-		//
-		// example:
-		//	When the longest animation ends, execute a function:
-		//	|	var anim = dojo.fx.combine([
-		//	|		dojo.fadeIn({ node: n, duration:700 }),
-		//	|		dojo.fadeOut({ node: otherNode, duration: 300 })
-		//	|	]);
-		//	|	dojo.connect(anim, "onEnd", function(){
-		//	|		// overall animation is done.
-		//	|	});
-		//	|	anim.play(); // play the animation
-		//
-		return new _combine(animations); // dojo.Animation
-	};
-
-	dojo.fx.wipeIn = function(/*Object*/ args){
-		// summary:
-		//		Expand a node to it's natural height.
-		//
-		// description:
-		//		Returns an animation that will expand the
-		//		node defined in 'args' object from it's current height to
-		//		it's natural height (with no scrollbar).
-		//		Node must have no margin/border/padding.
-		//
-		// args: Object
-		//		A hash-map of standard `dojo.Animation` constructor properties
-		//		(such as easing: node: duration: and so on)
-		//
-		// example:
-		//	|	dojo.fx.wipeIn({
-		//	|		node:"someId"
-		//	|	}).play()
-		var node = args.node = d.byId(args.node), s = node.style, o;
-
-		var anim = d.animateProperty(d.mixin({
-			properties: {
-				height: {
-					// wrapped in functions so we wait till the last second to query (in case value has changed)
-					start: function(){
-						// start at current [computed] height, but use 1px rather than 0
-						// because 0 causes IE to display the whole panel
-						o = s.overflow;
-						s.overflow = "hidden";
-						if(s.visibility == "hidden" || s.display == "none"){
-							s.height = "1px";
-							s.display = "";
-							s.visibility = "";
-							return 1;
-						}else{
-							var height = d.style(node, "height");
-							return Math.max(height, 1);
-						}
-					},
-					end: function(){
-						return node.scrollHeight;
-					}
-				}
-			}
-		}, args));
-
-		d.connect(anim, "onEnd", function(){ 
-			s.height = "auto";
-			s.overflow = o;
-		});
-
-		return anim; // dojo.Animation
-	}
-
-	dojo.fx.wipeOut = function(/*Object*/ args){
-		// summary:
-		//		Shrink a node to nothing and hide it. 
-		//
-		// description:
-		//		Returns an animation that will shrink node defined in "args"
-		//		from it's current height to 1px, and then hide it.
-		//
-		// args: Object
-		//		A hash-map of standard `dojo.Animation` constructor properties
-		//		(such as easing: node: duration: and so on)
-		// 
-		// example:
-		//	|	dojo.fx.wipeOut({ node:"someId" }).play()
-		
-		var node = args.node = d.byId(args.node), s = node.style, o;
-		
-		var anim = d.animateProperty(d.mixin({
-			properties: {
-				height: {
-					end: 1 // 0 causes IE to display the whole panel
-				}
-			}
-		}, args));
-
-		d.connect(anim, "beforeBegin", function(){
-			o = s.overflow;
-			s.overflow = "hidden";
-			s.display = "";
-		});
-		d.connect(anim, "onEnd", function(){
-			s.overflow = o;
-			s.height = "auto";
-			s.display = "none";
-		});
-
-		return anim; // dojo.Animation
-	}
-
-	dojo.fx.slideTo = function(/*Object*/ args){
-		// summary:
-		//		Slide a node to a new top/left position
-		//
-		// description:
-		//		Returns an animation that will slide "node" 
-		//		defined in args Object from its current position to
-		//		the position defined by (args.left, args.top).
-		//
-		// args: Object
-		//		A hash-map of standard `dojo.Animation` constructor properties
-		//		(such as easing: node: duration: and so on). Special args members
-		//		are `top` and `left`, which indicate the new position to slide to.
-		//
-		// example:
-		//	|	dojo.fx.slideTo({ node: node, left:"40", top:"50", units:"px" }).play()
-
-		var node = args.node = d.byId(args.node), 
-			top = null, left = null;
-
-		var init = (function(n){
-			return function(){
-				var cs = d.getComputedStyle(n);
-				var pos = cs.position;
-				top = (pos == 'absolute' ? n.offsetTop : parseInt(cs.top) || 0);
-				left = (pos == 'absolute' ? n.offsetLeft : parseInt(cs.left) || 0);
-				if(pos != 'absolute' && pos != 'relative'){
-					var ret = d.position(n, true);
-					top = ret.y;
-					left = ret.x;
-					n.style.position="absolute";
-					n.style.top=top+"px";
-					n.style.left=left+"px";
-				}
-			};
-		})(node);
-		init();
-
-		var anim = d.animateProperty(d.mixin({
-			properties: {
-				top: args.top || 0,
-				left: args.left || 0
-			}
-		}, args));
-		d.connect(anim, "beforeBegin", anim, init);
-
-		return anim; // dojo.Animation
-	}
-
-})();
-
-}
-
-if(!dojo._hasResource["dijit._CssStateMixin"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dijit._CssStateMixin"] = true;
-dojo.provide("dijit._CssStateMixin");
-
-
-dojo.declare("dijit._CssStateMixin", [], {
-	// summary:
-	//		Mixin for widgets to set CSS classes on the widget DOM nodes depending on hover/mouse press/focus
-	//		state changes, and also higher-level state changes such becoming disabled or selected.
-	//
-	// description:
-	//		By mixing this class into your widget, and setting the this.baseClass attribute, it will automatically
-	//		maintain CSS classes on the widget root node (this.domNode) depending on hover,
-	//		active, focus, etc. state.   Ex: with a baseClass of dijitButton, it will apply the classes
-	//		dijitButtonHovered and dijitButtonActive, as the user moves the mouse over the widget and clicks it.
-	//
-	//		It also sets CSS like dijitButtonDisabled based on widget semantic state.
-	//
-	//		By setting the cssStateNodes attribute, a widget can also track events on subnodes (like buttons
-	//		within the widget).
-
-	// cssStateNodes: [protected] Object
-	//		List of sub-nodes within the widget that need CSS classes applied on mouse hover/press and focus
-	//.
-	//		Each entry in the hash is a an attachpoint names (like "upArrowButton") mapped to a CSS class names
-	//		(like "dijitUpArrowButton"). Example:
-	//	|		{
-	//	|			"upArrowButton": "dijitUpArrowButton",
-	//	|			"downArrowButton": "dijitDownArrowButton"
-	//	|		}
-	//		The above will set the CSS class dijitUpArrowButton to the this.upArrowButton DOMNode when it
-	//		is hovered, etc.
-	cssStateNodes: {},
-
-	postCreate: function(){
-		this.inherited(arguments);
-
-		// Automatically monitor mouse events (essentially :hover and :active) on this.domNode
-		dojo.forEach(["onmouseenter", "onmouseleave", "onmousedown"], function(e){
-			this.connect(this.domNode, e, "_cssMouseEvent");
-		}, this);
-		
-		// Monitoring changes to disabled, readonly, etc. state, and update CSS class of root node
-		this.connect(this, "set", function(name, value){
-			if(arguments.length >= 2 && {disabled: true, readOnly: true, checked:true, selected:true}[name]){
-				this._setStateClass();
-			}
-		});
-
-		// The widget coming in/out of the focus change affects it's state
-		dojo.forEach(["_onFocus", "_onBlur"], function(ap){
-			this.connect(this, ap, "_setStateClass");
-		}, this);
-
-		// Events on sub nodes within the widget
-		for(var ap in this.cssStateNodes){
-			this._trackMouseState(this[ap], this.cssStateNodes[ap]);
-		}
-		// Set state initially; there's probably no hover/active/focus state but widget might be
-		// disabled/readonly so we want to set CSS classes for those conditions.
-		this._setStateClass();
-	},
-
-	_cssMouseEvent: function(/*Event*/ event){
-		// summary:
-		//	Sets _hovering and _active properties depending on mouse state,
-		//	then calls _setStateClass() to set appropriate CSS classes for this.domNode.
-
-		if(!this.disabled){
-			switch(event.type){
-				case "mouseenter":
-				case "mouseover":	// generated on non-IE browsers even though we connected to mouseenter
-					this._hovering = true;
-					this._active = this._mouseDown;
-					break;
-
-				case "mouseleave":
-				case "mouseout":	// generated on non-IE browsers even though we connected to mouseleave
-					this._hovering = false;
-					this._active = false;
-					break;
-
-				case "mousedown" :
-					this._active = true;
-					this._mouseDown = true;
-					// Set a global event to handle mouseup, so it fires properly
-					// even if the cursor leaves this.domNode before the mouse up event.
-					// Alternately could set active=false on mouseout.
-					var mouseUpConnector = this.connect(dojo.body(), "onmouseup", function(){
-						this._active = false;
-						this._mouseDown = false;
-						this._setStateClass();
-						this.disconnect(mouseUpConnector);
-					});
-					break;
-			}
-			this._setStateClass();
-		}
-	},
-
-	_setStateClass: function(){
-		// summary:
-		//		Update the visual state of the widget by setting the css classes on this.domNode
-		//		(or this.stateNode if defined) by combining this.baseClass with
-		//		various suffixes that represent the current widget state(s).
-		//
-		// description:
-		//		In the case where a widget has multiple
-		//		states, it sets the class based on all possible
-		//	 	combinations.  For example, an invalid form widget that is being hovered
-		//		will be "dijitInput dijitInputInvalid dijitInputHover dijitInputInvalidHover".
-		//
-		//		The widget may have one or more of the following states, determined
-		//		by this.state, this.checked, this.valid, and this.selected:
-		//			- Error - ValidationTextBox sets this.state to "Error" if the current input value is invalid
-		//			- Checked - ex: a checkmark or a ToggleButton in a checked state, will have this.checked==true
-		//			- Selected - ex: currently selected tab will have this.selected==true
-		//
-		//		In addition, it may have one or more of the following states,
-		//		based on this.disabled and flags set in _onMouse (this._active, this._hovering, this._focused):
-		//			- Disabled	- if the widget is disabled
-		//			- Active		- if the mouse (or space/enter key?) is being pressed down
-		//			- Focused		- if the widget has focus
-		//			- Hover		- if the mouse is over the widget
-
-		// Compute new set of classes
-		var newStateClasses = this.baseClass.split(" ");
-
-		function multiply(modifier){
-			newStateClasses = newStateClasses.concat(dojo.map(newStateClasses, function(c){ return c+modifier; }), "dijit"+modifier);
-		}
-
-		if(!this.isLeftToRight()){
-			// For RTL mode we need to set an addition class like dijitTextBoxRtl.
-			multiply("Rtl");
-		}
-
-		if(this.checked){
-			multiply("Checked");
-		}
-		if(this.state){
-			multiply(this.state);
-		}
-		if(this.selected){
-			multiply("Selected");
-		}
-
-		if(this.disabled){
-			multiply("Disabled");
-		}else if(this.readOnly){
-			multiply("ReadOnly");
-		}else{
-			if(this._active){
-				multiply("Active");
-			}else if(this._hovering){
-				multiply("Hover");
-			}
-		}
-
-		if(this._focused){
-			multiply("Focused");
-		}
-
-		// Remove old state classes and add new ones.
-		// For performance concerns we only write into domNode.className once.
-		var tn = this.stateNode || this.domNode,
-			classHash = {};	// set of all classes (state and otherwise) for node
-
-		dojo.forEach(tn.className.split(" "), function(c){ classHash[c] = true; });
-
-		if("_stateClasses" in this){
-			dojo.forEach(this._stateClasses, function(c){ delete classHash[c]; });
-		}
-
-		dojo.forEach(newStateClasses, function(c){ classHash[c] = true; });
-
-		var newClasses = [];
-		for(var c in classHash){
-			newClasses.push(c);
-		}
-		tn.className = newClasses.join(" ");
-
-		this._stateClasses = newStateClasses;
-	},
-
-	_trackMouseState: function(/*DomNode*/ node, /*String*/ clazz){
-		// summary:
-		//		Track mouse/focus events on specified node and set CSS class on that node to indicate
-		//		current state.   Usually not called directly, but via cssStateNodes attribute.
-		// description:
-		//		Given class=foo, will set the following CSS class on the node
-		//			- fooActive: if the user is currently pressing down the mouse button while over the node
-		//			- fooHover: if the user is hovering the mouse over the node, but not pressing down a button
-		//			- fooFocus: if the node is focused
-		//
-		//		Note that it won't set any classes if the widget is disabled.
-		// node: DomNode
-		//		Should be a sub-node of the widget, not the top node (this.domNode), since the top node
-		//		is handled specially and automatically just by mixing in this class.
-		// clazz: String
-		//		CSS class name (ex: dijitSliderUpArrow).
-
-		// Current state of node (initially false)
-		// NB: setting specifically to false because dojo.toggleClass() needs true boolean as third arg
-		var hovering=false, active=false, focused=false;
-
-		var self = this,
-			cn = dojo.hitch(this, "connect", node);
-
-		function setClass(){
-			var disabled = ("disabled" in self && self.disabled) || ("readonly" in self && self.readonly);
-			dojo.toggleClass(node, clazz+"Hover", hovering && !active && !disabled);
-			dojo.toggleClass(node, clazz+"Active", active && !disabled);
-			dojo.toggleClass(node, clazz+"Focused", focused && !disabled);
-		}
-
-		// Mouse
-		cn("onmouseenter", function(){
-			hovering = true;
-			setClass();
-		});
-		cn("onmouseleave", function(){
-			hovering = false;
-			active = false;
-			setClass();
-		});
-		cn("onmousedown", function(){
-			active = true;
-			setClass();
-		});
-		cn("onmouseup", function(){
-			active = false;
-			setClass();
-		});
-
-		// Focus
-		cn("onfocus", function(){
-			focused = true;
-			setClass();
-		});
-		cn("onblur", function(){
-			focused = false;
-			setClass();
-		});
-
-		// Just in case widget is enabled/disabled while it has focus/hover/active state.
-		// Maybe this is overkill.
-		this.connect(this, "set", function(name, value){
-			if(name == "disabled" || name == "readOnly"){
-				setClass();
-			}
-		});
-	}
-});
 
 }
 
@@ -10447,372 +12356,6 @@ dojo.cookie.isSupported = function(){
 	}
 	return navigator.cookieEnabled;
 };
-
-}
-
-if(!dojo._hasResource["dijit.form._FormWidget"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dijit.form._FormWidget"] = true;
-dojo.provide("dijit.form._FormWidget");
-
-
-
-
-
-
-
-dojo.declare("dijit.form._FormWidget", [dijit._Widget, dijit._Templated, dijit._CssStateMixin],
-	{
-	// summary:
-	//		Base class for widgets corresponding to native HTML elements such as <checkbox> or <button>,
-	//		which can be children of a <form> node or a `dijit.form.Form` widget.
-	//
-	// description:
-	//		Represents a single HTML element.
-	//		All these widgets should have these attributes just like native HTML input elements.
-	//		You can set them during widget construction or afterwards, via `dijit._Widget.attr`.
-	//
-	//		They also share some common methods.
-
-	// name: String
-	//		Name used when submitting form; same as "name" attribute or plain HTML elements
-	name: "",
-
-	// alt: String
-	//		Corresponds to the native HTML <input> element's attribute.
-	alt: "",
-
-	// value: String
-	//		Corresponds to the native HTML <input> element's attribute.
-	value: "",
-
-	// type: String
-	//		Corresponds to the native HTML <input> element's attribute.
-	type: "text",
-
-	// tabIndex: Integer
-	//		Order fields are traversed when user hits the tab key
-	tabIndex: "0",
-
-	// disabled: Boolean
-	//		Should this widget respond to user input?
-	//		In markup, this is specified as "disabled='disabled'", or just "disabled".
-	disabled: false,
-
-	// intermediateChanges: Boolean
-	//		Fires onChange for each value change or only on demand
-	intermediateChanges: false,
-
-	// scrollOnFocus: Boolean
-	//		On focus, should this widget scroll into view?
-	scrollOnFocus: true,
-
-	// These mixins assume that the focus node is an INPUT, as many but not all _FormWidgets are.
-	attributeMap: dojo.delegate(dijit._Widget.prototype.attributeMap, {
-		value: "focusNode",
-		id: "focusNode",
-		tabIndex: "focusNode",
-		alt: "focusNode",
-		title: "focusNode"
-	}),
-
-	postMixInProperties: function(){
-		// Setup name=foo string to be referenced from the template (but only if a name has been specified)
-		// Unfortunately we can't use attributeMap to set the name due to IE limitations, see #8660
-		// Regarding escaping, see heading "Attribute values" in
-		// http://www.w3.org/TR/REC-html40/appendix/notes.html#h-B.3.2
-		this.nameAttrSetting = this.name ? ('name="' + this.name.replace(/'/g, "&quot;") + '"') : '';
-		this.inherited(arguments);
-	},
-
-	postCreate: function(){
-		this.inherited(arguments);
-		this.connect(this.domNode, "onmousedown", "_onMouseDown");
-	},
-
-	_setDisabledAttr: function(/*Boolean*/ value){
-		this.disabled = value;
-		dojo.attr(this.focusNode, 'disabled', value);
-		if(this.valueNode){
-			dojo.attr(this.valueNode, 'disabled', value);
-		}
-		dijit.setWaiState(this.focusNode, "disabled", value);
-
-		if(value){
-			// reset these, because after the domNode is disabled, we can no longer receive
-			// mouse related events, see #4200
-			this._hovering = false;
-			this._active = false;
-
-			// clear tab stop(s) on this widget's focusable node(s)  (ComboBox has two focusable nodes)
-			var attachPointNames = "tabIndex" in this.attributeMap ? this.attributeMap.tabIndex : "focusNode";
-			dojo.forEach(dojo.isArray(attachPointNames) ? attachPointNames : [attachPointNames], function(attachPointName){
-				var node = this[attachPointName];
-				// complex code because tabIndex=-1 on a <div> doesn't work on FF
-				if(dojo.isWebKit || dijit.hasDefaultTabStop(node)){	// see #11064 about webkit bug
-					node.setAttribute('tabIndex', "-1");
-				}else{
-					node.removeAttribute('tabIndex');				
-				}
-			}, this);
-		}else{
-			this.focusNode.setAttribute('tabIndex', this.tabIndex);
-		}
-	},
-
-	setDisabled: function(/*Boolean*/ disabled){
-		// summary:
-		//		Deprecated.   Use set('disabled', ...) instead.
-		dojo.deprecated("setDisabled("+disabled+") is deprecated. Use set('disabled',"+disabled+") instead.", "", "2.0");
-		this.set('disabled', disabled);
-	},
-
-	_onFocus: function(e){
-		if(this.scrollOnFocus){
-			dojo.window.scrollIntoView(this.domNode);
-		}
-		this.inherited(arguments);
-	},
-
-	isFocusable: function(){
-		// summary:
-		//		Tells if this widget is focusable or not.   Used internally by dijit.
-		// tags:
-		//		protected
-		return !this.disabled && !this.readOnly && this.focusNode && (dojo.style(this.domNode, "display") != "none");
-	},
-
-	focus: function(){
-		// summary:
-		//		Put focus on this widget
-		dijit.focus(this.focusNode);
-	},
-
-	compare: function(/*anything*/val1, /*anything*/val2){
-		// summary:
-		//		Compare 2 values (as returned by attr('value') for this widget).
-		// tags:
-		//		protected
-		if(typeof val1 == "number" && typeof val2 == "number"){
-			return (isNaN(val1) && isNaN(val2)) ? 0 : val1 - val2;
-		}else if(val1 > val2){
-			return 1;
-		}else if(val1 < val2){
-			return -1;
-		}else{
-			return 0;
-		}
-	},
-
-	onChange: function(newValue){
-		// summary:
-		//		Callback when this widget's value is changed.
-		// tags:
-		//		callback
-	},
-
-	// _onChangeActive: [private] Boolean
-	//		Indicates that changes to the value should call onChange() callback.
-	//		This is false during widget initialization, to avoid calling onChange()
-	//		when the initial value is set.
-	_onChangeActive: false,
-
-	_handleOnChange: function(/*anything*/ newValue, /* Boolean? */ priorityChange){
-		// summary:
-		//		Called when the value of the widget is set.  Calls onChange() if appropriate
-		// newValue:
-		//		the new value
-		// priorityChange:
-		//		For a slider, for example, dragging the slider is priorityChange==false,
-		//		but on mouse up, it's priorityChange==true.  If intermediateChanges==true,
-		//		onChange is only called form priorityChange=true events.
-		// tags:
-		//		private
-		this._lastValue = newValue;
-		if(this._lastValueReported == undefined && (priorityChange === null || !this._onChangeActive)){
-			// this block executes not for a change, but during initialization,
-			// and is used to store away the original value (or for ToggleButton, the original checked state)
-			this._resetValue = this._lastValueReported = newValue;
-		}
-		if((this.intermediateChanges || priorityChange || priorityChange === undefined) &&
-			((typeof newValue != typeof this._lastValueReported) ||
-				this.compare(newValue, this._lastValueReported) != 0)){
-			this._lastValueReported = newValue;
-			if(this._onChangeActive){
-				if(this._onChangeHandle){
-					clearTimeout(this._onChangeHandle);
-				}
-				// setTimout allows hidden value processing to run and
-				// also the onChange handler can safely adjust focus, etc
-				this._onChangeHandle = setTimeout(dojo.hitch(this,
-					function(){
-						this._onChangeHandle = null;
-						this.onChange(newValue);
-					}), 0); // try to collapse multiple onChange's fired faster than can be processed
-			}
-		}
-	},
-
-	create: function(){
-		// Overrides _Widget.create()
-		this.inherited(arguments);
-		this._onChangeActive = true;
-	},
-
-	destroy: function(){
-		if(this._onChangeHandle){ // destroy called before last onChange has fired
-			clearTimeout(this._onChangeHandle);
-			this.onChange(this._lastValueReported);
-		}
-		this.inherited(arguments);
-	},
-
-	setValue: function(/*String*/ value){
-		// summary:
-		//		Deprecated.   Use set('value', ...) instead.
-		dojo.deprecated("dijit.form._FormWidget:setValue("+value+") is deprecated.  Use set('value',"+value+") instead.", "", "2.0");
-		this.set('value', value);
-	},
-
-	getValue: function(){
-		// summary:
-		//		Deprecated.   Use get('value') instead.
-		dojo.deprecated(this.declaredClass+"::getValue() is deprecated. Use get('value') instead.", "", "2.0");
-		return this.get('value');
-	},
-	
-	_onMouseDown: function(e){
-		// If user clicks on the button, even if the mouse is released outside of it,
-		// this button should get focus (to mimics native browser buttons).
-		// This is also needed on chrome because otherwise buttons won't get focus at all,
-		// which leads to bizarre focus restore on Dialog close etc.
-		if(!e.ctrlKey && this.isFocusable()){ // !e.ctrlKey to ignore right-click on mac
-			// Set a global event to handle mouseup, so it fires properly
-			// even if the cursor leaves this.domNode before the mouse up event.
-			var mouseUpConnector = this.connect(dojo.body(), "onmouseup", function(){
-				if (this.isFocusable()) {
-					this.focus();
-				}
-				this.disconnect(mouseUpConnector);
-			});
-		}
-	}
-});
-
-dojo.declare("dijit.form._FormValueWidget", dijit.form._FormWidget,
-{
-	// summary:
-	//		Base class for widgets corresponding to native HTML elements such as <input> or <select> that have user changeable values.
-	// description:
-	//		Each _FormValueWidget represents a single input value, and has a (possibly hidden) <input> element,
-	//		to which it serializes it's input value, so that form submission (either normal submission or via FormBind?)
-	//		works as expected.
-
-	// Don't attempt to mixin the 'type', 'name' attributes here programatically -- they must be declared
-	// directly in the template as read by the parser in order to function. IE is known to specifically
-	// require the 'name' attribute at element creation time.   See #8484, #8660.
-	// TODO: unclear what that {value: ""} is for; FormWidget.attributeMap copies value to focusNode,
-	// so maybe {value: ""} is so the value *doesn't* get copied to focusNode?
-	// Seems like we really want value removed from attributeMap altogether
-	// (although there's no easy way to do that now)
-
-	// readOnly: Boolean
-	//		Should this widget respond to user input?
-	//		In markup, this is specified as "readOnly".
-	//		Similar to disabled except readOnly form values are submitted.
-	readOnly: false,
-
-	attributeMap: dojo.delegate(dijit.form._FormWidget.prototype.attributeMap, {
-		value: "",
-		readOnly: "focusNode"
-	}),
-
-	_setReadOnlyAttr: function(/*Boolean*/ value){
-		this.readOnly = value;
-		dojo.attr(this.focusNode, 'readOnly', value);
-		dijit.setWaiState(this.focusNode, "readonly", value);
-	},
-
-	postCreate: function(){
-		this.inherited(arguments);
-
-		if(dojo.isIE){ // IE won't stop the event with keypress
-			this.connect(this.focusNode || this.domNode, "onkeydown", this._onKeyDown);
-		}
-		// Update our reset value if it hasn't yet been set (because this.set()
-		// is only called when there *is* a value)
-		if(this._resetValue === undefined){
-			this._resetValue = this.value;
-		}
-	},
-
-	_setValueAttr: function(/*anything*/ newValue, /*Boolean, optional*/ priorityChange){
-		// summary:
-		//		Hook so attr('value', value) works.
-		// description:
-		//		Sets the value of the widget.
-		//		If the value has changed, then fire onChange event, unless priorityChange
-		//		is specified as null (or false?)
-		this.value = newValue;
-		this._handleOnChange(newValue, priorityChange);
-	},
-
-	_getValueAttr: function(){
-		// summary:
-		//		Hook so attr('value') works.
-		return this._lastValue;
-	},
-
-	undo: function(){
-		// summary:
-		//		Restore the value to the last value passed to onChange
-		this._setValueAttr(this._lastValueReported, false);
-	},
-
-	reset: function(){
-		// summary:
-		//		Reset the widget's value to what it was at initialization time
-		this._hasBeenBlurred = false;
-		this._setValueAttr(this._resetValue, true);
-	},
-
-	_onKeyDown: function(e){
-		if(e.keyCode == dojo.keys.ESCAPE && !(e.ctrlKey || e.altKey || e.metaKey)){
-			var te;
-			if(dojo.isIE){
-				e.preventDefault(); // default behavior needs to be stopped here since keypress is too late
-				te = document.createEventObject();
-				te.keyCode = dojo.keys.ESCAPE;
-				te.shiftKey = e.shiftKey;
-				e.srcElement.fireEvent('onkeypress', te);
-			}
-		}
-	},
-
-	_layoutHackIE7: function(){
-		// summary:
-		//		Work around table sizing bugs on IE7 by forcing redraw
-
-		if(dojo.isIE == 7){ // fix IE7 layout bug when the widget is scrolled out of sight
-			var domNode = this.domNode;
-			var parent = domNode.parentNode;
-			var pingNode = domNode.firstChild || domNode; // target node most unlikely to have a custom filter
-			var origFilter = pingNode.style.filter; // save custom filter, most likely nothing
-			var _this = this;
-			while(parent && parent.clientHeight == 0){ // search for parents that haven't rendered yet
-				(function ping(){
-					var disconnectHandle = _this.connect(parent, "onscroll",
-						function(e){
-							_this.disconnect(disconnectHandle); // only call once
-							pingNode.style.filter = (new Date()).getMilliseconds(); // set to anything that's unique
-							setTimeout(function(){ pingNode.style.filter = origFilter }, 0); // restore custom filter, if any
-						}
-					);
-				})();
-				parent = parent.parentNode;
-			}
-		}
-	}
-});
 
 }
 
@@ -28580,385 +30123,6 @@ dojo.declare("dijit.form._FormSelectWidget", dijit.form._FormValueWidget, {
 
 }
 
-if(!dojo._hasResource["dijit.Tooltip"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dijit.Tooltip"] = true;
-dojo.provide("dijit.Tooltip");
-
-
-
-
-dojo.declare(
-	"dijit._MasterTooltip",
-	[dijit._Widget, dijit._Templated],
-	{
-		// summary:
-		//		Internal widget that holds the actual tooltip markup,
-		//		which occurs once per page.
-		//		Called by Tooltip widgets which are just containers to hold
-		//		the markup
-		// tags:
-		//		protected
-
-		// duration: Integer
-		//		Milliseconds to fade in/fade out
-		duration: dijit.defaultDuration,
-
-		templateString: dojo.cache("dijit", "templates/Tooltip.html", "<div class=\"dijitTooltip dijitTooltipLeft\" id=\"dojoTooltip\">\n\t<div class=\"dijitTooltipContainer dijitTooltipContents\" dojoAttachPoint=\"containerNode\" waiRole='alert'></div>\n\t<div class=\"dijitTooltipConnector\"></div>\n</div>\n"),
-
-		postCreate: function(){
-			dojo.body().appendChild(this.domNode);
-
-			this.bgIframe = new dijit.BackgroundIframe(this.domNode);
-
-			// Setup fade-in and fade-out functions.
-			this.fadeIn = dojo.fadeIn({ node: this.domNode, duration: this.duration, onEnd: dojo.hitch(this, "_onShow") });
-			this.fadeOut = dojo.fadeOut({ node: this.domNode, duration: this.duration, onEnd: dojo.hitch(this, "_onHide") });
-
-		},
-
-		show: function(/*String*/ innerHTML, /*DomNode*/ aroundNode, /*String[]?*/ position, /*Boolean*/ rtl){
-			// summary:
-			//		Display tooltip w/specified contents to right of specified node
-			//		(To left if there's no space on the right, or if rtl == true)
-
-			if(this.aroundNode && this.aroundNode === aroundNode){
-				return;
-			}
-
-			if(this.fadeOut.status() == "playing"){
-				// previous tooltip is being hidden; wait until the hide completes then show new one
-				this._onDeck=arguments;
-				return;
-			}
-			this.containerNode.innerHTML=innerHTML;
-
-			var pos = dijit.placeOnScreenAroundElement(this.domNode, aroundNode, dijit.getPopupAroundAlignment((position && position.length) ? position : dijit.Tooltip.defaultPosition, !rtl), dojo.hitch(this, "orient"));
-
-			// show it
-			dojo.style(this.domNode, "opacity", 0);
-			this.fadeIn.play();
-			this.isShowingNow = true;
-			this.aroundNode = aroundNode;
-		},
-
-		orient: function(/* DomNode */ node, /* String */ aroundCorner, /* String */ tooltipCorner){
-			// summary:
-			//		Private function to set CSS for tooltip node based on which position it's in.
-			//		This is called by the dijit popup code.
-			// tags:
-			//		protected
-
-			node.className = "dijitTooltip " +
-				{
-					"BL-TL": "dijitTooltipBelow dijitTooltipABLeft",
-					"TL-BL": "dijitTooltipAbove dijitTooltipABLeft",
-					"BR-TR": "dijitTooltipBelow dijitTooltipABRight",
-					"TR-BR": "dijitTooltipAbove dijitTooltipABRight",
-					"BR-BL": "dijitTooltipRight",
-					"BL-BR": "dijitTooltipLeft"
-				}[aroundCorner + "-" + tooltipCorner];
-		},
-
-		_onShow: function(){
-			// summary:
-			//		Called at end of fade-in operation
-			// tags:
-			//		protected
-			if(dojo.isIE){
-				// the arrow won't show up on a node w/an opacity filter
-				this.domNode.style.filter="";
-			}
-		},
-
-		hide: function(aroundNode){
-			// summary:
-			//		Hide the tooltip
-			if(this._onDeck && this._onDeck[1] == aroundNode){
-				// this hide request is for a show() that hasn't even started yet;
-				// just cancel the pending show()
-				this._onDeck=null;
-			}else if(this.aroundNode === aroundNode){
-				// this hide request is for the currently displayed tooltip
-				this.fadeIn.stop();
-				this.isShowingNow = false;
-				this.aroundNode = null;
-				this.fadeOut.play();
-			}else{
-				// just ignore the call, it's for a tooltip that has already been erased
-			}
-		},
-
-		_onHide: function(){
-			// summary:
-			//		Called at end of fade-out operation
-			// tags:
-			//		protected
-
-			this.domNode.style.cssText="";	// to position offscreen again
-			this.containerNode.innerHTML="";
-			if(this._onDeck){
-				// a show request has been queued up; do it now
-				this.show.apply(this, this._onDeck);
-				this._onDeck=null;
-			}
-		}
-
-	}
-);
-
-dijit.showTooltip = function(/*String*/ innerHTML, /*DomNode*/ aroundNode, /*String[]?*/ position, /*Boolean*/ rtl){
-	// summary:
-	//		Display tooltip w/specified contents in specified position.
-	//		See description of dijit.Tooltip.defaultPosition for details on position parameter.
-	//		If position is not specified then dijit.Tooltip.defaultPosition is used.
-	if(!dijit._masterTT){ dijit._masterTT = new dijit._MasterTooltip(); }
-	return dijit._masterTT.show(innerHTML, aroundNode, position, rtl);
-};
-
-dijit.hideTooltip = function(aroundNode){
-	// summary:
-	//		Hide the tooltip
-	if(!dijit._masterTT){ dijit._masterTT = new dijit._MasterTooltip(); }
-	return dijit._masterTT.hide(aroundNode);
-};
-
-dojo.declare(
-	"dijit.Tooltip",
-	dijit._Widget,
-	{
-		// summary:
-		//		Pops up a tooltip (a help message) when you hover over a node.
-
-		// label: String
-		//		Text to display in the tooltip.
-		//		Specified as innerHTML when creating the widget from markup.
-		label: "",
-
-		// showDelay: Integer
-		//		Number of milliseconds to wait after hovering over/focusing on the object, before
-		//		the tooltip is displayed.
-		showDelay: 400,
-
-		// connectId: [const] String[]
-		//		Id's of domNodes to attach the tooltip to.
-		//		When user hovers over any of the specified dom nodes, the tooltip will appear.
-		//
-		//		Note: Currently connectId can only be specified on initialization, it cannot
-		//		be changed via attr('connectId', ...)
-		//
-		//		Note: in 2.0 this will be renamed to connectIds for less confusion.
-		connectId: [],
-
-		// position: String[]
-		//		See description of `dijit.Tooltip.defaultPosition` for details on position parameter.
-		position: [],
-
-		constructor: function(){
-			// Map id's of nodes I'm connected to to a list of the this.connect() handles
-			this._nodeConnectionsById = {};
-		},
-
-		_setConnectIdAttr: function(newIds){
-			for(var oldId in this._nodeConnectionsById){
-				this.removeTarget(oldId);
-			}
-			dojo.forEach(dojo.isArrayLike(newIds) ? newIds : [newIds], this.addTarget, this);
-		},
-
-		_getConnectIdAttr: function(){
-			var ary = [];
-			for(var id in this._nodeConnectionsById){
-				ary.push(id);
-			}
-			return ary;
-		},
-
-		addTarget: function(/*DOMNODE || String*/ id){
-			// summary:
-			//		Attach tooltip to specified node, if it's not already connected
-			var node = dojo.byId(id);
-			if(!node){ return; }
-			if(node.id in this._nodeConnectionsById){ return; }//Already connected
-
-			this._nodeConnectionsById[node.id] = [
-				this.connect(node, "onmouseenter", "_onTargetMouseEnter"),
-				this.connect(node, "onmouseleave", "_onTargetMouseLeave"),
-				this.connect(node, "onfocus", "_onTargetFocus"),
-				this.connect(node, "onblur", "_onTargetBlur")
-			];
-		},
-
-		removeTarget: function(/*DOMNODE || String*/ node){
-			// summary:
-			//		Detach tooltip from specified node
-
-			// map from DOMNode back to plain id string
-			var id = node.id || node;
-
-			if(id in this._nodeConnectionsById){
-				dojo.forEach(this._nodeConnectionsById[id], this.disconnect, this);
-				delete this._nodeConnectionsById[id];
-			}
-		},
-
-		postCreate: function(){
-			dojo.addClass(this.domNode,"dijitTooltipData");
-		},
-
-		startup: function(){
-			this.inherited(arguments);
-
-			// If this tooltip was created in a template, or for some other reason the specified connectId[s]
-			// didn't exist during the widget's initialization, then connect now.
-			var ids = this.connectId;
-			dojo.forEach(dojo.isArrayLike(ids) ? ids : [ids], this.addTarget, this);
-		},
-
-		_onTargetMouseEnter: function(/*Event*/ e){
-			// summary:
-			//		Handler for mouseenter event on the target node
-			// tags:
-			//		private
-			this._onHover(e);
-		},
-
-		_onTargetMouseLeave: function(/*Event*/ e){
-			// summary:
-			//		Handler for mouseleave event on the target node
-			// tags:
-			//		private
-			this._onUnHover(e);
-		},
-
-		_onTargetFocus: function(/*Event*/ e){
-			// summary:
-			//		Handler for focus event on the target node
-			// tags:
-			//		private
-
-			this._focus = true;
-			this._onHover(e);
-		},
-
-		_onTargetBlur: function(/*Event*/ e){
-			// summary:
-			//		Handler for blur event on the target node
-			// tags:
-			//		private
-
-			this._focus = false;
-			this._onUnHover(e);
-		},
-
-		_onHover: function(/*Event*/ e){
-			// summary:
-			//		Despite the name of this method, it actually handles both hover and focus
-			//		events on the target node, setting a timer to show the tooltip.
-			// tags:
-			//		private
-			if(!this._showTimer){
-				var target = e.target;
-				this._showTimer = setTimeout(dojo.hitch(this, function(){this.open(target)}), this.showDelay);
-			}
-		},
-
-		_onUnHover: function(/*Event*/ e){
-			// summary:
-			//		Despite the name of this method, it actually handles both mouseleave and blur
-			//		events on the target node, hiding the tooltip.
-			// tags:
-			//		private
-
-			// keep a tooltip open if the associated element still has focus (even though the
-			// mouse moved away)
-			if(this._focus){ return; }
-
-			if(this._showTimer){
-				clearTimeout(this._showTimer);
-				delete this._showTimer;
-			}
-			this.close();
-		},
-
-		open: function(/*DomNode*/ target){
- 			// summary:
-			//		Display the tooltip; usually not called directly.
-			// tags:
-			//		private
-
-			if(this._showTimer){
-				clearTimeout(this._showTimer);
-				delete this._showTimer;
-			}
-			dijit.showTooltip(this.label || this.domNode.innerHTML, target, this.position, !this.isLeftToRight());
-
-			this._connectNode = target;
-			this.onShow(target, this.position);
-		},
-
-		close: function(){
-			// summary:
-			//		Hide the tooltip or cancel timer for show of tooltip
-			// tags:
-			//		private
-
-			if(this._connectNode){
-				// if tooltip is currently shown
-				dijit.hideTooltip(this._connectNode);
-				delete this._connectNode;
-				this.onHide();
-			}
-			if(this._showTimer){
-				// if tooltip is scheduled to be shown (after a brief delay)
-				clearTimeout(this._showTimer);
-				delete this._showTimer;
-			}
-		},
-
-		onShow: function(target, position){
-			// summary:
-			//		Called when the tooltip is shown
-			// tags:
-			//		callback
-		},
-
-		onHide: function(){
-			// summary:
-			//		Called when the tooltip is hidden
-			// tags:
-			//		callback
-		},
-
-		uninitialize: function(){
-			this.close();
-			this.inherited(arguments);
-		}
-	}
-);
-
-// dijit.Tooltip.defaultPosition: String[]
-//		This variable controls the position of tooltips, if the position is not specified to
-//		the Tooltip widget or *TextBox widget itself.  It's an array of strings with the following values:
-//
-//			* before: places tooltip to the left of the target node/widget, or to the right in
-//			  the case of RTL scripts like Hebrew and Arabic
-//			* after: places tooltip to the right of the target node/widget, or to the left in
-//			  the case of RTL scripts like Hebrew and Arabic
-//			* above: tooltip goes above target node
-//			* below: tooltip goes below target node
-//
-//		The list is positions is tried, in order, until a position is found where the tooltip fits
-//		within the viewport.
-//
-//		Be careful setting this parameter.  A value of "above" may work fine until the user scrolls
-//		the screen so that there's no room above the target node.   Nodes with drop downs, like
-//		DropDownButton or FilteringSelect, are especially problematic, in that you need to be sure
-//		that the drop down and tooltip don't overlap, even when the viewport is scrolled so that there
-//		is only room below (or above) the target node, but not both.
-dijit.Tooltip.defaultPosition = ["after", "before"];
-
-}
-
 if(!dojo._hasResource["dijit.form.Select"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
 dojo._hasResource["dijit.form.Select"] = true;
 dojo.provide("dijit.form.Select");
@@ -29493,878 +30657,6 @@ dojo.provide("dijit.form.RadioButton");
 
 
 // TODO: for 2.0, move the RadioButton code into this file
-
-}
-
-if(!dojo._hasResource["dijit.form.TextBox"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dijit.form.TextBox"] = true;
-dojo.provide("dijit.form.TextBox");
-
-
-
-dojo.declare(
-	"dijit.form.TextBox",
-	dijit.form._FormValueWidget,
-	{
-		// summary:
-		//		A base class for textbox form inputs
-
-		// trim: Boolean
-		//		Removes leading and trailing whitespace if true.  Default is false.
-		trim: false,
-
-		// uppercase: Boolean
-		//		Converts all characters to uppercase if true.  Default is false.
-		uppercase: false,
-
-		// lowercase: Boolean
-		//		Converts all characters to lowercase if true.  Default is false.
-		lowercase: false,
-
-		// propercase: Boolean
-		//		Converts the first character of each word to uppercase if true.
-		propercase: false,
-
-		//	maxLength: String
-		//		HTML INPUT tag maxLength declaration.
-		maxLength: "",
-
-		//	selectOnClick: [const] Boolean
-		//		If true, all text will be selected when focused with mouse
-		selectOnClick: false,
-
-		//	placeHolder: String
-		//		Defines a hint to help users fill out the input field (as defined in HTML 5).
-		//		This should only contain plain text (no html markup).
-		placeHolder: "",
-		
-		templateString: dojo.cache("dijit.form", "templates/TextBox.html", "<div class=\"dijit dijitReset dijitInline dijitLeft\" id=\"widget_${id}\" waiRole=\"presentation\"\n\t><div class=\"dijitReset dijitInputField dijitInputContainer\"\n\t\t><input class=\"dijitReset dijitInputInner\" dojoAttachPoint='textbox,focusNode' autocomplete=\"off\"\n\t\t\t${!nameAttrSetting} type='${type}'\n\t/></div\n></div>\n"),
-		_singleNodeTemplate: '<input class="dijit dijitReset dijitLeft dijitInputField" dojoAttachPoint="textbox,focusNode" autocomplete="off" type="${type}" ${!nameAttrSetting} />',
-
-		_buttonInputDisabled: dojo.isIE ? "disabled" : "", // allows IE to disallow focus, but Firefox cannot be disabled for mousedown events
-
-		baseClass: "dijitTextBox",
-
-		attributeMap: dojo.delegate(dijit.form._FormValueWidget.prototype.attributeMap, {
-			maxLength: "focusNode"
-		}),
-		
-		postMixInProperties: function(){
-			var type = this.type.toLowerCase();
-			if(this.templateString.toLowerCase() == "input" || ((type == "hidden" || type == "file") && this.templateString == dijit.form.TextBox.prototype.templateString)){
-				this.templateString = this._singleNodeTemplate;
-			}
-			this.inherited(arguments);
-		},
-
-		_setPlaceHolderAttr: function(v){
-			this.placeHolder = v;
-			if(!this._phspan){
-				this._attachPoints.push('_phspan');
-				/* dijitInputField class gives placeHolder same padding as the input field
-				 * parent node already has dijitInputField class but it doesn't affect this <span>
-				 * since it's position: absolute.
-				 */
-				this._phspan = dojo.create('span',{className:'dijitPlaceHolder dijitInputField'},this.textbox,'after');
-			}
-			this._phspan.innerHTML="";
-			this._phspan.appendChild(document.createTextNode(v));
-			
-			this._updatePlaceHolder();
-		},
-		
-		_updatePlaceHolder: function(){
-			if(this._phspan){
-				this._phspan.style.display=(this.placeHolder&&!this._focused&&!this.textbox.value)?"":"none";
-			}
-		},
-
-		_getValueAttr: function(){
-			// summary:
-			//		Hook so attr('value') works as we like.
-			// description:
-			//		For `dijit.form.TextBox` this basically returns the value of the <input>.
-			//
-			//		For `dijit.form.MappedTextBox` subclasses, which have both
-			//		a "displayed value" and a separate "submit value",
-			//		This treats the "displayed value" as the master value, computing the
-			//		submit value from it via this.parse().
-			return this.parse(this.get('displayedValue'), this.constraints);
-		},
-
-		_setValueAttr: function(value, /*Boolean?*/ priorityChange, /*String?*/ formattedValue){
-			// summary:
-			//		Hook so attr('value', ...) works.
-			//
-			// description:
-			//		Sets the value of the widget to "value" which can be of
-			//		any type as determined by the widget.
-			//
-			// value:
-			//		The visual element value is also set to a corresponding,
-			//		but not necessarily the same, value.
-			//
-			// formattedValue:
-			//		If specified, used to set the visual element value,
-			//		otherwise a computed visual value is used.
-			//
-			// priorityChange:
-			//		If true, an onChange event is fired immediately instead of
-			//		waiting for the next blur event.
-
-			var filteredValue;
-			if(value !== undefined){
-				// TODO: this is calling filter() on both the display value and the actual value.
-				// I added a comment to the filter() definition about this, but it should be changed.
-				filteredValue = this.filter(value);
-				if(typeof formattedValue != "string"){
-					if(filteredValue !== null && ((typeof filteredValue != "number") || !isNaN(filteredValue))){
-						formattedValue = this.filter(this.format(filteredValue, this.constraints));
-					}else{ formattedValue = ''; }
-				}
-			}
-			if(formattedValue != null && formattedValue != undefined && ((typeof formattedValue) != "number" || !isNaN(formattedValue)) && this.textbox.value != formattedValue){
-				this.textbox.value = formattedValue;
-			}
-
-			this._updatePlaceHolder();
-
-			this.inherited(arguments, [filteredValue, priorityChange]);
-		},
-
-		// displayedValue: String
-		//		For subclasses like ComboBox where the displayed value
-		//		(ex: Kentucky) and the serialized value (ex: KY) are different,
-		//		this represents the displayed value.
-		//
-		//		Setting 'displayedValue' through attr('displayedValue', ...)
-		//		updates 'value', and vice-versa.  Otherwise 'value' is updated
-		//		from 'displayedValue' periodically, like onBlur etc.
-		//
-		//		TODO: move declaration to MappedTextBox?
-		//		Problem is that ComboBox references displayedValue,
-		//		for benefit of FilteringSelect.
-		displayedValue: "",
-
-		getDisplayedValue: function(){
-			// summary:
-			//		Deprecated.   Use set('displayedValue') instead.
-			// tags:
-			//		deprecated
-			dojo.deprecated(this.declaredClass+"::getDisplayedValue() is deprecated. Use set('displayedValue') instead.", "", "2.0");
-			return this.get('displayedValue');
-		},
-
-		_getDisplayedValueAttr: function(){
-			// summary:
-			//		Hook so attr('displayedValue') works.
-			// description:
-			//		Returns the displayed value (what the user sees on the screen),
-			// 		after filtering (ie, trimming spaces etc.).
-			//
-			//		For some subclasses of TextBox (like ComboBox), the displayed value
-			//		is different from the serialized value that's actually
-			//		sent to the server (see dijit.form.ValidationTextBox.serialize)
-
-			return this.filter(this.textbox.value);
-		},
-
-		setDisplayedValue: function(/*String*/value){
-			// summary:
-			//		Deprecated.   Use set('displayedValue', ...) instead.
-			// tags:
-			//		deprecated
-			dojo.deprecated(this.declaredClass+"::setDisplayedValue() is deprecated. Use set('displayedValue', ...) instead.", "", "2.0");
-			this.set('displayedValue', value);
-		},
-
-		_setDisplayedValueAttr: function(/*String*/value){
-			// summary:
-			//		Hook so attr('displayedValue', ...) works.
-			// description:
-			//		Sets the value of the visual element to the string "value".
-			//		The widget value is also set to a corresponding,
-			//		but not necessarily the same, value.
-
-			if(value === null || value === undefined){ value = '' }
-			else if(typeof value != "string"){ value = String(value) }
-			this.textbox.value = value;
-			this._setValueAttr(this.get('value'), undefined, value);
-		},
-
-		format: function(/* String */ value, /* Object */ constraints){
-			// summary:
-			//		Replacable function to convert a value to a properly formatted string.
-			// tags:
-			//		protected extension
-			return ((value == null || value == undefined) ? "" : (value.toString ? value.toString() : value));
-		},
-
-		parse: function(/* String */ value, /* Object */ constraints){
-			// summary:
-			//		Replacable function to convert a formatted string to a value
-			// tags:
-			//		protected extension
-
-			return value;	// String
-		},
-
-		_refreshState: function(){
-			// summary:
-			//		After the user types some characters, etc., this method is
-			//		called to check the field for validity etc.  The base method
-			//		in `dijit.form.TextBox` does nothing, but subclasses override.
-			// tags:
-			//		protected
-		},
-
-		_onInput: function(e){
-			if(e && e.type && /key/i.test(e.type) && e.keyCode){
-				switch(e.keyCode){
-					case dojo.keys.SHIFT:
-					case dojo.keys.ALT:
-					case dojo.keys.CTRL:
-					case dojo.keys.TAB:
-						return;
-				}
-			}
-			if(this.intermediateChanges){
-				var _this = this;
-				// the setTimeout allows the key to post to the widget input box
-				setTimeout(function(){ _this._handleOnChange(_this.get('value'), false); }, 0);
-			}
-			this._refreshState();
-		},
-
-		postCreate: function(){
-			// setting the value here is needed since value="" in the template causes "undefined"
-			// and setting in the DOM (instead of the JS object) helps with form reset actions
-			if(dojo.isIE){ // IE INPUT tag fontFamily has to be set directly using STYLE
-				var s = dojo.getComputedStyle(this.domNode);
-				if(s){
-					var ff = s.fontFamily;
-					if(ff){
-						var inputs = this.domNode.getElementsByTagName("INPUT");
-						if(inputs){
-							for(var i=0; i < inputs.length; i++){
-								inputs[i].style.fontFamily = ff;
-							}
-						}
-					}
-				}
-			}
-			this.textbox.setAttribute("value", this.textbox.value); // DOM and JS values shuld be the same
-			this.inherited(arguments);
-			if(dojo.isMoz || dojo.isOpera){
-				this.connect(this.textbox, "oninput", this._onInput);
-			}else{
-				this.connect(this.textbox, "onkeydown", this._onInput);
-				this.connect(this.textbox, "onkeyup", this._onInput);
-				this.connect(this.textbox, "onpaste", this._onInput);
-				this.connect(this.textbox, "oncut", this._onInput);
-			}
-		},
-
-		_blankValue: '', // if the textbox is blank, what value should be reported
-		filter: function(val){
-			// summary:
-			//		Auto-corrections (such as trimming) that are applied to textbox
-			//		value on blur or form submit.
-			// description:
-			//		For MappedTextBox subclasses, this is called twice
-			// 			- once with the display value
-			//			- once the value as set/returned by attr('value', ...)
-			//		and attr('value'), ex: a Number for NumberTextBox.
-			//
-			//		In the latter case it does corrections like converting null to NaN.  In
-			//		the former case the NumberTextBox.filter() method calls this.inherited()
-			//		to execute standard trimming code in TextBox.filter().
-			//
-			//		TODO: break this into two methods in 2.0
-			//
-			// tags:
-			//		protected extension
-			if(val === null){ return this._blankValue; }
-			if(typeof val != "string"){ return val; }
-			if(this.trim){
-				val = dojo.trim(val);
-			}
-			if(this.uppercase){
-				val = val.toUpperCase();
-			}
-			if(this.lowercase){
-				val = val.toLowerCase();
-			}
-			if(this.propercase){
-				val = val.replace(/[^\s]+/g, function(word){
-					return word.substring(0,1).toUpperCase() + word.substring(1);
-				});
-			}
-			return val;
-		},
-
-		_setBlurValue: function(){
-			this._setValueAttr(this.get('value'), true);
-		},
-
-		_onBlur: function(e){
-			if(this.disabled){ return; }
-			this._setBlurValue();
-			this.inherited(arguments);
-
-			if(this._selectOnClickHandle){
-				this.disconnect(this._selectOnClickHandle);
-			}
-			if(this.selectOnClick && dojo.isMoz){
-				this.textbox.selectionStart = this.textbox.selectionEnd = undefined; // clear selection so that the next mouse click doesn't reselect
-			}
-			
-			this._updatePlaceHolder();
-		},
-
-		_onFocus: function(/*String*/ by){
-			if(this.disabled || this.readOnly){ return; }
-
-			// Select all text on focus via click if nothing already selected.
-			// Since mouse-up will clear the selection need to defer selection until after mouse-up.
-			// Don't do anything on focus by tabbing into the widget since there's no associated mouse-up event.
-			if(this.selectOnClick && by == "mouse"){
-				this._selectOnClickHandle = this.connect(this.domNode, "onmouseup", function(){
-					// Only select all text on first click; otherwise users would have no way to clear
-					// the selection.
-					this.disconnect(this._selectOnClickHandle);
-
-					// Check if the user selected some text manually (mouse-down, mouse-move, mouse-up)
-					// and if not, then select all the text
-					var textIsNotSelected;
-					if(dojo.isIE){
-						var range = dojo.doc.selection.createRange();
-						var parent = range.parentElement();
-						textIsNotSelected = parent == this.textbox && range.text.length == 0;
-					}else{
-						textIsNotSelected = this.textbox.selectionStart == this.textbox.selectionEnd;
-					}
-					if(textIsNotSelected){
-						dijit.selectInputText(this.textbox);
-					}
-				});
-			}
-
-			this._updatePlaceHolder();
-			
-			this._refreshState();
-			this.inherited(arguments);
-		},
-
-		reset: function(){
-			// Overrides dijit._FormWidget.reset().
-			// Additionally resets the displayed textbox value to ''
-			this.textbox.value = '';
-			this.inherited(arguments);
-		}
-	}
-);
-
-dijit.selectInputText = function(/*DomNode*/element, /*Number?*/ start, /*Number?*/ stop){
-	// summary:
-	//		Select text in the input element argument, from start (default 0), to stop (default end).
-
-	// TODO: use functions in _editor/selection.js?
-	var _window = dojo.global;
-	var _document = dojo.doc;
-	element = dojo.byId(element);
-	if(isNaN(start)){ start = 0; }
-	if(isNaN(stop)){ stop = element.value ? element.value.length : 0; }
-	dijit.focus(element);
-	if(_document["selection"] && dojo.body()["createTextRange"]){ // IE
-		if(element.createTextRange){
-			var range = element.createTextRange();
-			with(range){
-				collapse(true);
-				moveStart("character", -99999); // move to 0
-				moveStart("character", start); // delta from 0 is the correct position
-				moveEnd("character", stop-start);
-				select();
-			}
-		}
-	}else if(_window["getSelection"]){
-		if(element.setSelectionRange){
-			element.setSelectionRange(start, stop);
-		}
-	}
-};
-
-}
-
-if(!dojo._hasResource["dijit.form.ValidationTextBox"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dijit.form.ValidationTextBox"] = true;
-dojo.provide("dijit.form.ValidationTextBox");
-
-
-
-
-
-
-
-
-/*=====
-	dijit.form.ValidationTextBox.__Constraints = function(){
-		// locale: String
-		//		locale used for validation, picks up value from this widget's lang attribute
-		// _flags_: anything
-		//		various flags passed to regExpGen function
-		this.locale = "";
-		this._flags_ = "";
-	}
-=====*/
-
-dojo.declare(
-	"dijit.form.ValidationTextBox",
-	dijit.form.TextBox,
-	{
-		// summary:
-		//		Base class for textbox widgets with the ability to validate content of various types and provide user feedback.
-		// tags:
-		//		protected
-
-		templateString: dojo.cache("dijit.form", "templates/ValidationTextBox.html", "<div class=\"dijit dijitReset dijitInlineTable dijitLeft\"\n\tid=\"widget_${id}\" waiRole=\"presentation\"\n\t><div class='dijitReset dijitValidationContainer'\n\t\t><input class=\"dijitReset dijitInputField dijitValidationIcon dijitValidationInner\" value=\"&Chi; \" type=\"text\" tabIndex=\"-1\" readOnly waiRole=\"presentation\"\n\t/></div\n\t><div class=\"dijitReset dijitInputField dijitInputContainer\"\n\t\t><input class=\"dijitReset dijitInputInner\" dojoAttachPoint='textbox,focusNode' autocomplete=\"off\"\n\t\t\t${!nameAttrSetting} type='${type}'\n\t/></div\n></div>\n"),
-		baseClass: "dijitTextBox dijitValidationTextBox",
-
-		// required: Boolean
-		//		User is required to enter data into this field.
-		required: false,
-
-		// promptMessage: String
-		//		If defined, display this hint string immediately on focus to the textbox, if empty.
-		//		Think of this like a tooltip that tells the user what to do, not an error message
-		//		that tells the user what they've done wrong.
-		//
-		//		Message disappears when user starts typing.
-		promptMessage: "",
-
-		// invalidMessage: String
-		// 		The message to display if value is invalid.
-		//		The translated string value is read from the message file by default.
-		// 		Set to "" to use the promptMessage instead.
-		invalidMessage: "$_unset_$",
-
-		// missingMessage: String
-		// 		The message to display if value is empty and the field is required.
-		//		The translated string value is read from the message file by default.
-		// 		Set to "" to use the invalidMessage instead.
-		missingMessage: "$_unset_$",
-
-		// constraints: dijit.form.ValidationTextBox.__Constraints
-		//		user-defined object needed to pass parameters to the validator functions
-		constraints: {},
-
-		// regExp: [extension protected] String
-		//		regular expression string used to validate the input
-		//		Do not specify both regExp and regExpGen
-		regExp: ".*",
-
-		regExpGen: function(/*dijit.form.ValidationTextBox.__Constraints*/constraints){
-			// summary:
-			//		Overridable function used to generate regExp when dependent on constraints.
-			//		Do not specify both regExp and regExpGen.
-			// tags:
-			//		extension protected
-			return this.regExp; // String
-		},
-
-		// state: [readonly] String
-		//		Shows current state (ie, validation result) of input (Normal, Warning, or Error)
-		state: "",
-
-		// tooltipPosition: String[]
-		//		See description of `dijit.Tooltip.defaultPosition` for details on this parameter.
-		tooltipPosition: [],
-
-		_setValueAttr: function(){
-			// summary:
-			//		Hook so attr('value', ...) works.
-			this.inherited(arguments);
-			this.validate(this._focused);
-		},
-
-		validator: function(/*anything*/value, /*dijit.form.ValidationTextBox.__Constraints*/constraints){
-			// summary:
-			//		Overridable function used to validate the text input against the regular expression.
-			// tags:
-			//		protected
-			return (new RegExp("^(?:" + this.regExpGen(constraints) + ")"+(this.required?"":"?")+"$")).test(value) &&
-				(!this.required || !this._isEmpty(value)) &&
-				(this._isEmpty(value) || this.parse(value, constraints) !== undefined); // Boolean
-		},
-
-		_isValidSubset: function(){
-			// summary:
-			//		Returns true if the value is either already valid or could be made valid by appending characters.
-			//		This is used for validation while the user [may be] still typing.
-			return this.textbox.value.search(this._partialre) == 0;
-		},
-
-		isValid: function(/*Boolean*/ isFocused){
-			// summary:
-			//		Tests if value is valid.
-			//		Can override with your own routine in a subclass.
-			// tags:
-			//		protected
-			return this.validator(this.textbox.value, this.constraints);
-		},
-
-		_isEmpty: function(value){
-			// summary:
-			//		Checks for whitespace
-			return /^\s*$/.test(value); // Boolean
-		},
-
-		getErrorMessage: function(/*Boolean*/ isFocused){
-			// summary:
-			//		Return an error message to show if appropriate
-			// tags:
-			//		protected
-			return (this.required && this._isEmpty(this.textbox.value)) ? this.missingMessage : this.invalidMessage; // String
-		},
-
-		getPromptMessage: function(/*Boolean*/ isFocused){
-			// summary:
-			//		Return a hint message to show when widget is first focused
-			// tags:
-			//		protected
-			return this.promptMessage; // String
-		},
-
-		_maskValidSubsetError: true,
-		validate: function(/*Boolean*/ isFocused){
-			// summary:
-			//		Called by oninit, onblur, and onkeypress.
-			// description:
-			//		Show missing or invalid messages if appropriate, and highlight textbox field.
-			// tags:
-			//		protected
-			var message = "";
-			var isValid = this.disabled || this.isValid(isFocused);
-			if(isValid){ this._maskValidSubsetError = true; }
-			var isEmpty = this._isEmpty(this.textbox.value);
-			var isValidSubset = !isValid && !isEmpty && isFocused && this._isValidSubset();
-			this.state = ((isValid || ((!this._hasBeenBlurred || isFocused) && isEmpty) || isValidSubset) && this._maskValidSubsetError) ? "" : "Error";
-			if(this.state == "Error"){ this._maskValidSubsetError = isFocused; } // we want the error to show up afer a blur and refocus
-			this._setStateClass();
-			dijit.setWaiState(this.focusNode, "invalid", isValid ? "false" : "true");
-			if(isFocused){
-				if(this.state == "Error"){
-					message = this.getErrorMessage(true);
-				}else{
-					message = this.getPromptMessage(true); // show the prompt whever there's no error
-				}
-				this._maskValidSubsetError = true; // since we're focused, always mask warnings
-			}
-			this.displayMessage(message);
-			return isValid;
-		},
-
-		// _message: String
-		//		Currently displayed message
-		_message: "",
-
-		displayMessage: function(/*String*/ message){
-			// summary:
-			//		Overridable method to display validation errors/hints.
-			//		By default uses a tooltip.
-			// tags:
-			//		extension
-			if(this._message == message){ return; }
-			this._message = message;
-			dijit.hideTooltip(this.domNode);
-			if(message){
-				dijit.showTooltip(message, this.domNode, this.tooltipPosition, !this.isLeftToRight());
-			}
-		},
-
-		_refreshState: function(){
-			// Overrides TextBox._refreshState()
-			this.validate(this._focused);
-			this.inherited(arguments);
-		},
-
-		//////////// INITIALIZATION METHODS ///////////////////////////////////////
-
-		constructor: function(){
-			this.constraints = {};
-		},
-
-		_setConstraintsAttr: function(/* Object */ constraints){
-			if(!constraints.locale && this.lang){
-				constraints.locale = this.lang;
-			}
-			this.constraints = constraints;
-			this._computePartialRE();
-		},
-
-		_computePartialRE: function(){
-			var p = this.regExpGen(this.constraints);
-			this.regExp = p;
-			var partialre = "";
-			// parse the regexp and produce a new regexp that matches valid subsets
-			// if the regexp is .* then there's no use in matching subsets since everything is valid
-			if(p != ".*"){ this.regExp.replace(/\\.|\[\]|\[.*?[^\\]{1}\]|\{.*?\}|\(\?[=:!]|./g,
-				function (re){
-					switch(re.charAt(0)){
-						case '{':
-						case '+':
-						case '?':
-						case '*':
-						case '^':
-						case '$':
-						case '|':
-						case '(':
-							partialre += re;
-							break;
-						case ")":
-							partialre += "|$)";
-							break;
-						 default:
-							partialre += "(?:"+re+"|$)";
-							break;
-					}
-				}
-			);}
-			try{ // this is needed for now since the above regexp parsing needs more test verification
-				"".search(partialre);
-			}catch(e){ // should never be here unless the original RE is bad or the parsing is bad
-				partialre = this.regExp;
-				console.warn('RegExp error in ' + this.declaredClass + ': ' + this.regExp);
-			} // should never be here unless the original RE is bad or the parsing is bad
-			this._partialre = "^(?:" + partialre + ")$";
-		},
-
-		postMixInProperties: function(){
-			this.inherited(arguments);
-			this.messages = dojo.i18n.getLocalization("dijit.form", "validate", this.lang);
-			if(this.invalidMessage == "$_unset_$"){ this.invalidMessage = this.messages.invalidMessage; }
-			if(!this.invalidMessage){ this.invalidMessage = this.promptMessage; }
-			if(this.missingMessage == "$_unset_$"){ this.missingMessage = this.messages.missingMessage; }
-			if(!this.missingMessage){ this.missingMessage = this.invalidMessage; }
-			this._setConstraintsAttr(this.constraints); // this needs to happen now (and later) due to codependency on _set*Attr calls attachPoints
-		},
-
-		_setDisabledAttr: function(/*Boolean*/ value){
-			this.inherited(arguments);	// call FormValueWidget._setDisabledAttr()
-			this._refreshState();
-		},
-
-		_setRequiredAttr: function(/*Boolean*/ value){
-			this.required = value;
-			dijit.setWaiState(this.focusNode, "required", value);
-			this._refreshState();
-		},
-
-		reset:function(){
-			// Overrides dijit.form.TextBox.reset() by also
-			// hiding errors about partial matches
-			this._maskValidSubsetError = true;
-			this.inherited(arguments);
-		},
-
-		_onBlur: function(){
-			this.displayMessage('');
-			this.inherited(arguments);
-		}
-	}
-);
-
-dojo.declare(
-	"dijit.form.MappedTextBox",
-	dijit.form.ValidationTextBox,
-	{
-		// summary:
-		//		A dijit.form.ValidationTextBox subclass which provides a base class for widgets that have
-		//		a visible formatted display value, and a serializable
-		//		value in a hidden input field which is actually sent to the server.
-		// description:
-		//		The visible display may
-		//		be locale-dependent and interactive.  The value sent to the server is stored in a hidden
-		//		input field which uses the `name` attribute declared by the original widget.  That value sent
-		//		to the server is defined by the dijit.form.MappedTextBox.serialize method and is typically
-		//		locale-neutral.
-		// tags:
-		//		protected
-
-		postMixInProperties: function(){
-			this.inherited(arguments);
-
-			// we want the name attribute to go to the hidden <input>, not the displayed <input>,
-			// so override _FormWidget.postMixInProperties() setting of nameAttrSetting
-			this.nameAttrSetting = "";
-		},
-
-		serialize: function(/*anything*/val, /*Object?*/options){
-			// summary:
-			//		Overridable function used to convert the attr('value') result to a canonical
-			//		(non-localized) string.  For example, will print dates in ISO format, and
-			//		numbers the same way as they are represented in javascript.
-			// tags:
-			//		protected extension
-			return val.toString ? val.toString() : ""; // String
-		},
-
-		toString: function(){
-			// summary:
-			//		Returns widget as a printable string using the widget's value
-			// tags:
-			//		protected
-			var val = this.filter(this.get('value')); // call filter in case value is nonstring and filter has been customized
-			return val != null ? (typeof val == "string" ? val : this.serialize(val, this.constraints)) : ""; // String
-		},
-
-		validate: function(){
-			// Overrides `dijit.form.TextBox.validate`
-			this.valueNode.value = this.toString();
-			return this.inherited(arguments);
-		},
-
-		buildRendering: function(){
-			// Overrides `dijit._Templated.buildRendering`
-
-			this.inherited(arguments);
-
-			// Create a hidden <input> node with the serialized value used for submit
-			// (as opposed to the displayed value).
-			// Passing in name as markup rather than calling dojo.create() with an attrs argument
-			// to make dojo.query(input[name=...]) work on IE. (see #8660)
-			this.valueNode = dojo.place("<input type='hidden'" + (this.name ? " name='" + this.name + "'" : "") + ">", this.textbox, "after");
-		},
-
-		reset:function(){
-			// Overrides `dijit.form.ValidationTextBox.reset` to
-			// reset the hidden textbox value to ''
-			this.valueNode.value = '';
-			this.inherited(arguments);
-		}
-	}
-);
-
-/*=====
-	dijit.form.RangeBoundTextBox.__Constraints = function(){
-		// min: Number
-		//		Minimum signed value.  Default is -Infinity
-		// max: Number
-		//		Maximum signed value.  Default is +Infinity
-		this.min = min;
-		this.max = max;
-	}
-=====*/
-
-dojo.declare(
-	"dijit.form.RangeBoundTextBox",
-	dijit.form.MappedTextBox,
-	{
-		// summary:
-		//		Base class for textbox form widgets which defines a range of valid values.
-
-		// rangeMessage: String
-		//		The message to display if value is out-of-range
-		rangeMessage: "",
-
-		/*=====
-		// constraints: dijit.form.RangeBoundTextBox.__Constraints
-		constraints: {},
-		======*/
-
-		rangeCheck: function(/*Number*/ primitive, /*dijit.form.RangeBoundTextBox.__Constraints*/ constraints){
-			// summary:
-			//		Overridable function used to validate the range of the numeric input value.
-			// tags:
-			//		protected
-			return	("min" in constraints? (this.compare(primitive,constraints.min) >= 0) : true) &&
-				("max" in constraints? (this.compare(primitive,constraints.max) <= 0) : true); // Boolean
-		},
-
-		isInRange: function(/*Boolean*/ isFocused){
-			// summary:
-			//		Tests if the value is in the min/max range specified in constraints
-			// tags:
-			//		protected
-			return this.rangeCheck(this.get('value'), this.constraints);
-		},
-
-		_isDefinitelyOutOfRange: function(){
-			// summary:
-			//		Returns true if the value is out of range and will remain
-			//		out of range even if the user types more characters
-			var val = this.get('value');
-			var isTooLittle = false;
-			var isTooMuch = false;
-			if("min" in this.constraints){
-				var min = this.constraints.min;
-				min = this.compare(val, ((typeof min == "number") && min >= 0 && val !=0) ? 0 : min);
-				isTooLittle = (typeof min == "number") && min < 0;
-			}
-			if("max" in this.constraints){
-				var max = this.constraints.max;
-				max = this.compare(val, ((typeof max != "number") || max > 0) ? max : 0);
-				isTooMuch = (typeof max == "number") && max > 0;
-			}
-			return isTooLittle || isTooMuch;
-		},
-
-		_isValidSubset: function(){
-			// summary:
-			//		Overrides `dijit.form.ValidationTextBox._isValidSubset`.
-			//		Returns true if the input is syntactically valid, and either within
-			//		range or could be made in range by more typing.
-			return this.inherited(arguments) && !this._isDefinitelyOutOfRange();
-		},
-
-		isValid: function(/*Boolean*/ isFocused){
-			// Overrides dijit.form.ValidationTextBox.isValid to check that the value is also in range.
-			return this.inherited(arguments) &&
-				((this._isEmpty(this.textbox.value) && !this.required) || this.isInRange(isFocused)); // Boolean
-		},
-
-		getErrorMessage: function(/*Boolean*/ isFocused){
-			// Overrides dijit.form.ValidationTextBox.getErrorMessage to print "out of range" message if appropriate
-			var v = this.get('value');
-			if(v !== null && v !== '' && v !== undefined && (typeof v != "number" || !isNaN(v)) && !this.isInRange(isFocused)){ // don't check isInRange w/o a real value
-				return this.rangeMessage; // String
-			}
-			return this.inherited(arguments);
-		},
-
-		postMixInProperties: function(){
-			this.inherited(arguments);
-			if(!this.rangeMessage){
-				this.messages = dojo.i18n.getLocalization("dijit.form", "validate", this.lang);
-				this.rangeMessage = this.messages.rangeMessage;
-			}
-		},
-
-		_setConstraintsAttr: function(/* Object */ constraints){
-			this.inherited(arguments);
-			if(this.focusNode){ // not set when called from postMixInProperties
-				if(this.constraints.min !== undefined){
-					dijit.setWaiState(this.focusNode, "valuemin", this.constraints.min);
-				}else{
-					dijit.removeWaiState(this.focusNode, "valuemin");
-				}
-				if(this.constraints.max !== undefined){
-					dijit.setWaiState(this.focusNode, "valuemax", this.constraints.max);
-				}else{
-					dijit.removeWaiState(this.focusNode, "valuemax");
-				}
-			}
-		},
-
-		_setValueAttr: function(/*Number*/ value, /*Boolean?*/ priorityChange){
-			// summary:
-			//		Hook so attr('value', ...) works.
-
-			dijit.setWaiState(this.focusNode, "valuenow", value);
-			this.inherited(arguments);
-		}
-	}
-);
 
 }
 
@@ -43581,7 +43873,7 @@ dojo.provide("dwb.Main");
 
 
 dojo.declare("dwb.Main", dwb.Main._base, {
-	templateString: dojo.cache("dwb.ui.templates", "Main.html", "<div>\n\t<div dojoAttachPoint=\"borderContainer\" dojoType=\"dijit.layout.BorderContainer\" design=\"sidebar\">\t\t\n\t\t<div dojoType=\"dijit.layout.ContentPane\" region=\"trailing\" class=\"rightContentPane\">\n\t\t\t<div dojoAttachPoint=\"buildOptionsContent\" dojoAttachEvent=\"onPackageSelect:_newPackageSelected\" class=\"buildConfigPanel Modules simpleMode SearchOptionsOpen ModuleLayersOptionsOpen\" dojoType=\"dwb.ui.BuildConfigPanel\"></div>\t    \t\n\t\t</div>\t\t\t\t\t    \t\n\t\t<div dojoAttachPoint=\"center\" dojoType=\"dijit.layout.ContentPane\" region=\"center\">\t\t        \n\t\t\t <div dojoAttachPoint=\"tabContainer\" dojoAttachEvent=\"selectChild:_tabChildSelect\" dojoType=\"dijit.layout.TabContainer\" style=\"width: 90%; height: 95%;\">\n\t\t\t\t<div class=\"modulesPanel\" dojoAttachPoint=\"modulesPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Modules\" selected=\"true\">\n\t\t\t\t\t<div class=\"searchBox\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<input type=\"text\" class=\"searchBoxInput\" placeHolder=\"Enter search text here...\" dojoAttachEvent=\"onKeyUp: checkForEnter\" dojoAttachPoint=\"_searchInputField\" dojoType=\"dijit.form.TextBox\"></input>\t\t\n\t\t\t\t\t\t\t<button class=\"searchButton\" dojoType=\"dijit.form.Button\" dojoAttachEvent=\"onClick:updateModuleFilter\">Search</button>\n\t\t\t\t\t\t</div> \t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"modulesGrid\">\n\t\t\t\t\t\t<div dojoAttachPoint=\"moduleCounter\" class=\"moduleCounter\">\n\t\t\t\t\t\t0 - 0 of 0 modules\t\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<table dojoType=\"dwb.ui.ModuleGrid\" dojoAttachEvent=\"onRowClick:_moduleGridRowClick\" dojoAttachPoint=\"module_grid\" height=\"100%\" queryOptions=\"{'ignoreCase': true }\" plugins=\"{indirectSelection: {name: 'Include', width: '70px', styles: 'text-align: center;'}}\" >\n\t\t\t\t\t\t\t<thead>\n\t\t\t\t\t\t    \t<tr>\n\t\t\t\t\t\t      \t\t<th field=\"name\" width=\"30%\">Module Name</th>\n\t\t\t\t\t\t      \t\t<th field=\"desc\" width=\"70%\">Description</th>\n\t\t\t\t\t\t    \t</tr>\n\t\t\t\t\t\t\t</thead>\n\t\t\t\t\t\t</table>\n\t\t\t\t\t</div>\t\t            \n\t\t\t    </div>\n\t\t\t    <div dojoAttachPoint=\"analysePane\" dojoType=\"dwb.ui.AutoAnalysisModuleTab\" title=\"Auto-Analyse\">  \n\t\t        </div>\t\t\t\n\t\t\t    <div dojoAttachPoint=\"layersPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Layers\" class=\"advancedMode\">\n\t\t\t\t\t<div dojoAttachPoint=\"layersTabContainer\" dojoAttachEvent=\"selectChild:_layersTabChildSelect\" dojoType=\"dijit.layout.TabContainer\" style=\"width: 100%; height: 100%;\" tabPosition=\"top\" tabStrip=\"true\">\t\n\t\t\t        \t<div dojoAttachPoint=\"baseLayerPane\" title=\"dojo.js\" closable=\"false\" labelChange=\"false\" dojoType=\"dwb.ui.ModuleTab\" class=\"baseModuleLayerPane\">\t\t\t        \t\n\t\t\t        \t</div>\t\t\t        \t\t\t            \t\t\n\t\t\t\t\t</div>\n\t\t\t\t</div>        \n\t\t\t\t<div dojoAttachPoint=\"helpPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Help\" href=\"js/dwb/ui/fragments/HelpPanelContent.html\">\t\t\t            \n\t\t        </div>\n\t\t\t</div>\n\t\t</div>\n\t</div> \n\t<div dojoAttachPoint=\"buildProgress\" dojoType=\"dijit.Dialog\" title=\"Building Dojo Package...\" style=\"width: 450px\">\n\t\t<div dojoType=\"dijit.ProgressBar\" style=\"width: 434px\" indeterminate=\"true\"></div>\n\t\t<div class=\"buildProgressContainer\">\n\t\t\t<table width=\"100%\" height=\"100%\">\n\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t</table>\n\t\t</div>\n\t</div>\n</div>\n\n\n\n\n\n\n\n\n\n\n"),	
+	templateString: dojo.cache("dwb.ui.templates", "Main.html", "<div>\n\t<div dojoAttachPoint=\"borderContainer\" dojoType=\"dijit.layout.BorderContainer\" design=\"sidebar\">\t\t\n\t\t<div dojoType=\"dijit.layout.ContentPane\" region=\"trailing\" class=\"rightContentPane\">\n\t\t\t<div dojoAttachPoint=\"buildOptionsContent\" dojoAttachEvent=\"onPackageSelect:_newPackageSelected\" class=\"buildConfigPanel Modules simpleMode SearchOptionsOpen ModuleLayersOptionsOpen\" dojoType=\"dwb.ui.BuildConfigPanel\"></div>\t    \t\n\t\t</div>\t\t\t\t\t    \t\n\t\t<div dojoAttachPoint=\"center\" dojoType=\"dijit.layout.ContentPane\" region=\"center\">\t\t        \n\t\t\t <div dojoAttachPoint=\"tabContainer\" dojoAttachEvent=\"selectChild:_tabChildSelect\" dojoType=\"dijit.layout.TabContainer\" style=\"width: 90%; height: 95%;\">\n\t\t\t\t<div class=\"modulesPanel\" dojoAttachPoint=\"modulesPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Modules\" selected=\"true\">\n\t\t\t\t\t<div class=\"failureMessage\">\n\t\t\t\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t\t\t\t<h2>Error!</h2>\n\t\t\t\t\t\t<p>Unable to retrieve module list from server, error occurred. Please contact the system administrator.</p>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"searchBox\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<input type=\"text\" class=\"searchBoxInput\" placeHolder=\"Enter search text here...\" dojoAttachEvent=\"onKeyUp: checkForEnter\" dojoAttachPoint=\"_searchInputField\" dojoType=\"dijit.form.TextBox\"></input>\t\t\n\t\t\t\t\t\t\t<button class=\"searchButton\" dojoType=\"dijit.form.Button\" dojoAttachEvent=\"onClick:updateModuleFilter\">Search</button>\n\t\t\t\t\t\t</div> \t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"modulesGrid\">\n\t\t\t\t\t\t<div dojoAttachPoint=\"moduleCounter\" class=\"moduleCounter\">\n\t\t\t\t\t\t0 - 0 of 0 modules\t\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<table dojoType=\"dwb.ui.ModuleGrid\" dojoAttachEvent=\"onRowClick:_moduleGridRowClick\" dojoAttachPoint=\"module_grid\" height=\"100%\" queryOptions=\"{'ignoreCase': true }\" plugins=\"{indirectSelection: {name: 'Include', width: '70px', styles: 'text-align: center;'}}\" >\n\t\t\t\t\t\t\t<thead>\n\t\t\t\t\t\t    \t<tr>\n\t\t\t\t\t\t      \t\t<th field=\"name\" width=\"30%\">Module Name</th>\n\t\t\t\t\t\t      \t\t<th field=\"desc\" width=\"70%\">Description</th>\n\t\t\t\t\t\t    \t</tr>\n\t\t\t\t\t\t\t</thead>\n\t\t\t\t\t\t</table>\n\t\t\t\t\t</div>\t\t            \n\t\t\t    </div>\n\t\t\t    <div dojoAttachPoint=\"analysePane\" dojoType=\"dwb.ui.AutoAnalysisModuleTab\" title=\"Auto-Analyse\">  \n\t\t        </div>\t\t\t\n\t\t\t    <div dojoAttachPoint=\"layersPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Layers\" class=\"advancedMode\">\n\t\t\t\t\t<div dojoAttachPoint=\"layersTabContainer\" dojoAttachEvent=\"selectChild:_layersTabChildSelect\" dojoType=\"dijit.layout.TabContainer\" style=\"width: 100%; height: 100%;\" tabPosition=\"top\" tabStrip=\"true\">\t\n\t\t\t        \t<div dojoAttachPoint=\"baseLayerPane\" title=\"dojo.js\" closable=\"false\" labelChange=\"false\" dojoType=\"dwb.ui.ModuleTab\" class=\"baseModuleLayerPane\">\t\t\t        \t\n\t\t\t        \t</div>\t\t\t        \t\t\t            \t\t\n\t\t\t\t\t</div>\n\t\t\t\t</div>        \n\t\t\t\t<div dojoAttachPoint=\"helpPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Help\" href=\"js/dwb/ui/fragments/HelpPanelContent.html\">\t\t\t            \n\t\t        </div>\n\t\t\t</div>\n\t\t</div>\n\t</div> \n\t<div dojoAttachPoint=\"buildProgress\" dojoType=\"dijit.Dialog\" title=\"Building Dojo Package...\" class=\"buildProgressDialog\" style=\"width: 450px\">\n\t\t<div class=\"successMessage endMessages\">\n\t\t\t<img src=\"img/accepted_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Success!</h2>\n\t\t\t\t<p >Build completed successfully, downloading...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"failureMessage endMessages\">\n\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Failure!</h2>\n\t\t\t\t<p>Error completing build, please try again...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"buildProgressMessage\">\n\t\t\t<div dojoType=\"dijit.ProgressBar\" style=\"width: 434px\" indeterminate=\"true\"></div>\n\t\t\t<div class=\"buildProgressContainer\">\n\t\t\t\t<table width=\"100%\" height=\"100%\">\n\t\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t\t<tr height=\"18px\"><td style=\"font-family: courier new; overflow:hidden;white-space:nowrap;\"></td></tr>\n\t\t\t\t</table>  \n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n\n\n\n\n\n\n\n\n\n\n"),	
 	widgetsInTemplate: true,
 
 	// Global store for Dojo modules
@@ -43601,7 +43893,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 	_lastQuery : "",
 
-	_modulesDisplayedFormat: "1Showing ${0} - ${1} of ${2} modules",
+	_modulesDisplayedFormat: "Showing ${0} - ${1} of ${2} modules",
 
 	displayMode: "simple",
 
@@ -43631,7 +43923,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			url: this.packageEndPoint,
 			handleAs: "json"
 		});
-		d.then(dojo.hitch(this, "_handlePackagesResponse"));
+		d.then(dojo.hitch(this, "_handlePackagesResponse"), dojo.hitch(this, "_moduleLoadingError"));
 
 		dojo.subscribe("dwb/search/updateFilter", dojo.hitch(this, "updateModuleFilter"));
 		dojo.subscribe("dwb/build/request", dojo.hitch(this, "triggerBuildRequest"));
@@ -43789,7 +44081,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 		d.then(dojo.hitch(this, function(response) {
 			this._modulesAvailable(response.modules);
-		}));
+		}), dojo.hitch(this, "_moduleLoadingError"));
 	},
 
 	triggerBuildRequest: function () {
@@ -43808,18 +44100,23 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 				headers: {"Content-Type":"application/json"},
 				postData: dojo.toJson(completeProfile)
 			});
-
+			
+			// If either of the XHR requests fails, tell user and cancel
+			// build progress dialog.
+			var errorHandling = dojo.hitch(this, function() {
+				this._buildProgressFinished("failure");
+			});
+			
 			// Once complete, cancel build button animation 
 			// and forward user to response location
-			// TODO: Need error handling if this stage fails!
 			d.then(dojo.hitch(this, function (response) {
 				var d = dojo.xhrGet({
 					url: response.buildStatusLink,
 					handleAs: "json"
 				});
 
-				d.then(dojo.hitch(this, "buildStatusPoller", response.buildStatusLink));
-			}));
+				d.then(dojo.hitch(this, "buildStatusPoller", response.buildStatusLink), errorHandling);
+			}), errorHandling);
 
 			// Clear any previous log lines and show progress indicator
 			this._updateLogView([]);
@@ -43842,7 +44139,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			baseLayer.modules.push(this.store.getValue(item, "name"));
 		}));
 
-		return {"layers":[baseLayer]};
+		return {"layers":[baseLayer], "userPackages": this.temporaryPackages};
 	},
 
 	// User has triggered a build request. Construct build profile
@@ -43965,9 +44262,9 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 		// If the build has completed, redirect to package URL to force download.
 		if (response.state === "COMPLETED") {
-			this.buildProgress.hide();
-			dojo.publish("dwb/build/finished");
-			window.location.assign(response.result);
+			this._buildProgressFinished("success", function () {
+				window.location.assign(response.result);
+			});
 			// Otherwise, keep polling for log changes.
 		} else if (response.state === "BUILDING" || response.state === "NOT_STARTED") {
 			setTimeout(dojo.hitch(this, function () {
@@ -43976,15 +44273,35 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 					handleAs: "json"
 				});
 
-				d.then(dojo.hitch(this, "buildStatusPoller", statusUrl));	
+				d.then(dojo.hitch(this, "buildStatusPoller", statusUrl), function () {
+					this._buildProgressFinished("failure")
+				});	
 			}), 500);
-			// TODO: Something has failed, show user error message
+		// An error occurred, indicate this.
 		} else {
-			this.buildOptionsContent.get("build").cancel();
-			this.buildProgress.hide();
+			this._buildProgressFinished("failure");
 		}
 	},
 
+	_buildProgressFinished : function(status, callback) {
+		// Show associated status message
+		dojo.addClass(this.buildProgress.domNode, status);
+		
+		// After brief period, hide the dialog and remove message
+		setTimeout(dojo.hitch(this, function () {
+			this.buildProgress.hide();
+			dojo.removeClass(this.buildProgress.domNode, status);
+			
+			// If the user has asked for notification, execute callback.
+			if (callback) {
+				callback();
+			}
+		}), 500);
+		
+		// Inform all listeners we have finished building.
+		dojo.publish("dwb/build/finished");
+	},
+	
 	// Packages modules have been retrieved and can be rendered 
 	// using the module grid. 
 	_modulesAvailable : function(modules) {		
@@ -44168,6 +44485,19 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		this.buildOptionsContent.layerNameUpdate.onClick();
 	},
 
+	// When any path of the module loading process
+	// fails, lock down UI to stop further interaction
+	// and display error message.
+	_moduleLoadingError : function () {
+		dojo.addClass(this.modulesPane.domNode, "failure");
+		
+		// Disable all action buttons, radio buttons, select boxes. Don't want
+		// user triggered that interact with the module list.
+		dojo.query(".dijitButton, .dijitRadio, .dijitCheckBox, .dijitSelect, .dijitComboBox").forEach(function (node) {
+			dijit.byNode(node).set("disabled", true)
+		});
+	},
+	
 	_handlePackagesResponse: function (response) {
 		// TODO: Just use first Dojo package until 
 		// we can handle switching versions.
@@ -44179,7 +44509,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		});
 
 		
-		d.then(dojo.hitch(this, "_handlePackageVersionsResponse"));
+		d.then(dojo.hitch(this, "_handlePackageVersionsResponse"), dojo.hitch(this, "_moduleLoadingError"));
 
 		// Store result to use when building
 		this.baseProfile["package"] = packageObj.name;

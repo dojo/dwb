@@ -1,25 +1,28 @@
 dojo.provide("dwb.ui.AutoAnalysisModuleTab");
 
 dojo.require("dwb.ui.ModuleTab");
+dojo.require("dwb.ui.ValidationTextBox");
 dojo.require("dwb.util.Config");
 dojo.require("dojo.DeferredList");
+dojo.require("dojo.NodeList-fx");
 
 dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	// Override ContentPane and default to true
 	closable: false,
 	
+	// Hint tooltip delay till hide timeout reference
+	_timeout: null,
+	
 	analysisContentFragments: {
 		"profile": dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html"),
 		"web_app": dojo.cache("dwb.ui.fragments", "AnalyseRemoteWebAppModuleTab.html"),
 		"dojo_app": dojo.cache("dwb.ui.fragments", "UploadUserAppModuleTab.html"),
-		"html_file": dojo.cache("dwb.ui.fragments", "AnalyseHTMLModuleTabLocal.html")
+		"html_file": dojo.cache("dwb.ui.fragments", "AnalyseHTMLModuleTabLocal.html"),
+		"failure": dojo.cache("dwb.ui.fragments", "AnalysisFailureModuleTab.html")
 	},
 	
 	analysisType: "web_app",
 	
-	// Hint text to display when the modules tab is empty
-	//content: dojo.cache("dwb.ui.fragments", "AnalyseHTMLModuleTabLocal.html"),
-
 	analysisURL : dwb.util.Config.get("dependenciesApi"),
 	packageURL : dwb.util.Config.get("packagesApi"),
 	
@@ -186,25 +189,27 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	
 	// Background upload of HTML file, returning modules found.
 	_onSubmit : function (e) {		
+		console.log(e);
 		dojo.stopEvent(e);
-			
-		var form = dojo.query("form", this.domNode)[0];
-		// HTML files, web apps and profiles go through dependencies end point. User applications
-		// need turning into temporary packages, must go through package api.
-		var url = (this.analysisType === "dojo_app") ? this.packageURL : this.analysisURL;
 		
-		dojo.io.iframe.send({
-			url: url, 
-			method: "post", 
-			handleAs: "json", 
-			form: form, 
-			handle: dojo.hitch(this, "_handleResponse"), 
-			error: dojo.hitch(this, function (e) {
-				this._cancelBusyBtn();
-				// TODO: Need to support proper error handling.
-				console.log(e);
-			})
-		});			
+		// Check user has filled in form fields before submission
+		if (this._isValid()) {		
+			var form = dojo.query("form", this.domNode)[0];
+			// HTML files, web apps and profiles go through dependencies end point. User applications
+			// need turning into temporary packages, must go through package api.
+			var url = (this.analysisType === "dojo_app") ? this.packageURL : this.analysisURL;
+			
+			dojo.io.iframe.send({
+				url: url, 
+				method: "post", 
+				handleAs: "json", 
+				form: form, 
+				load: dojo.hitch(this, "_handleResponse"), 
+				error: dojo.hitch(this, "_moduleAnalysisError")
+			});	
+		} else {
+			this._cancelBusyBtn();
+		}
 	},
 	
 	// Signal that we want to remove this tab 
@@ -212,9 +217,71 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	_onRemove : function () {
 	},
 	
+	// Validate form parameters for auto-analysis module tab, this may be either validation input 
+	// boxes or file input fields. 
+	_isValid : function () {
+		return (this.analysisType === "web_app" ? this._isValidInputText() : this._isValidInputFile());	
+	},
+	
+	// Checking input file field isn't empty, show tooltip with hint
+	// if user hasn't filled it out.
+	_isValidInputFile : function () {
+		var inputField = dojo.query("input[type=file]", this.domNode)[0];
+		var file = dojo.attr(inputField, "value");
+		// Ensure some file has been selected
+		var valid = (file !== "");
+		if (!valid) {
+			// Tooltip not shown at the moment.
+			if (this._timeout === null) {
+				dijit.showTooltip("This value is required", inputField);
+			// Just reset hide timeout for shown tooltip
+			} else {
+				clearTimeout(this._timeout);
+			}
+			
+			// Hide tooltip after a second
+			this._timeout = setTimeout(dojo.hitch(this, function () {
+				dijit.hideTooltip(inputField);
+				this._timeout = null;
+			}), 1000);
+		}
+		
+		return valid;
+	},
+	
+	// Check validation on input text fields in this content pane
+	_isValidInputText : function () {
+		// Find validation text box within content pane.
+		var tb = dijit.byNode(dojo.query(".dijitValidationTextBox", this.domNode)[0]);
+		
+		// Validation messages won't show until user has at 
+		// least focused on field. Fake this behaviour.  
+		tb._hasBeenBlurred = true;
+		
+		// Check for empty field and focus if not valid.
+		var valid = tb.validate();
+		if (!valid) {
+			tb.focus();
+		}
+		
+		return valid;
+	},
+	
 	_cancelBusyBtn : function () {
 		dojo.query(".dijitButton", this.domNode).forEach(function (button) {
 			dijit.byNode(button).cancel();
 		});
+	}, 
+	
+	_moduleAnalysisError : function (timeout) {
+		this.set("content", this.analysisContentFragments.failure);
+		
+		dojo.query(".analyse_container", this.domNode).fadeOut({
+			onEnd: dojo.hitch(this, function () {
+				this._setAnalysisTypeAttr(this.analysisType);
+			}),
+			duration: 750,
+			delay: 1250
+		}).play(); 
 	}
 });
