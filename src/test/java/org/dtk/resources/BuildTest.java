@@ -2,6 +2,7 @@ package org.dtk.resources;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.zip.ZipInputStream;
 
 import javax.ws.rs.core.MediaType;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -56,8 +58,8 @@ public class BuildTest {
 	/**
 	 * Default build profile for base dojo.js with no added modules.
 	 */
-	final protected String defaultBuildProfile = "{\"layers\":[{\"name\":\"dojo.js\",\"modules\":[]}],\"userPackages\":[],\"version\":\"1.5.0\",\"optimise\":\"shrinksafe\",\"cdn\":\"none\",\"package\":\"dojo\"}";
-
+	final protected String defaultBuildProfile = "default_build_request.json";
+	
 	/**
 	 * Default build profile for base dojo.js with no added modules.
 	 */
@@ -369,7 +371,10 @@ public class BuildTest {
 	 * @return Http response object associated build request
 	 */
 	protected HttpResponse generateBuildRequest() throws ClientProtocolException, IOException, URISyntaxException {
-		return generateBuildRequest(defaultBuildProfile);
+		InputStream is = getClass().getClassLoader().getResourceAsStream(defaultBuildProfile);
+		StringWriter writer = new StringWriter();
+		IOUtils.copy(is, writer, "utf-8");
+		return generateBuildRequest(writer.toString());
 	}
 
 	/**

@@ -51,6 +51,11 @@
 	    <artifactId>httpclient</artifactId>
 	    <version>4.0.1</version>
 	</dependency>
+    <dependency>
+	    <groupId>org.apache.httpcomponents</groupId>
+	    <artifactId>httpmime</artifactId>
+	    <version>4.0.1</version>
+	</dependency>
 	<dependency>
 	    <groupId>org.apache.commons</groupId>
 	    <artifactId>commons-build-plugin</artifactId>
@@ -71,9 +76,17 @@
 	    <artifactId>commons-lang</artifactId>
 	    <version>2.3</version>
 	</dependency>
+	<dependency>
+	    <groupId>commons-lang</groupId>
+	    <artifactId>commons-lang</artifactId>
+	    <version>2.3</version>
+	</dependency>
+	<dependency>
+	    <groupId>junit</groupId>
+	    <artifactId>junit</artifactId>
+	    <version>4.8.2</version>
+	</dependency>
     </dependencies>
-
-
     <profiles>
 
         <profile>
@@ -222,6 +235,23 @@
 
             </build>
         </profile>
+
+        <!-- Special profile to re-enable tests, which are integration tests
+             and can't be run until deployment has finished -->
+        <profile>
+            <id>test</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>false</skipTests>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
     <build>
@@ -273,11 +303,17 @@
            
          </plugin>
 
+         <!-- Disable tests from running during deployment as our tests verify RESTful API 
+            once it has been deployed. We can re-enable using profile switch. -->
+    <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+            <skipTests>true</skipTests>
+        </configuration>
+    </plugin>
 
-
-
-
-                               <plugin>
+         <plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-war-plugin</artifactId>
 				<version>2.1.1</version>

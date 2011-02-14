@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -25,7 +24,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
-import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jsoup.Jsoup;
@@ -251,7 +250,9 @@ public class PackagesTest {
 		// We want to upload our sample application, containing custom module
 		// definitions and DTK dependencies.
 		MultipartEntity reqEntity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
-		FileBody bin = new FileBody(new File("test/samples/user_app.zip"), "application/zip");
+		
+		InputStream is = getClass().getClassLoader().getResourceAsStream("user_app.zip");		
+		InputStreamBody bin = new InputStreamBody(is, "application/zip", "user_app.zip");
 		reqEntity.addPart("user_app", bin);
 		
 		httpPost.setEntity(reqEntity);

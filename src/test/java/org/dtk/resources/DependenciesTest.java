@@ -3,9 +3,9 @@ package org.dtk.resources;
 import static org.junit.Assert.* ;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -23,6 +23,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -147,7 +148,9 @@ public class DependenciesTest {
 		// Add HTML file and type="web_page" fields.
 		StringBody strBody = new StringBody("web_page");
 		reqEntity.addPart("type", strBody);
-		FileBody htmlPage = new FileBody(new File("test/samples/sample.html"));
+		
+		InputStream is = getClass().getClassLoader().getResourceAsStream("sample.html");		
+		InputStreamBody htmlPage = new InputStreamBody(is, "sample.html");
 		reqEntity.addPart("value", htmlPage);
 		
 		// Simulate form submission, check HTTP status and parse JSON from HTML response.
@@ -186,7 +189,9 @@ public class DependenciesTest {
 		// Add HTML file and type="web_page" fields.
 		StringBody strBody = new StringBody("web_page");
 		reqEntity.addPart("type", strBody);
-		FileBody htmlPage = new FileBody(new File("test/samples/sampleNoModules.html"));
+		
+		InputStreamBody htmlPage = new InputStreamBody(getClass().getClassLoader().getResourceAsStream("sampleNoModules.html"), 
+			"sampleNoModules.html");
 		reqEntity.addPart("value", htmlPage);
 		
 		// Simulate form submission, check HTTP status and parse JSON from HTML response.
@@ -219,7 +224,9 @@ public class DependenciesTest {
 		// Add HTML file and type="web_page" fields with invalid HTML file.
 		StringBody strBody = new StringBody("web_page");
 		reqEntity.addPart("type", strBody);
-		FileBody htmlPage = new FileBody(new File("test/samples/sampleInvalidHTML.html"));
+		
+		InputStream is = getClass().getClassLoader().getResourceAsStream("sampleInvalidHTML.html");
+		InputStreamBody htmlPage = new InputStreamBody(is, "sampleInvalidHTML.html");
 		reqEntity.addPart("value", htmlPage);
 		
 		// Simulate form submission, check HTTP status returned is 200. Our service 
@@ -378,9 +385,10 @@ public class DependenciesTest {
 		// Add HTML file and type="web_page" fields.
 		StringBody strBody = new StringBody("profile");
 		reqEntity.addPart("type", strBody);
-		FileBody htmlPage = new FileBody(new File("test/samples/baseplus.profile.js"));
-		reqEntity.addPart("value", htmlPage);
 		
+		InputStream is = getClass().getClassLoader().getResourceAsStream("baseplus.profile.js");
+		InputStreamBody htmlPage = new InputStreamBody(is, "baseplus.profile.js");
+		reqEntity.addPart("value", htmlPage);
 		// Simulate form submission, check HTTP status and parse JSON from HTML response.
 		HttpResponse response = simulateMultiPartFormSubmission(reqEntity);
 		assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
@@ -390,7 +398,7 @@ public class DependenciesTest {
 		Map<String, Object> jsonObj = extractJsonFromHTMLEncodedResponse(response);
 		
 		// Should contain list of object layers from profile
-		List<Object> layers = (List<Object>) jsonObj.get("layers");;
+		List<Object> layers = (List<Object>) jsonObj.get("layers");
 		
 		assertNotNull(layers);
 		
@@ -430,7 +438,10 @@ public class DependenciesTest {
 		// Add HTML file and type="web_page" fields.
 		StringBody strBody = new StringBody("profile");
 		reqEntity.addPart("type", strBody);
-		FileBody htmlPage = new FileBody(new File("test/samples/error.profile.js"));
+
+		InputStream is = getClass().getClassLoader().getResourceAsStream("error.profile.js");
+		InputStreamBody htmlPage = new InputStreamBody(is, "error.profile.js");
+		
 		reqEntity.addPart("value", htmlPage);
 		
 		// Simulate form submission, check HTTP status and parse JSON from HTML response.
@@ -454,7 +465,8 @@ public class DependenciesTest {
 		// Add HTML file and type="web_page" fields.
 		StringBody strBody = new StringBody("profile");
 		reqEntity.addPart("type", strBody);
-		FileBody htmlPage = new FileBody(new File("test/samples/empty.profile.js"));
+		InputStream is = getClass().getClassLoader().getResourceAsStream("empty.profile.js");
+		InputStreamBody htmlPage = new InputStreamBody(is, "empty.profile.js");
 		reqEntity.addPart("value", htmlPage);
 		
 		// Simulate form submission, check HTTP status and parse JSON from HTML response.
