@@ -59,24 +59,6 @@ fileUtil.getFilteredFileList = function(/*String*/startDir, /*RegExp*/regExpFilt
 }
 
 
-fileUtil.copyDir = function(/*String*/srcDir, /*String*/destDir, /*RegExp*/regExpFilter, /*boolean?*/onlyCopyNew){
-	//summary: copies files from srcDir to destDir using the regExpFilter to determine if the
-	//file should be copied. Returns a list file name strings of the destinations that were copied.
-	var fileNames = fileUtil.getFilteredFileList(srcDir, regExpFilter, true);
-	var copiedFiles = [];
-	
-	for(var i = 0; i < fileNames.length; i++){
-		var srcFileName = fileNames[i];
-		var destFileName = srcFileName.replace(srcDir, destDir);
-
-		if(fileUtil.copyFile(srcFileName, destFileName, onlyCopyNew)){
-			copiedFiles.push(destFileName);
-		}
-	}
-
-	return copiedFiles.length ? copiedFiles : null; //Array or null
-}
-
 fileUtil.asyncFixEOLRe= new RegExp(fileUtil.getLineSeparator(), "g");
 
 fileUtil.transformAsyncModule= function(filename, contents) {
@@ -192,6 +174,7 @@ fileUtil.readFile = function(/*String*/path, /*String?*/encoding){
 	var file = new java.io.File(path);
 	var lineSeparator = fileUtil.getLineSeparator();
 	var input = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(file), encoding));
+    var content;
 	try{
 		var stringBuffer = new java.lang.StringBuffer();
 		var line = input.readLine();
@@ -213,10 +196,18 @@ fileUtil.readFile = function(/*String*/path, /*String?*/encoding){
 			line = input.readLine();
 		}
 		//Make sure we return a JavaScript string and not a Java string.
-		return new String(stringBuffer.toString()); //String
+		content = new String(stringBuffer.toString()); //String
 	}finally{
 		input.close();
 	}
+
+    // CHANGE: Transform any Dojo Modules that are in the new AMD format into the previous 
+    // Dojo Module Definition format.
+	if (content && /.+\.js$/.test(path)) {
+		content = fileUtil.transformAsyncModule(path, content).replace(fileUtil.asyncFixEOLRe, "\n");
+	} 
+
+    return content;
 }
 
 fileUtil.saveUtf8File = function(/*String*/fileName, /*String*/fileContents){

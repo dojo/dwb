@@ -79,6 +79,18 @@ function i18nUtil_setup (/*Object*/kwArgs){
 		buildUtil.configPrefixes(kwArgs.profileProperties.dependencies.prefixes);
 
 		dojo.require("dojo.i18n");
+
+
+        // Replace the load function to transform all source input before 
+        // eval'ing 
+        dojo._loadUri = function (uri, cb) {
+            buildUtil._load(uri);
+
+            if (cb) {
+                cb();
+            }
+            return true;
+        };
 	}
 }
 

@@ -420,6 +420,25 @@ buildUtil.includeLoaderFiles = function(/*String*/dojoLoader, /*String or Array*
 	}
 }
 
+
+// CHANGE: Use our custom load functoin to transfrom all load files from AMD
+// format before they are evaluated. 
+buildUtil._load = function (/*String*/ fileName){ 
+	//summary: opens the file at fileName and evals the contents as JavaScript.
+	
+	//Read the file, automatic AMD-to-Normal conversion
+	var fileContents = fileUtil.readFile(fileName);
+
+	//Eval the contents.
+	var Context = Packages.org.mozilla.javascript.Context;
+	var context = Context.enter();
+	try{
+		return context.evaluateString(this, fileContents, fileName, 1, null);
+    }finally{
+		Context.exit();
+    }
+}
+
 buildUtil.getDependencyList = function(/*Object*/dependencies, /*String or Array*/hostenvType, /*Object?*/kwArgs, /*String?*/buildscriptsPath){
 	//summary: Main function that traces the files that are needed for a give list of dependencies.
 
@@ -698,7 +717,14 @@ buildUtil.getDependencyList = function(/*Object*/dependencies, /*String or Array
 			djGlobal['djConfig'] = undefined;
 	
 			delete dojo;
-			//delete define;
+            // This may or may not exist depending on the version
+            // of dojo we are building...
+            try {
+                delete define;
+            } catch (e) {
+                // If this fails, we are in 1.5 so don't 
+                // worry about it.
+            };
 		}
 	}
 
