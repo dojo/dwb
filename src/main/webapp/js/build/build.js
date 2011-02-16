@@ -14,23 +14,24 @@ function writeLog(reference, logLine) {
 }
 
 
-function load(/*String*/fileName){
+//function load(/*String*/fileName){
 	//summary: opens the file at fileName and evals the contents as JavaScript.
 	
 	//Read the file
-	var fileContents = readFile(fileName);
+//	var fileContents = readFile(fileName);
 
 	//Eval the contents.
-	var Context = Packages.org.mozilla.javascript.Context;
-	var context = Context.enter();
-	try{
-		return context.evaluateString(this, fileContents, fileName, 1, null);
-	}finally{
-		Context.exit();
-	}
-}
+//	var Context = Packages.org.mozilla.javascript.Context;
+//	var context = Context.enter();
+//	try{
+//		return context.evaluateString(this, fileContents, fileName, 1, null);
+//	}finally{
+//		Context.exit();
+//	}
+//}
 
-function readFile(/*String*/path, /*String?*/encoding){
+//function readFile(/*String*/path, /*String?*/encoding){
+/*    return fileUtil.readFile(path, encoding);
 	//summary: reads a file and returns a string
 	encoding = encoding || "utf-8";
 	var file = new java.io.File(path);
@@ -48,20 +49,27 @@ function readFile(/*String*/path, /*String?*/encoding){
 	} finally {
 		input.close();
 	}
-}
+}*/
+
+
+/* Our build process has modified multiple parts of the existing Dojo build scripts.
+ * All modified functions are included below and used instead of their original versions */
 
 function i18nUtil_setup (/*Object*/kwArgs){
 	//summary: loads dojo so we can use it for i18n bundle flattening.
 	
 	//Do the setup only if it has not already been done before.
 	if(typeof djConfig == "undefined" || !(typeof dojo != "undefined" && dojo["i18n"])){
+        // Pull Dojo path direct from module prefixes
+        var dojoPath = kwArgs.profileProperties.dependencies.prefixes[0][1] + '/';		
+
 		djConfig={
 			locale: 'xx',
 			extraLocale: kwArgs.localeList,
-			baseUrl: buildscriptDir + "../../dojo/"
+			baseUrl: dojoPath
 		};
 
-		load(buildscriptDir + '../../dojo/dojo.js');
+		load(dojoPath + "dojo.js");
 
 		//Now set baseUrl so it is current directory, since all the prefixes
 		//will be relative to the release dir from this directory.
@@ -73,7 +81,6 @@ function i18nUtil_setup (/*Object*/kwArgs){
 		dojo.require("dojo.i18n");
 	}
 }
-
 
 function flattenLayerFileBundles (/*String*/fileName, /*String*/fileContents, /*Object*/ resultFileArchive,
 	/*Object*/kwArgs, /*String packageRef*/ packageRef){
@@ -368,14 +375,7 @@ function flattenCss(/*String*/fileName, /*Object*/ themeFiles){
 }
 
 function findModulesAndRequires(/*String fileName*/srcRoot, /*String rootDojoDir*/dojoDir) {
-	var buildscriptDir = dojoDir + "util/buildscripts/";
-	
-	//Load the libraries to help in the build.
-	load(dojoDir + "util/buildscripts/jslib/fileUtil.js");
-	
-	var results = [findModules(srcRoot), findRequires(srcRoot)];
-	
-	return results;
+    return [findModules(srcRoot), findRequires(srcRoot)];
 }
 
 function findRequires(/*String fileName*/srcRoot) {
@@ -477,7 +477,7 @@ function findDijitThemeFiles(/*String filename*/ dojoSrcDir, /*String dirName*/ 
 	    file = fileList[i];
 	    trimmed = file.substring(dojoSrcDir.length, file.length);
 	    // Ensure content is a JS String rather than NativeStringObj
-	    themeContents[trimmed] = "" + readFile(file);
+	    themeContents[trimmed] = "" + fileUtil.readFile(file);
 	}
 	
 	return themeContents;
@@ -536,8 +536,8 @@ function optimiseCSS(/*String*/theme, /*Object fileCache*/ themeFiles, /*String 
 
 build = {	
 	make: function(
-		//The path to this file. Assumes dojo builds under it.
-		/*String*/builderPath,
+		//The path to the global dojo directory. 
+        /*String*/dojoDir,
 		
 		//"1.1.1" or "1.3.2": used to choose directory of dojo to use.
 		/*String*/version,
@@ -588,8 +588,10 @@ build = {
 			writeLogLine(packageRef, "Local build selected.");
 		}
 		
-		//Directory that holds dojo source distro. Direct child under the helma dir
-		var dojoDir = builderPath + "/"; 
+		//Directory that holds dojo source distro. Ensure it ends with a forward slash
+        if (!dojoDir.match("/$")) { 
+            dojoDir = dojoDir + '/';
+        }
 		
 		//Normalize the dependencies so that have double-quotes
 		//around each dependency.
@@ -603,12 +605,12 @@ build = {
 		// Global referenced needed by i18n utils.
 		buildscriptDir = dojoDir + "util/buildscripts/";
 		
-		//Load the libraries to help in the build.
-		load(dojoDir + "util/buildscripts/jslib/logger.js");
-		load(dojoDir + "util/buildscripts/jslib/fileUtil.js");
-		load(dojoDir + "util/buildscripts/jslib/buildUtil.js");
-		load(dojoDir + "util/buildscripts/jslib/buildUtilXd.js");
-		load(dojoDir + "util/buildscripts/jslib/i18nUtil.js");
+		//Load the stripped down and modified build libraries.
+		load("build/logger.js");
+		load("build/fileUtil.js");
+		load("build/buildUtil.js");
+		load("build/buildUtilXd.js");
+		load("build/i18nUtil.js");
 
 		writeLogLine(packageRef, "done");
 		

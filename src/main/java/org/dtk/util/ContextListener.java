@@ -24,7 +24,7 @@ public class ContextListener implements ServletContextListener {
 	protected static final String cachePathParam = "dwb.cachepath";
 
 	/** Relative path to custom Dojo build script */
-	protected static final String buildPathScript = "/js/build.js";
+	protected static final String buildPathScript = "/js/build/build.js";
 
 	/** Relative path to custom build parameters configuration */
 	protected static final String buildParametersConfig = "/WEB-INF/config/build_options.json";
