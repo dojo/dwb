@@ -24,7 +24,7 @@ public class ContextListener implements ServletContextListener {
 	protected static final String cachePathParam = "dwb.cachepath";
 
 	/** Relative path to custom Dojo build script */
-	protected static final String buildPathScript = "/js/build/build.js";
+	protected static final String buildScriptsDirParam = "/js/build/";
 
 	/** Relative path to custom build parameters configuration */
 	protected static final String buildParametersConfig = "/WEB-INF/config/build_options.json";
@@ -50,15 +50,15 @@ public class ContextListener implements ServletContextListener {
 		
 		String cachePath = getCacheDirectoryPath();
 		String packagePath = servletContext.getRealPath(packageRepoPath);
-		String buildScript = servletContext.getRealPath(buildPathScript);
-		
+		String buildScriptsDir = servletContext.getRealPath(buildScriptsDirParam);
+
 		PackageRepository packageRepo = PackageRepository.getInstance();
 		packageRepo.setPackageBaseLocation(packagePath);
 		packageRepo.setBuildParametersLocation(servletContext.getRealPath(buildParametersConfig));
 		
 		BuildStatusManager buildStatusManager = BuildStatusManager.getInstance();
 		buildStatusManager.setBuildResultCachePath(cachePath);
-		buildStatusManager.setBuildScriptPath(buildScript);
+		buildStatusManager.setBuildScriptsDir(buildScriptsDir);
 	}
 	
     /**

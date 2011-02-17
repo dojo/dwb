@@ -1,5 +1,6 @@
 package org.dtk.resources.build;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,7 +15,8 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.tools.shell.Global;
 
 public class BuilderContextAction implements ContextAction {
-	private String buildScriptPath;
+	private String buildScript;
+	private String buildScriptsPath;
 	private BuildRequest buildRequest;
 
 	private Exception exception;
@@ -22,10 +24,13 @@ public class BuilderContextAction implements ContextAction {
 	private Context context;
 	private Map<String, String> result;
 
-	public BuilderContextAction(String buildScriptPath, BuildRequest buildRequest) {
-		this.buildScriptPath = buildScriptPath;
+	public BuilderContextAction(String buildScript, String buildScriptsPath, BuildRequest buildRequest) {
+		this.buildScriptsPath = buildScriptsPath;
 		this.buildRequest = buildRequest;
 
+		// Find full path to build script 
+		this.buildScript = buildScript;
+		
 		this.exception = null;
 		this.context = null;
 		this.topScope = null;
@@ -47,9 +52,8 @@ public class BuilderContextAction implements ContextAction {
 		topScope = context.initStandardObjects(global);
 
 		try {
-			//String fileName = builderPath + "build.js";
-			String fileContent = FileUtil.readFromFile(this.buildScriptPath, null);
-			Script script = context.compileString(fileContent, this.buildScriptPath, 1, null);
+			String fileContent = FileUtil.readFromFile(this.buildScript, null);
+			Script script = context.compileString(fileContent, this.buildScript, 1, null);
 
 			// Expose top level scope as the "global" scope.
 			//TODO: only need this for the load function, maybe there is a built in way
@@ -62,18 +66,9 @@ public class BuilderContextAction implements ContextAction {
 			// Call build.make(builderPath)
 			Scriptable build = Context.toObject(topScope.get("build", topScope), topScope);
 
-			/*Object args[] = {
-                    builderPath,
-                    version,
-                    cdn,
-                    layers,
-                    optimize,
-                    userAppPaths,
-                    cachedFilePath
-            };
-			 */
 			Object args[] = {
 				buildRequest.getPackageLocation(),
+				this.buildScriptsPath, 
 				buildRequest.getVersion(),
 				buildRequest.getCdn(),
 				buildRequest.getPlatforms(),
@@ -86,8 +81,6 @@ public class BuilderContextAction implements ContextAction {
 			};
 
 			Function make = (Function) build.get("make", topScope);
-			//Function make = (Function) build.get("makeTest", topScope);
-			//String result = (String) make.call(context, topScope, build, args);
 			Object resultObj = make.call(context, topScope, build, args);
 			result = unwrapObject((ScriptableObject) Context.jsToJava(resultObj, ScriptableObject.class));     
 		} catch (Exception e) {

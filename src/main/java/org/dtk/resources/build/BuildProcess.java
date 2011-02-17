@@ -67,10 +67,11 @@ public class BuildProcess implements Runnable {
 	 * @return State of build process completion
 	 */
 	protected BuildState requestCompilation(String resultPath) {
-		String scriptPath = buildStatusManager.getBuildScriptPath();
+		String scriptPath = buildStatusManager.getBuildScriptPath(),
+			buildScriptsDir = buildStatusManager.getBuildScriptsDir();
 		
 		// Create new Rhino-based JS compilation script
-		BuilderContextAction contextAction = new BuilderContextAction(scriptPath, buildRequest);
+		BuilderContextAction contextAction = new BuilderContextAction(scriptPath, buildScriptsDir, buildRequest);
 		
 		BuildState finishState = BuildState.FAILED;
 		String reference = buildRequest.getBuildReference();

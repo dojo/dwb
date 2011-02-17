@@ -551,6 +551,8 @@ build = {
 		//The path to the global dojo directory. 
         /*String*/dojoDir,
 		
+        /*String*/localBuildDir,
+
 		//"1.1.1" or "1.3.2": used to choose directory of dojo to use.
 		/*String*/version,
 		
@@ -616,13 +618,13 @@ build = {
 		
 		// Global referenced needed by i18n utils.
 		buildscriptDir = dojoDir + "util/buildscripts/";
-		
+	    
 		//Load the stripped down and modified build libraries.
-		load("build/logger.js");
-		load("build/fileUtil.js");
-		load("build/buildUtil.js");
-		load("build/buildUtilXd.js");
-		load("build/i18nUtil.js");
+		load(localBuildDir + "/logger.js");
+		load(localBuildDir + "/fileUtil.js");
+		load(localBuildDir + "/buildUtil.js");
+		load(localBuildDir + "/buildUtilXd.js");
+		load(localBuildDir + "/i18nUtil.js");
 
 		writeLogLine(packageRef, "done");
 		

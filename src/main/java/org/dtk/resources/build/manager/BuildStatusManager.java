@@ -1,5 +1,6 @@
 package org.dtk.resources.build.manager;
 
+import java.io.File;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
@@ -30,11 +31,17 @@ public final class BuildStatusManager {
 	/** Single instance of build status manager */
 	protected static final BuildStatusManager INSTANCE = new BuildStatusManager();
 
+	/** File name for the main build script */
+	protected final String buildScriptName = "build.js";
+	
 	/** Directory containing cached build results */
 	protected String buildResultCachePath;
 	
-	/** Directory containing cached build results */
+	/** Full path for main build script */
 	protected String buildScriptPath;
+	
+	/** Directory containing local build scripts */
+	protected String buildScriptsDir;
 	
 	/**
 	 * Private constructor to enforce singleton pattern.
@@ -310,22 +317,34 @@ public final class BuildStatusManager {
 	}
 	
 	/**
-	 * 
-	 * Set file path for the build script.
-	 * 
-	 * @param buildScriptPath - Directory path
-	 */
-	public void setBuildScriptPath(String buildScriptPath) {
-		this.buildScriptPath = buildScriptPath;
-	}
-	
-	/**
-	 * Get file path for the build script.
+	 * Get the absolute file path for the build script.
 	 * 
 	 * @return Build script path
 	 */
 	public String getBuildScriptPath() {
 		return this.buildScriptPath;
+	}
+	
+	/**
+	 * Get the full path for the directory containing
+	 * the build scripts.
+	 * 
+	 * @return Build scripts directory path
+	 */
+	public String getBuildScriptsDir() {
+		return this.buildScriptsDir;
+	}
+	
+	/**
+	 * 
+	 * @param buildScriptsDir
+	 */
+	public void setBuildScriptsDir(String buildScriptsDir) {
+		this.buildScriptsDir = buildScriptsDir;
+		// Now derive the full path for the build script
+		// from the absolute scripts path and build file name.
+		File buildScript = (new File(this.buildScriptsDir, this.buildScriptName));
+		this.buildScriptPath = buildScript.getAbsolutePath();
 	}
 	
 	/**
