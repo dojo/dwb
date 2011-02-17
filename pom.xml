@@ -11,6 +11,7 @@
 
     <properties>
         <tomcat.version>6.0.20</tomcat.version>
+        <dojo.version>1.6.0</dojo.version>
     </properties>
 
     <dependencies>
@@ -272,7 +273,19 @@
                       <phase>validate</phase>
                       <configuration>
                           <tasks>
-                              <replaceregexp file="src/main/webapp/WEB-INF/config/packages/dojo/1.5.0/package.json"
+                            <!-- Remove previous Dojo version -->
+                            <delete includeemptydirs="true">
+                                <fileset dir="src/main/webapp/WEB-INF/config/packages/">
+                                </fileset>
+                            </delete>
+                              
+                              <!-- Copy package meta-data for desired version of Dojo -->
+                              <copy todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}" >  
+                                  <fileset dir="src/main/packages/dojo/${dojo.version}"/>  
+                             </copy>
+                              
+                             <!-- Update meta-data to point to actual Dojo source location -->
+                              <replaceregexp file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
                                   match='location\":.*,'
                                   replace='location\": \"${dojo.source}\",'/>
                               

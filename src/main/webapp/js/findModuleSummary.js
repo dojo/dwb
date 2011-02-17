@@ -1,5 +1,3 @@
-load("../jslib/fileUtil.js");
-
 function findSummary(fileContents) {
   // Find first line match "summary:", match groups consisting of 
   // any text after the summary prefix and any additional lines with

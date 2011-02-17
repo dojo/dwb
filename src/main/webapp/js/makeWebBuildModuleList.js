@@ -2,24 +2,19 @@
 //This file should be called from ant/command line, and the output file
 //needs to be generated before the web build will work.
 
-
 //START of the "main" part of the script.
 //This is the entry point for this script file.
 var srcRoot = arguments[0];
 var outputFileName = arguments[1];
+load("build/logger.js");
+load("build/fileUtil.js");
+load("findModuleSummary.js");
 
-//Load Dojo so we can reuse code.
-djConfig={
-	baseUrl: "../../../dojo/"
-};
-load('../../../dojo/dojo.js');
+//quit();
 
-load("../jslib/logger.js");
-load("../jslib/fileUtil.js");
-load("./findModuleSummary.js");
-
-//Get a list of files that might be modules.
-var fileList = fileUtil.getFilteredFileList(srcRoot, /\.js$/, true);
+print("Looking for modules....");
+//Get a list of files that might be modules, ignoring util and other dirs
+var fileList = fileUtil.getFilteredFileList(srcRoot, /(dojo\/|dojox\/|dijit\/).*\.js$/, true);
 
 var provideRegExp = /dojo\.provide\(\".*\"\)/g;
 
@@ -30,7 +25,7 @@ var provideList = [];
 
 for(var i = 0; i < fileList.length; i++){
 	var fileName = fileList[i];
-	var fileContents = new fileUtil.readFile(fileName);
+	var fileContents = fileUtil.readFile(fileName);
 
 	var matches = fileContents.match(provideRegExp);
 	
@@ -47,6 +42,7 @@ for(var i = 0; i < fileList.length; i++){
 				continue;
 			}
 
+            print("Found: " + fileName);
 			//Only allow the provides that match the file name.
 			//So, the different dijit permutations of dijit.form.Button will not show up.
 			if (modFileName.lastIndexOf(provideName.replace(/\./g, "/")) == modFileName.length - provideName.length){
@@ -62,7 +58,4 @@ for(var i = 0; i < fileList.length; i++){
 
 provideList = provideList.sort();
 
-logger.trace(provideList);
-logger.trace(provideList.join(","));
-
-fileUtil.saveFile(outputFileName, "[" + provideList + "]");
+fileUtil.saveFile(outputFileName, "{\n  \"name\": \"Dojo Toolkit\",\n  \"description\": \"Dojo Toolkit, release X.X.X\",\n  \"location\": \""+srcRoot+"\",\n  \"modules\": [" + provideList + "]\n}");
