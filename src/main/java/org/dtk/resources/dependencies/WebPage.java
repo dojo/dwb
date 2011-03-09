@@ -137,7 +137,13 @@ public class WebPage {
 
 			// Check if this path has a registered location...
 			if (this.modulePaths.containsKey(currentSearchpath)) {
-				moduleLocation += this.modulePaths.get(currentSearchpath);
+				String modulePath = this.modulePaths.get(currentSearchpath);
+				// If custom module path points to absolute path, don't start with base dojo path.
+				if (modulePath.startsWith("./") || modulePath.startsWith("/") || modulePath.startsWith("http://")) {
+					moduleLocation = modulePath;
+				} else {
+					moduleLocation += modulePath;
+				}
 				break;
 			}
 
