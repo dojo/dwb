@@ -10,6 +10,7 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.dtk.util.Options;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -44,15 +46,9 @@ import org.junit.Test;
 public class PackagesTest {
 
 	/**
-	 * Service end point details.
-	 */
-	final protected String protocol = "http";
-
-	final protected String host = "localhost";
-
-	final protected int port = 8080;
-
-	final protected String baseResourcePath = "/dwb/api/packages/";
+	 * Service end point path.
+	 */	
+	final protected String packageAPIPath = "/api/packages/";
 
 	/**
 	 * Test normal path through the code. Retrieve all packages
@@ -176,7 +172,7 @@ public class PackagesTest {
 	public void test_RetrieveVersionsForInvalidPackage() throws ClientProtocolException, URISyntaxException, IOException {
 		// Generate random package name to retrieve. 
 		String randomPackageName = RandomStringUtils.randomAlphabetic(32);
-		URL invalidPackageResource = new URL(protocol, host, port, baseResourcePath + randomPackageName);
+		URL invalidPackageResource = new URL(Options.getTestAPILocation(packageAPIPath) + randomPackageName);
 		HttpResponse response = jsonGetRequest(invalidPackageResource);
 		assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusLine().getStatusCode());	
 	}
@@ -226,7 +222,7 @@ public class PackagesTest {
 	public void test_RetrieveInvalidPackageAndInvalidVersionDetails() throws ClientProtocolException, URISyntaxException, IOException {
 		// Generate random package name to retrieve. 
 		String randomChars = RandomStringUtils.randomAlphabetic(32);
-		URL invalidPackageResource = new URL(protocol, host, port, baseResourcePath + randomChars + "/" + randomChars);
+		URL invalidPackageResource = new URL(Options.getTestAPILocation(packageAPIPath) + randomChars + "/" + randomChars);
 		HttpResponse response = jsonGetRequest(invalidPackageResource);
 		assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusLine().getStatusCode());	
 	}
@@ -243,7 +239,7 @@ public class PackagesTest {
 	@Test
 	public void test_CreateNewPackage() throws URISyntaxException, ClientProtocolException, IOException {
 		// Create HTTP Post request to base package URL
-		URL url = new URL(protocol, host, port, baseResourcePath);
+		URL url = new URL(Options.getTestAPILocation(packageAPIPath));
 		HttpClient httpclient = new DefaultHttpClient();
 		HttpPost httpPost = new HttpPost(url.toURI());
 		
@@ -276,11 +272,17 @@ public class PackagesTest {
 		// Extract response values for standard Dojo modules within user application,
 		// user defined custom modules and reference id for new package. Confirm they 
 		// match our expected values.
-		assertEquals(Arrays.asList("dojo.cache", "dijit.form.Button", "dojox.form.BusyButton"), 
-				details.get("requiredDojoModules"));
+		List<String> dojoModules = (List<String>) details.get("requiredDojoModules");
+		Collections.sort(dojoModules);
+		assertEquals(Arrays.asList("dijit.form.Button", "dojo.cache", "dojox.form.BusyButton"), 
+			dojoModules);
+		
+		// Make sure list elements are in the same order
+		List<String> availableModules = (List<String>) details.get("availableModules");
+		Collections.sort(availableModules);
 		
 		assertEquals(Arrays.asList("user_app.module_a", "user_app.module_b", "user_app.module_c", "user_app.util.util"), 
-				details.get("availableModules"));
+			availableModules);
 		
 		assertNotNull(details.get("packageReference"));
 	}
@@ -298,7 +300,7 @@ public class PackagesTest {
 	@Test
 	public void test_CreateNewPackageMissingResource() throws URISyntaxException, ClientProtocolException, IOException {
 		// Create HTTP Post request to base package URL
-		URL url = new URL(protocol, host, port, baseResourcePath);
+		URL url = new URL(Options.getTestAPILocation(packageAPIPath));
 		HttpClient httpclient = new DefaultHttpClient();
 		HttpPost httpPost = new HttpPost(url.toURI());
 		
@@ -346,7 +348,7 @@ public class PackagesTest {
 	 * @throws IOException
 	 */
 	protected HttpResponse generateDefaultPackageRequest() throws ClientProtocolException, MalformedURLException, URISyntaxException, IOException {
-		return jsonGetRequest(new URL(protocol, host, port, baseResourcePath));
+		return jsonGetRequest(new URL(Options.getTestAPILocation(packageAPIPath)));
 	}
 	
 	/**

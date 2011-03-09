@@ -27,6 +27,7 @@ import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.dtk.util.Options;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -47,13 +48,7 @@ public class DependenciesTest {
 	/**
 	 * Service end point details.
 	 */
-	final protected String protocol = "http";
-
-	final protected String host = "localhost";
-
-	final protected int port = 8080;
-
-	final protected String baseResourcePath = "/dwb/api/dependencies/";
+	final protected String baseResourcePath = "/api/dependencies/";
 	
 	/** Sample web address with Dojo application */
 	final protected String validWebAddress = "http://jthomas.vm.bytemark.co.uk/sample.html";
@@ -497,7 +492,7 @@ public class DependenciesTest {
 	 */
 	protected HttpResponse simulateMultiPartFormSubmission(MultipartEntity multipartEntity) throws ClientProtocolException, IOException, URISyntaxException {
 		// Create HTTP Post request to base package URL
-		URL url = new URL(protocol, host, port, baseResourcePath);
+		URL url = new URL(Options.getTestAPILocation(baseResourcePath));
 		HttpClient httpclient = new DefaultHttpClient();
 		HttpPost httpPost = new HttpPost(url.toURI());
 		

@@ -28,6 +28,7 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.dtk.resources.build.manager.BuildState;
 import org.dtk.util.JsonUtil;
+import org.dtk.util.Options;
 import org.junit.Test;
 
 import static org.junit.Assert.* ;
@@ -43,17 +44,11 @@ import static org.junit.Assert.* ;
 public class BuildTest {
 
 	/**
-	 * Service end point details.
+	 * API end point details.
 	 */
-	final protected String protocol = "http";
+	final protected String baseResourcePath = "/api/build/";
 
-	final protected String host = "localhost";
-
-	final protected int port = 8080;
-
-	final protected String baseResourcePath = "/dwb/api/build/";
-
-	final protected String statusResourcePath = "/dwb/api/build/status/";
+	final protected String statusResourcePath = "/api/build/status/";
 
 	/**
 	 * Default build profile for base dojo.js with no added modules.
@@ -152,7 +147,7 @@ public class BuildTest {
 		// Use a fixed short string as the invalid resource id
 		String invalidBuildURL = statusResourcePath + "invalid_resource_id";
 		// Set up HTTP client connection....
-		URL serviceEndPoint = new URL(protocol, host, port, invalidBuildURL);
+		URL serviceEndPoint = new URL(Options.getTestAPILocation(invalidBuildURL));
 		HttpClient httpClient = new DefaultHttpClient();
 		HttpGet httpGet = new HttpGet(serviceEndPoint.toURI());
 
@@ -190,7 +185,7 @@ public class BuildTest {
 		// Use a fixed short string as the invalid resource id
 		String invalidBuildURL = baseResourcePath + RandomStringUtils.randomAlphabetic(32);
 		// Set up HTTP client connection....
-		URL serviceEndPoint = new URL(protocol, host, port, invalidBuildURL);
+		URL serviceEndPoint = new URL(Options.getTestAPILocation(invalidBuildURL));
 		HttpClient httpClient = new DefaultHttpClient();
 		HttpGet httpGet = new HttpGet(serviceEndPoint.toURI());
 
@@ -387,7 +382,7 @@ public class BuildTest {
 	 */
 	protected HttpResponse generateBuildRequest(String buildProfile) throws ClientProtocolException, IOException, URISyntaxException {
 		// Set up HTTP client connection....
-		URL serviceEndPoint = new URL(protocol, host, port, baseResourcePath);
+		URL serviceEndPoint = new URL(Options.getTestAPILocation(baseResourcePath));
 		HttpClient httpClient = new DefaultHttpClient();
 		HttpPost httpPost = new HttpPost(serviceEndPoint.toURI());
 
