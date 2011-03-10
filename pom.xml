@@ -102,7 +102,7 @@
         <artifactId>shrinksafe</artifactId>
         <version>1.0</version>
         <scope>system</scope>
-        <systemPath>${project.basedir}/src/main/resource/lib/shrinksafe.jar</systemPath>
+        <systemPath>${project.basedir}/src/main/webapp/WEB-INF/lib/shrinksafe.jar</systemPath>
     </dependency>    
     </dependencies>
     <profiles>
