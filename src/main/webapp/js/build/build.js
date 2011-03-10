@@ -433,7 +433,7 @@ function findModules(/*String fileName*/srcRoot) {
 	var provideList = [];
 	for(var i = 0; i < fileList.length; i++){
 		var fileName = fileList[i];
-		var fileContents = new fileUtil.readFile(fileName);
+		var fileContents = fileUtil.readFile(fileName);
 
 		var matches = fileContents.match(provideRegExp);
 		
