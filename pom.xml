@@ -361,6 +361,7 @@
                 <artifactId>tomcat-maven-plugin</artifactId>
                 <configuration>
                     <server>dwb</server>
+                    <path>/</path>
                 </configuration>
             </plugin>
         </plugins>

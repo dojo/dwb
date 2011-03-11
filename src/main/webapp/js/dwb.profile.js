@@ -12,6 +12,6 @@ dependencies = {
 	prefixes: [
 		[ "dijit", "../dijit" ],
 		[ "dojox", "../dojox" ],
-		[ "dwb", "/Users/james/IBM/Code/dwb_conversion/dwb/src/main/webapp/js/dwb"]
+		[ "dwb", "/Users/james/IBM/Code/dwb/src/main/webapp/js/dwb"]
 	]
 }

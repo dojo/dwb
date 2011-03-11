@@ -7012,7 +7012,7 @@ dojo.provide("dwb.ui.BuildConfigPanel");
 
 
 dojo.declare("dwb.ui.BuildConfigPanel", [dijit._Widget, dijit._Templated], {
-	templateString : dojo.cache("dwb.ui.templates", "ConfigurationPanel.html", "<div>\n\t<div class=\"titlePaneConfig\">\n\t\t<div dojoType=\"dijit.TitlePane\" title=\"Search Options\" dojoAttachEvent=\"onPreToggleOpen:_titlePaneOpen,onPreToggleClose:_titlePaneClose\" class=\"tp Modules simple advanced bottomPadding\">\n   \t\t\t<form class=\"optionsForm\" dojoAttachPoint=\"formValues\" dojoType=\"dijit.form.Form\">\n\t   \t\t\t<fieldset>\n\t    \t\t\t<legend>Search against module fields</legend>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"checkbox\" name=\"name\" checked=true dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tName \n\t    \t\t\t</label>\n\t    \t\t\t<label class=\"lastChild\">\n\t    \t\t\t\t<input type=\"checkbox\" name=\"desc\" checked=true dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tDescription \n\t    \t\t\t</label>\n\t    \t\t</fieldset>\n\t    \t\t<fieldset class=\"lastChild\">\n\t    \t\t\t<legend>Exclude modules from package</legend>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"checkbox\" name=\"dojo\" dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tDojo \n\t    \t\t\t</label>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"checkbox\" name=\"dijit\" dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tDijit \n\t    \t\t\t</label>\n\t    \t\t\t<label class=\"lastChild\">\n\t    \t\t\t\t<input type=\"checkbox\" name=\"dojox\" dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tDojox \n\t    \t\t\t</label>\n\t    \t\t</fieldset>\n    \t\t</form>\n    \t</div>\n    \t<div class=\"Modules Auto-Analyse advanced\" dojoAttachEvent=\"onPreToggleOpen:_titlePaneOpen,onPreToggleClose:_titlePaneClose\" dojoType=\"dijit.TitlePane\" title=\"Module Layers Options\">\n\t    \t<fieldset class=\"lastChild\">\n\t\t\t<legend>Choose layer for selected modules</legend>\n\t\t\t<div>\n\t\t \t\t<label class=\"formLabel\">Layer Name</label>\n\t\t\t\t<select dojoAttachPoint=\"layerNameSelect\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.FilteringSelect\">\t\t\t\n\t\t\t\t</select>\t\n\t\t   \t</div>\t\t\t\t\t\n\t\t\t</fieldset>\n    \t</div>\n    \t<div dojoAttachPoint=\"modulesSelectedView\" class=\"Modules simple advanced moduleOverviewTitlePane\" dojoType=\"dijit.TitlePane\" title=\"Modules Selected (0)\">\n    \t</div>\n    \t<div class=\"Layers simple advanced\" dojoAttachPoint=\"layerDetailsPane\" dojoType=\"dijit.TitlePane\" title=\"Module Layer Details\">\n    \t<fieldset class=\"lastChild\">\n\t  \t\t<legend>Choose a layer name</legend>\n\t\t   \t<div>\n\t\t    \t<label class=\"formLabel\">Layer name</label>\t\t\t\t\t\t\t\n\t\t\t\t<input disabled=\"true\" dojoAttachPoint=\"layerNameTextBox\" dojoAttachEvent=\"onKeyUp:_onLayerTitleChange\" type=\"text\" value=\"dojo.js\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.TextBox\">\n\t\t\t\t</input>\n\t\t   \t</div>\n\t\t</fieldset>\n    \t</div>\n    \t<div class=\"Layers simple advanced\" dojoType=\"dijit.TitlePane\" title=\"Build Parameters\">\n    \t\t<form dojoAttachPoint=\"buildParameterForm\" dojoType=\"dijit.form.Form\">\n\t\t    \t<fieldset class=\"lastChild\">\n\t\t\t\t\t<legend>Configure Build Parameters</legend>\n\t\t\t\t    <div>\n\t\t\t\t    \t<label class=\"formLabel\">Optimisation Level</label>\n\t\t\t\t    \t<!-- dijit.form.Select widgets wont pick up width from class label -->\n\t\t\t\t\t\t<select dojoAttachPoint=\"optimiseBuildParam\" name=\"optimise\" style=\"width: 90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\t        \n\t\t\t\t\t<div>\n\t\t\t\t    \t<label class=\"formLabel\">Cross Domain Build</label>\n\t\t\t\t\t\t<select dojoAttachPoint=\"crossDomainBuildParam\" name=\"cdn\" style=\"width:90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\n\t\t\t    \t<div>\n\t\t\t\t    \t<label class=\"formLabel\">Target Platforms</label>\n\t\t\t\t\t\t<select dojoAttachPoint=\"targetPlatformsParam\" name=\"platforms\" style=\"width:90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\t\t\t\t\t\t\n\t\t\t\t</fieldset>\t\n\t\t\t</form>\n    \t</div>\n    \t<div class=\"Layers simple advanced\" dojoType=\"dijit.TitlePane\" title=\"Theme Parameters\">\n    \t\t<form dojoAttachPoint=\"themeParameterForm\" dojoType=\"dijit.form.Form\">\n\t\t    \t<fieldset class=\"lastChild\">\n\t\t\t\t\t<legend>Configure Theme Parameters</legend>\n\t\t\t\t    <div>\n\t\t\t\t    \t<label class=\"formLabel\">Include Dijit Theme</label>\n\t\t\t\t    \t<!-- dijit.form.Select widgets wont pick up width from class label -->\n\t\t\t\t\t\t<select dojoAttachPoint=\"includeThemeParam\" name=\"themes\" style=\"width: 90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\n\t\t\t    \t <div>\n\t\t\t\t    \t<label class=\"formLabel\">CSS Optimisations</label>\n\t\t\t\t    \t<!-- dijit.form.Select widgets wont pick up width from class label -->\n\t\t\t\t\t\t<select dojoAttachPoint=\"cssOptimiseParam\" name=\"cssOptimise\" style=\"width: 90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\t        \t\t\t\t\t\t\n\t\t\t\t</fieldset>\n\t\t\t</form>\n    \t</div>\n    \t<div class=\"analysisSourceType Auto-Analyse advanced simple bottomPadding\" dojoType=\"dijit.TitlePane\" title=\"Auto-Analysis Options\">\n    \t\t<form dojoAttachPoint=\"analyseModulesSourceForm\" dojoType=\"dijit.form.Form\">\n\t    \t\t<fieldset class=\"lastChild\">\n\t    \t\t\t<legend>Analyse modules from source type</legend>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"radio\" name=\"source\" value=\"web_app\" checked=\"true\" dojoAttachEvent=\"onChange:_analyseSourceChange\" dojoType=\"dijit.form.RadioButton\"></input>\n\t    \t\t\t\tWeb Application\n\t    \t\t\t</label>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"radio\" name=\"source\" value=\"html_file\" dojoAttachEvent=\"onChange:_analyseSourceChange\" dojoType=\"dijit.form.RadioButton\"></input>\n\t    \t\t\t\tHTML File  \n\t    \t\t\t</label>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"radio\" name=\"source\" value=\"dojo_app\" dojoAttachEvent=\"onChange:_analyseSourceChange\" dojoType=\"dijit.form.RadioButton\"></input>\n\t    \t\t\t\tDojo Application Archive\n\t    \t\t\t</label>\n\t    \t\t\t<label class=\"lastChild\">\n\t    \t\t\t\t<input type=\"radio\" name=\"source\" value=\"profile\" dojoAttachEvent=\"onChange:_analyseSourceChange\" dojoType=\"dijit.form.RadioButton\"></input>\n\t    \t\t\t\tExisting Profile\n\t    \t\t\t</label>\n\t    \t\t</fieldset>\n    \t\t</form>\n    \t</div>\n    \t<div class=\"Help advanced simple\" dojoType=\"dijit.TitlePane\" title=\"Help Topics\">\n    \t<p>Select a help topic to display the associated answer</p>\n    \t<ul>\n    \t<li><a href='#question_1'>Dojo already has a fantastic build system, why do we need a \"Web Builder\"?</a></li>\n    \t\t<li><a href='#question_2'>How do I switch between simple and advanced mode?</a></li>\n    \t\t<li><a href='#question_3'>What is the difference between the \"Simple\" and \"Advanced\" display modes?</a></li>\n    \t\t<li><a href='#question_4'>How can I generate a custom Dojo build in \"Simple\" Mode?</a></li>\n    \t\t<li><a href='#question_5'>How can I generate a custom Dojo build in \"Advanced\" mode?</a></li>\n    \t</ul>\n    \t</div>\n\t</div>  \n\t<div class=\"buttonPanels\">\t\t\t\t    \t\n\t\t<button class=\"Modules simple\" label=\"Build\" busyLabel=\"Building...\" timeout=\"100000\" dojoType=\"dojox.form.BusyButton\" dojoAttachPoint=\"modulesBuildBtn\" dojoAttachEvent=\"onClick:_onBuild\">\t\t\t\t\t\t\t\t\n\t\t</button>\n\t\t<button class=\"Layers advanced\" label=\"Build\" busyLabel=\"Building...\" timeout=\"100000\" dojoType=\"dojox.form.BusyButton\" dojoAttachPoint=\"layersBuildBtn\" dojoAttachEvent=\"onClick:_onBuild\">\t\t\t\t\t\t\t\t\n\t\t</button>\n\t\t<button class=\"Auto-Analyse simple advanced\" dojoAttachEvent=\"onClick:_onAddAnalysisModules\" label=\"Add Modules\" dojoType=\"dijit.form.Button\" >\t\t\t\t\t\t\t\t\n\t\t</button>\n\t\t<button class=\"Modules advanced\" label=\"Add Modules\" dojoAttachEvent=\"onClick:_onAddModuleSelection\"  dojoType=\"dijit.form.Button\" >\t\t\t\t\t\t\t\t\n\t\t</button>\t\n\t</div>\n</div>\n"),
+	templateString : dojo.cache("dwb.ui.templates", "ConfigurationPanel.html", "<div>\n\t<div class=\"titlePaneConfig\">\n\t\t<div dojoType=\"dijit.TitlePane\" title=\"Search Options\" dojoAttachEvent=\"onPreToggleOpen:_titlePaneOpen,onPreToggleClose:_titlePaneClose\" class=\"tp Modules simple advanced bottomPadding\">\n   \t\t\t<form class=\"optionsForm\" dojoAttachPoint=\"formValues\" dojoType=\"dijit.form.Form\">\n\t   \t\t\t<fieldset>\n\t    \t\t\t<legend>Search against module fields</legend>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"checkbox\" name=\"name\" checked=true dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tName \n\t    \t\t\t</label>\n\t    \t\t\t<label class=\"lastChild\">\n\t    \t\t\t\t<input type=\"checkbox\" name=\"desc\" checked=true dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tDescription \n\t    \t\t\t</label>\n\t    \t\t</fieldset>\n\t    \t\t<fieldset class=\"lastChild\">\n\t    \t\t\t<legend>Exclude modules from package</legend>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"checkbox\" name=\"dojo\" dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tDojo \n\t    \t\t\t</label>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"checkbox\" name=\"dijit\" dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tDijit \n\t    \t\t\t</label>\n\t    \t\t\t<label class=\"lastChild\">\n\t    \t\t\t\t<input type=\"checkbox\" name=\"dojox\" dojoAttachEvent=\"onChange:_onOptionChanged\" dojoType=\"dijit.form.CheckBox\"></input>\n\t    \t\t\t\tDojox \n\t    \t\t\t</label>\n\t    \t\t</fieldset>\n    \t\t</form>\n    \t</div>\n    \t<div class=\"Modules Auto-Analyse advanced\" dojoAttachEvent=\"onPreToggleOpen:_titlePaneOpen,onPreToggleClose:_titlePaneClose\" dojoType=\"dijit.TitlePane\" title=\"Module Layers Options\">\n\t    \t<fieldset class=\"lastChild\">\n\t\t\t<legend>Choose layer for selected modules</legend>\n\t\t\t<div>\n\t\t \t\t<label class=\"formLabel\">Layer Name</label>\n\t\t\t\t<select dojoAttachPoint=\"layerNameSelect\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.FilteringSelect\">\t\t\t\n\t\t\t\t</select>\t\n\t\t   \t</div>\t\t\t\t\t\n\t\t\t</fieldset>\n    \t</div>\n    \t<div dojoAttachPoint=\"modulesSelectedView\" class=\"Modules simple advanced moduleOverviewTitlePane\" dojoType=\"dijit.TitlePane\" title=\"Modules Selected (0)\">\n    \t</div>\n    \t<div class=\"Layers simple advanced\" dojoAttachPoint=\"layerDetailsPane\" dojoType=\"dijit.TitlePane\" title=\"Module Layer Details\">\n    \t<fieldset class=\"lastChild\">\n\t  \t\t<legend>Choose a layer name</legend>\n\t\t   \t<div>\n\t\t    \t<label class=\"formLabel\">Layer name</label>\t\t\t\t\t\t\t\n\t\t\t\t<input disabled=\"true\" dojoAttachPoint=\"layerNameTextBox\" dojoAttachEvent=\"onKeyUp:_onLayerTitleChange\" type=\"text\" value=\"dojo.js\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.TextBox\">\n\t\t\t\t</input>\n\t\t   \t</div>\n\t\t</fieldset>\n    \t</div>\n    \t<div class=\"Layers simple advanced\" dojoType=\"dijit.TitlePane\" title=\"Build Parameters\">\n    \t\t<form dojoAttachPoint=\"buildParameterForm\" dojoType=\"dijit.form.Form\">\n\t\t    \t<fieldset class=\"lastChild\">\n\t\t\t\t\t<legend>Configure Build Parameters</legend>\n\t\t\t\t    <div>\n\t\t\t\t    \t<label class=\"formLabel\">Optimisation Level</label>\n\t\t\t\t    \t<!-- dijit.form.Select widgets wont pick up width from class label -->\n\t\t\t\t\t\t<select dojoAttachPoint=\"optimiseBuildParam\" name=\"optimise\" style=\"width: 90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\t        \n\t\t\t\t\t<div>\n\t\t\t\t    \t<label class=\"formLabel\">Cross Domain Build</label>\n\t\t\t\t\t\t<select dojoAttachPoint=\"crossDomainBuildParam\" name=\"cdn\" style=\"width:90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\n\t\t\t    \t<div>\n\t\t\t\t    \t<label class=\"formLabel\">Target Platforms</label>\n\t\t\t\t\t\t<select dojoAttachPoint=\"targetPlatformsParam\" name=\"platforms\" style=\"width:90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\t\t\t\t\t\t\n\t\t\t\t</fieldset>\t\n\t\t\t</form>\n    \t</div>\n    \t<div class=\"Layers simple advanced\" dojoType=\"dijit.TitlePane\" title=\"Theme Parameters\">\n    \t\t<form dojoAttachPoint=\"themeParameterForm\" dojoType=\"dijit.form.Form\">\n\t\t    \t<fieldset class=\"lastChild\">\n\t\t\t\t\t<legend>Configure Theme Parameters</legend>\n\t\t\t\t    <div>\n\t\t\t\t    \t<label class=\"formLabel\">Include Dijit Theme</label>\n\t\t\t\t    \t<!-- dijit.form.Select widgets wont pick up width from class label -->\n\t\t\t\t\t\t<select dojoAttachPoint=\"includeThemeParam\" name=\"themes\" style=\"width: 90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\n\t\t\t    \t <div>\n\t\t\t\t    \t<label class=\"formLabel\">CSS Optimisations</label>\n\t\t\t\t    \t<!-- dijit.form.Select widgets wont pick up width from class label -->\n\t\t\t\t\t\t<select dojoAttachPoint=\"cssOptimiseParam\" name=\"cssOptimise\" style=\"width: 90%;\" class=\"titlePanelDropDown\" dojotype=\"dijit.form.Select\"></select>\t\n\t\t\t    \t</div>\t        \t\t\t\t\t\t\n\t\t\t\t</fieldset>\n\t\t\t</form>\n    \t</div>\n    \t<div class=\"analysisSourceType Auto-Analyse advanced simple bottomPadding\" dojoType=\"dijit.TitlePane\" title=\"Auto-Analysis Options\">\n    \t\t<form dojoAttachPoint=\"analyseModulesSourceForm\" dojoType=\"dijit.form.Form\">\n\t    \t\t<fieldset class=\"lastChild\">\n\t    \t\t\t<legend>Analyse modules from source type</legend>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"radio\" name=\"source\" value=\"web_app\" checked=\"true\" dojoAttachEvent=\"onChange:_analyseSourceChange\" dojoType=\"dijit.form.RadioButton\"></input>\n\t    \t\t\t\tWeb Application\n\t    \t\t\t</label>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"radio\" name=\"source\" value=\"html_file\" dojoAttachEvent=\"onChange:_analyseSourceChange\" dojoType=\"dijit.form.RadioButton\"></input>\n\t    \t\t\t\tHTML File  \n\t    \t\t\t</label>\n\t    \t\t\t<label>\n\t    \t\t\t\t<input type=\"radio\" name=\"source\" value=\"dojo_app\" dojoAttachEvent=\"onChange:_analyseSourceChange\" dojoType=\"dijit.form.RadioButton\"></input>\n\t    \t\t\t\tDojo Application Archive\n\t    \t\t\t</label>\n\t    \t\t\t<label class=\"lastChild\">\n\t    \t\t\t\t<input type=\"radio\" name=\"source\" value=\"profile\" dojoAttachEvent=\"onChange:_analyseSourceChange\" dojoType=\"dijit.form.RadioButton\"></input>\n\t    \t\t\t\tExisting Profile\n\t    \t\t\t</label>\n\t    \t\t</fieldset>\n    \t\t</form>\n    \t</div>\n    \t<div class=\"Help advanced simple\" dojoType=\"dijit.TitlePane\" title=\"Help Topics\">\n    \t<p>Select a help topic to display the associated answer</p>\n    \t<ul>\n    \t<li><a href='#question_1'>Dojo already has a fantastic build system, why do we need a \"Web Builder\"?</a></li>\n    \t\t<li><a href='#question_2'>How do I switch between simple and advanced mode?</a></li>\n    \t\t<li><a href='#question_3'>What is the difference between the \"Simple\" and \"Advanced\" display modes?</a></li>\n    \t\t<li><a href='#question_4'>How can I generate a custom Dojo build in \"Simple\" Mode?</a></li>\n    \t\t<li><a href='#question_5'>How can I generate a custom Dojo build in \"Advanced\" mode?</a></li>\n    \t</ul>\n    \t</div>\n\t</div>  \n\t<div class=\"buttonPanels\">\t\t\t\t    \t\n\t\t<button class=\"Modules simple\" label=\"Build\" busyLabel=\"Building...\" timeout=\"100000\" dojoType=\"dojox.form.BusyButton\" dojoAttachPoint=\"modulesBuildBtn\" dojoAttachEvent=\"onClick:_onBuild\">\t\t\t\t\t\t\t\t\n\t\t</button>\n\t\t<button class=\"Layers advanced\" label=\"Build\" busyLabel=\"Building...\" timeout=\"100000\" dojoType=\"dojox.form.BusyButton\" dojoAttachPoint=\"layersBuildBtn\" dojoAttachEvent=\"onClick:_onBuild\">\t\t\t\t\t\t\t\t\n\t\t</button>\n\t\t<button class=\"Auto-Analyse simple advanced\" dojoAttachEvent=\"onClick:_onAddAnalysisModules\" label=\"Include\" dojoType=\"dijit.form.Button\" >\t\t\t\t\t\t\t\t\n\t\t</button>\n\t\t<button class=\"Modules advanced\" label=\"Include\" dojoAttachEvent=\"onClick:_onAddModuleSelection\"  dojoType=\"dijit.form.Button\" >\t\t\t\t\t\t\t\t\n\t\t</button>\t\n\t</div>\n</div>\n"),
 	
 	widgetsInTemplate: true,
 	
@@ -12194,6 +12194,44 @@ dijit._dialogStack = [];
 
 }
 
+if(!dojo._hasResource["dwb.ui.PositionableDialog"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dwb.ui.PositionableDialog"] = true;
+dojo.provide("dwb.ui.PositionableDialog");
+
+
+
+dojo.declare("dwb.ui.PositionableDialog", dijit.Dialog, {
+    leftOffset: null,
+	topOffset: null,
+	
+	_position: function(){
+		// summary:
+		//		Position modal dialog in the viewport. If no relative offset
+		//		in the viewport has been determined (by dragging, for instance),
+		//		center the node. Otherwise, use the Dialog's stored relative offset,
+		//		and position the node to top: left: values based on the viewport.
+		// tags:
+		//		private
+		if (!dojo.hasClass(dojo.body(),"dojoMove")){
+			var node = this.domNode,
+				viewport = dojo.window.getBox(),
+				p = this._relativePosition,
+				bb = p ? null : dojo._getBorderBox(node),
+				// If absolute position are already available, don't calculate.
+				l = this.leftOffset ? this.leftOffset : Math.floor(viewport.l + (p ? p.x : (viewport.w - bb.w) / 2)),
+				t = this.topOffset ? this.topOffset : Math.floor(viewport.t + (p ? p.y : (viewport.h - bb.h) / 2))
+			;
+			
+			dojo.style(node,{
+				left: l + "px",
+				top: t + "px"
+			});
+		}
+	}
+});
+
+}
+
 if(!dojo._hasResource["dojo.regexp"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
 dojo._hasResource["dojo.regexp"] = true;
 dojo.provide("dojo.regexp");
@@ -13314,13 +13352,12 @@ dojo.provide("dwb.ui.IntroDialog");
 
 
 
-dojo.declare("dwb.ui.IntroDialog", dijit.Dialog, {
+dojo.declare("dwb.ui.IntroDialog", dwb.ui.PositionableDialog, {
 	title: "Dojo Web Builder Introduction",
     style: "width: 464px;",
     content: dojo.cache("dwb.ui.fragments", "HelpDialogContent.html", "<div class=\"introDialog\">\n<h1>Welcome to the Dojo Web Builder!</h1>\n<div class=\"content\">This tool provides a web front-end to the existing Dojo Toolkit build system. Search through the entire catalogue\nof Dojo, Dijit and DojoX modules, automatically find module dependencies in existing Dojo applications and generate custom builds\nfrom the results. For more detailed help, see the \"Help\" tab in the main application. \n</div>\n<div class=\"footer\">\n\t<div class=\"confirmation\">\n\t\t<div class=\"label\">Show this dialog next time</div>\n\t\t<input type=\"radio\" dojoType=\"dijit.form.CheckBox\" onChange=\"dojo.publish('dwb/dialog/shownAtLoad', [{'value': this.get('checked')}]);\" checked=\"true\"></input>\n\t</div>\n\t<div>Enjoy!</div>\n</div>\n</div>\n"),
-    leftOffset: null,
-	topOffset: null,
 	
+    // Use cookie to store show dialog check state.
     constructor: function () {
     	dojo.subscribe('dwb/dialog/shownAtLoad', function (message) {
 			if (!message.value) {
@@ -13329,64 +13366,681 @@ dojo.declare("dwb.ui.IntroDialog", dijit.Dialog, {
 				dojo.cookie("dontShowDialogAtLoad", null, {expires: -1});
 			}
 		});
-    },
-    
-	_position: function(){
-		// summary:
-		//		Position modal dialog in the viewport. If no relative offset
-		//		in the viewport has been determined (by dragging, for instance),
-		//		center the node. Otherwise, use the Dialog's stored relative offset,
-		//		and position the node to top: left: values based on the viewport.
-		// tags:
-		//		private
-		if (!dojo.hasClass(dojo.body(),"dojoMove")){
-			var node = this.domNode,
-				viewport = dojo.window.getBox(),
-				p = this._relativePosition,
-				bb = p ? null : dojo._getBorderBox(node),
-				// If absolute position are already available, don't calculate.
-				l = this.leftOffset ? this.leftOffset : Math.floor(viewport.l + (p ? p.x : (viewport.w - bb.w) / 2)),
-				t = this.topOffset ? this.topOffset : Math.floor(viewport.t + (p ? p.y : (viewport.h - bb.h) / 2))
-			;
-			
-			dojo.style(node,{
-				left: l + "px",
-				top: t + "px"
-			});
-		}
-	}
+    }
 });
 
 }
 
-if(!dojo._hasResource["dijit.dijit"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dijit.dijit"] = true;
-dojo.provide("dijit.dijit");
+if(!dojo._hasResource["dojo.data.util.sorter"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dojo.data.util.sorter"] = true;
+dojo.provide("dojo.data.util.sorter");
+
+dojo.data.util.sorter.basicComparator = function(	/*anything*/ a, 
+													/*anything*/ b){
+	//	summary:  
+	//		Basic comparision function that compares if an item is greater or less than another item
+	//	description:  
+	//		returns 1 if a > b, -1 if a < b, 0 if equal.
+	//		'null' values (null, undefined) are treated as larger values so that they're pushed to the end of the list.
+	//		And compared to each other, null is equivalent to undefined.
+	
+	//null is a problematic compare, so if null, we set to undefined.
+	//Makes the check logic simple, compact, and consistent
+	//And (null == undefined) === true, so the check later against null
+	//works for undefined and is less bytes.
+	var r = -1;
+	if(a === null){
+		a = undefined;
+	}
+	if(b === null){
+		b = undefined;
+	}
+	if(a == b){
+		r = 0; 
+	}else if(a > b || a == null){
+		r = 1; 
+	}
+	return r; //int {-1,0,1}
+};
+
+dojo.data.util.sorter.createSortFunction = function(	/* attributes array */sortSpec,
+														/*dojo.data.core.Read*/ store){
+	//	summary:  
+	//		Helper function to generate the sorting function based off the list of sort attributes.
+	//	description:  
+	//		The sort function creation will look for a property on the store called 'comparatorMap'.  If it exists
+	//		it will look in the mapping for comparisons function for the attributes.  If one is found, it will
+	//		use it instead of the basic comparator, which is typically used for strings, ints, booleans, and dates.
+	//		Returns the sorting function for this particular list of attributes and sorting directions.
+	//
+	//	sortSpec: array
+	//		A JS object that array that defines out what attribute names to sort on and whether it should be descenting or asending.
+	//		The objects should be formatted as follows:
+	//		{
+	//			attribute: "attributeName-string" || attribute,
+	//			descending: true|false;   // Default is false.
+	//		}
+	//	store: object
+	//		The datastore object to look up item values from.
+	//
+	var sortFunctions=[];
+
+	function createSortFunction(attr, dir, comp, s){
+		//Passing in comp and s (comparator and store), makes this
+		//function much faster.
+		return function(itemA, itemB){
+			var a = s.getValue(itemA, attr);
+			var b = s.getValue(itemB, attr);
+			return dir * comp(a,b); //int
+		};
+	}
+	var sortAttribute;
+	var map = store.comparatorMap;
+	var bc = dojo.data.util.sorter.basicComparator;
+	for(var i = 0; i < sortSpec.length; i++){
+		sortAttribute = sortSpec[i];
+		var attr = sortAttribute.attribute;
+		if(attr){
+			var dir = (sortAttribute.descending) ? -1 : 1;
+			var comp = bc;
+			if(map){
+				if(typeof attr !== "string" && ("toString" in attr)){
+					 attr = attr.toString();
+				}
+				comp = map[attr] || bc;
+			}
+			sortFunctions.push(createSortFunction(attr, 
+				dir, comp, store));
+		}
+	}
+	return function(rowA, rowB){
+		var i=0;
+		while(i < sortFunctions.length){
+			var ret = sortFunctions[i++](rowA, rowB);
+			if(ret !== 0){
+				return ret;//int
+			}
+		}
+		return 0; //int  
+	}; // Function
+};
+
+}
+
+if(!dojo._hasResource["dijit.form._FormSelectWidget"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit.form._FormSelectWidget"] = true;
+dojo.provide("dijit.form._FormSelectWidget");
+
+
+
 
 /*=====
-dijit.dijit = {
-	// summary:
-	//		A roll-up for common dijit methods
-	// description:
-	//	A rollup file for the build system including the core and common
-	//	dijit files.
-	//
-	// example:
-	// | <script type="text/javascript" src="js/dojo/dijit/dijit.js"></script>
-	//
-};
+dijit.form.__SelectOption = function(){
+	// value: String
+	//		The value of the option.  Setting to empty (or missing) will
+	//		place a separator at that location
+	// label: String
+	//		The label for our option.  It can contain html tags.
+	//  selected: Boolean
+	//		Whether or not we are a selected option
+	// disabled: Boolean
+	//		Whether or not this specific option is disabled
+	this.value = value;
+	this.label = label;
+	this.selected = selected;
+	this.disabled = disabled;
+}
 =====*/
 
-// All the stuff in _base (these are the function that are guaranteed available without an explicit dojo.require)
+dojo.declare("dijit.form._FormSelectWidget", dijit.form._FormValueWidget, {
+	// summary:
+	//		Extends _FormValueWidget in order to provide "select-specific"
+	//		values - i.e., those values that are unique to <select> elements.
+	//		This also provides the mechanism for reading the elements from
+	//		a store, if desired.
+
+	// multiple: Boolean
+	//		Whether or not we are multi-valued
+	multiple: false,
+
+	// options: dijit.form.__SelectOption[]
+	//		The set of options for our select item.  Roughly corresponds to
+	//      the html <option> tag.
+	options: null,
+
+	// store: dojo.data.api.Identity
+	//		A store which, at the very least impelements dojo.data.api.Identity
+	//		to use for getting our list of options - rather than reading them
+	//		from the <option> html tags.
+	store: null,
+
+	// query: object
+	//		A query to use when fetching items from our store
+	query: null,
+
+	// queryOptions: object
+	//		Query options to use when fetching from the store
+	queryOptions: null,
+
+	// onFetch: Function
+	//		A callback to do with an onFetch - but before any items are actually
+	//		iterated over (i.e. to filter even futher what you want to add)
+	onFetch: null,
+
+	// sortByLabel: boolean
+	//		Flag to sort the options returned from a store by the label of
+	//		the store.
+	sortByLabel: true,
 
 
-// And some other stuff that we tend to pull in all the time anyway
+	// loadChildrenOnOpen: boolean
+	//		By default loadChildren is called when the items are fetched from the
+	//		store.  This property allows delaying loadChildren (and the creation
+	//		of the options/menuitems) until the user opens the click the button.
+	//		dropdown
+	loadChildrenOnOpen: false,
 
+	getOptions: function(/* anything */ valueOrIdx){
+		// summary:
+		//		Returns a given option (or options).
+		// valueOrIdx:
+		//		If passed in as a string, that string is used to look up the option
+		//		in the array of options - based on the value property.
+		//		(See dijit.form.__SelectOption).
+		//
+		//		If passed in a number, then the option with the given index (0-based)
+		//		within this select will be returned.
+		//
+		//		If passed in a dijit.form.__SelectOption, the same option will be
+		//		returned if and only if it exists within this select.
+		//
+		//		If passed an array, then an array will be returned with each element
+		//		in the array being looked up.
+		//
+		//		If not passed a value, then all options will be returned
+		//
+		// returns:
+		//		The option corresponding with the given value or index.  null
+		//		is returned if any of the following are true:
+		//			- A string value is passed in which doesn't exist
+		//			- An index is passed in which is outside the bounds of the array of options
+		//			- A dijit.form.__SelectOption is passed in which is not a part of the select
 
+		// NOTE: the compare for passing in a dijit.form.__SelectOption checks
+		//		if the value property matches - NOT if the exact option exists
+		// NOTE: if passing in an array, null elements will be placed in the returned
+		//		array when a value is not found.
+		var lookupValue = valueOrIdx, opts = this.options || [], l = opts.length;
 
+		if(lookupValue === undefined){
+			return opts; // dijit.form.__SelectOption[]
+		}
+		if(dojo.isArray(lookupValue)){
+			return dojo.map(lookupValue, "return this.getOptions(item);", this); // dijit.form.__SelectOption[]
+		}
+		if(dojo.isObject(valueOrIdx)){
+			// We were passed an option - so see if it's in our array (directly),
+			// and if it's not, try and find it by value.
+			if(!dojo.some(this.options, function(o, idx){
+				if(o === lookupValue ||
+					(o.value && o.value === lookupValue.value)){
+					lookupValue = idx;
+					return true;
+				}
+				return false;
+			})){
+				lookupValue = -1;
+			}
+		}
+		if(typeof lookupValue == "string"){
+			for(var i=0; i<l; i++){
+				if(opts[i].value === lookupValue){
+					lookupValue = i;
+					break;
+				}
+			}
+		}
+		if(typeof lookupValue == "number" && lookupValue >= 0 && lookupValue < l){
+			return this.options[lookupValue] // dijit.form.__SelectOption
+		}
+		return null; // null
+	},
 
+	addOption: function(/* dijit.form.__SelectOption, dijit.form.__SelectOption[] */ option){
+		// summary:
+		//		Adds an option or options to the end of the select.  If value
+		//		of the option is empty or missing, a separator is created instead.
+		//		Passing in an array of options will yield slightly better performance
+		//		since the children are only loaded once.
+		if(!dojo.isArray(option)){ option = [option]; }
+		dojo.forEach(option, function(i){
+			if(i && dojo.isObject(i)){
+				this.options.push(i);
+			}
+		}, this);
+		this._loadChildren();
+	},
 
+	removeOption: function(/* string, dijit.form.__SelectOption, number, or array */ valueOrIdx){
+		// summary:
+		//		Removes the given option or options.  You can remove by string
+		//		(in which case the value is removed), number (in which case the
+		//		index in the options array is removed), or select option (in
+		//		which case, the select option with a matching value is removed).
+		//		You can also pass in an array of those values for a slightly
+		//		better performance since the children are only loaded once.
+		if(!dojo.isArray(valueOrIdx)){ valueOrIdx = [valueOrIdx]; }
+		var oldOpts = this.getOptions(valueOrIdx);
+		dojo.forEach(oldOpts, function(i){
+			// We can get null back in our array - if our option was not found.  In
+			// that case, we don't want to blow up...
+			if(i){
+				this.options = dojo.filter(this.options, function(node, idx){
+					return (node.value !== i.value);
+				});
+				this._removeOptionItem(i);
+			}
+		}, this);
+		this._loadChildren();
+	},
 
+	updateOption: function(/* dijit.form.__SelectOption, dijit.form.__SelectOption[] */ newOption){
+		// summary:
+		//		Updates the values of the given option.  The option to update
+		//		is matched based on the value of the entered option.  Passing
+		//		in an array of new options will yeild better performance since
+		//		the children will only be loaded once.
+		if(!dojo.isArray(newOption)){ newOption = [newOption]; }
+		dojo.forEach(newOption, function(i){
+			var oldOpt = this.getOptions(i), k;
+			if(oldOpt){
+				for(k in i){ oldOpt[k] = i[k]; }
+			}
+		}, this);
+		this._loadChildren();
+	},
+
+	setStore: function(/* dojo.data.api.Identity */ store,
+						/* anything? */ selectedValue,
+						/* Object? */ fetchArgs){
+		// summary:
+		//		Sets the store you would like to use with this select widget.
+		//		The selected value is the value of the new store to set.  This
+		//		function returns the original store, in case you want to reuse
+		//		it or something.
+		// store: dojo.data.api.Identity
+		//		The store you would like to use - it MUST implement Identity,
+		//		and MAY implement Notification.
+		// selectedValue: anything?
+		//		The value that this widget should set itself to *after* the store
+		//		has been loaded
+		// fetchArgs: Object?
+		//		The arguments that will be passed to the store's fetch() function
+		var oStore = this.store;
+		fetchArgs = fetchArgs || {};
+		if(oStore !== store){
+			// Our store has changed, so update our notifications
+			dojo.forEach(this._notifyConnections || [], dojo.disconnect);
+			delete this._notifyConnections;
+			if(store && store.getFeatures()["dojo.data.api.Notification"]){
+				this._notifyConnections = [
+					dojo.connect(store, "onNew", this, "_onNewItem"),
+					dojo.connect(store, "onDelete", this, "_onDeleteItem"),
+					dojo.connect(store, "onSet", this, "_onSetItem")
+				];
+			}
+			this.store = store;
+		}
+
+		// Turn off change notifications while we make all these changes
+		this._onChangeActive = false;
+
+		// Remove existing options (if there are any)
+		if(this.options && this.options.length){
+			this.removeOption(this.options);
+		}
+
+		// Add our new options
+		if(store){
+			var cb = function(items){
+				if(this.sortByLabel && !fetchArgs.sort && items.length){
+					items.sort(dojo.data.util.sorter.createSortFunction([{
+						attribute: store.getLabelAttributes(items[0])[0]
+					}], store));
+				}
+
+				if(fetchArgs.onFetch){
+					items = fetchArgs.onFetch(items);
+				}
+				// TODO: Add these guys as a batch, instead of separately
+				dojo.forEach(items, function(i){
+					this._addOptionForItem(i);
+				}, this);
+
+				// Set our value (which might be undefined), and then tweak
+				// it to send a change event with the real value
+				this._loadingStore = false;
+				this.set("value", (("_pendingValue" in this) ? this._pendingValue : selectedValue));
+				delete this._pendingValue;
+
+				if(!this.loadChildrenOnOpen){
+					this._loadChildren();
+				}else{
+					this._pseudoLoadChildren(items);
+				}
+				this._fetchedWith = opts;
+				this._lastValueReported = this.multiple ? [] : null;
+				this._onChangeActive = true;
+				this.onSetStore();
+				this._handleOnChange(this.value);
+			};
+			var opts = dojo.mixin({onComplete:cb, scope: this}, fetchArgs);
+			this._loadingStore = true;
+			store.fetch(opts);
+		}else{
+			delete this._fetchedWith;
+		}
+		return oStore;	// dojo.data.api.Identity
+	},
+
+	_setValueAttr: function(/*anything*/ newValue, /*Boolean, optional*/ priorityChange){
+		// summary:
+		//		set the value of the widget.
+		//		If a string is passed, then we set our value from looking it up.
+		if(this._loadingStore){
+			// Our store is loading - so save our value, and we'll set it when
+			// we're done
+			this._pendingValue = newValue;
+			return;
+		}
+		var opts = this.getOptions() || [];
+		if(!dojo.isArray(newValue)){
+			newValue = [newValue];
+		}
+		dojo.forEach(newValue, function(i, idx){
+			if(!dojo.isObject(i)){
+				i = i + "";
+			}
+			if(typeof i === "string"){
+				newValue[idx] = dojo.filter(opts, function(node){
+					return node.value === i;
+				})[0] || {value: "", label: ""};
+			}
+		}, this);
+
+		// Make sure some sane default is set
+		newValue = dojo.filter(newValue, function(i){ return i && i.value; });
+		if(!this.multiple && (!newValue[0] || !newValue[0].value) && opts.length){
+			newValue[0] = opts[0];
+		}
+		dojo.forEach(opts, function(i){
+			i.selected = dojo.some(newValue, function(v){ return v.value === i.value; });
+		});
+		var val = dojo.map(newValue, function(i){ return i.value; }),
+			disp = dojo.map(newValue, function(i){ return i.label; });
+
+		this.value = this.multiple ? val : val[0];
+		this._setDisplay(this.multiple ? disp : disp[0]);
+		this._updateSelection();
+		this._handleOnChange(this.value, priorityChange);
+	},
+
+	_getDisplayedValueAttr: function(){
+		// summary:
+		//		returns the displayed value of the widget
+		var val = this.get("value");
+		if(!dojo.isArray(val)){
+			val = [val];
+		}
+		var ret = dojo.map(this.getOptions(val), function(v){
+			if(v && "label" in v){
+				return v.label;
+			}else if(v){
+				return v.value;
+			}
+			return null;
+		}, this);
+		return this.multiple ? ret : ret[0];
+	},
+
+	_getValueDeprecated: false, // remove when _FormWidget:getValue is removed
+	getValue: function(){
+		// summary:
+		//		get the value of the widget.
+		return this._lastValue;
+	},
+
+	undo: function(){
+		// summary:
+		//		restore the value to the last value passed to onChange
+		this._setValueAttr(this._lastValueReported, false);
+	},
+
+	_loadChildren: function(){
+		// summary:
+		//		Loads the children represented by this widget's options.
+		//		reset the menu to make it "populatable on the next click
+		if(this._loadingStore){ return; }
+		dojo.forEach(this._getChildren(), function(child){
+			child.destroyRecursive();
+		});
+		// Add each menu item
+		dojo.forEach(this.options, this._addOptionItem, this);
+
+		// Update states
+		this._updateSelection();
+	},
+
+	_updateSelection: function(){
+		// summary:
+		//		Sets the "selected" class on the item for styling purposes
+		this.value = this._getValueFromOpts();
+		var val = this.value;
+		if(!dojo.isArray(val)){
+			val = [val];
+		}
+		if(val && val[0]){
+			dojo.forEach(this._getChildren(), function(child){
+				var isSelected = dojo.some(val, function(v){
+					return child.option && (v === child.option.value);
+				});
+				dojo.toggleClass(child.domNode, this.baseClass + "SelectedOption", isSelected);
+				dijit.setWaiState(child.domNode, "selected", isSelected);
+			}, this);
+		}
+		this._handleOnChange(this.value);
+	},
+
+	_getValueFromOpts: function(){
+		// summary:
+		//		Returns the value of the widget by reading the options for
+		//		the selected flag
+		var opts = this.getOptions() || [];
+		if(!this.multiple && opts.length){
+			// Mirror what a select does - choose the first one
+			var opt = dojo.filter(opts, function(i){
+				return i.selected;
+			})[0];
+			if(opt && opt.value){
+				return opt.value
+			}else{
+				opts[0].selected = true;
+				return opts[0].value;
+			}
+		}else if(this.multiple){
+			// Set value to be the sum of all selected
+			return dojo.map(dojo.filter(opts, function(i){
+				return i.selected;
+			}), function(i){
+				return i.value;
+			}) || [];
+		}
+		return "";
+	},
+
+	// Internal functions to call when we have store notifications come in
+	_onNewItem: function(/* item */ item, /* Object? */ parentInfo){
+		if(!parentInfo || !parentInfo.parent){
+			// Only add it if we are top-level
+			this._addOptionForItem(item);
+		}
+	},
+	_onDeleteItem: function(/* item */ item){
+		var store = this.store;
+		this.removeOption(store.getIdentity(item));
+	},
+	_onSetItem: function(/* item */ item){
+		this.updateOption(this._getOptionObjForItem(item));
+	},
+
+	_getOptionObjForItem: function(item){
+		// summary:
+		//		Returns an option object based off the given item.  The "value"
+		//		of the option item will be the identity of the item, the "label"
+		//		of the option will be the label of the item.  If the item contains
+		//		children, the children value of the item will be set
+		var store = this.store, label = store.getLabel(item),
+			value = (label ? store.getIdentity(item) : null);
+		return {value: value, label: label, item:item}; // dijit.form.__SelectOption
+	},
+
+	_addOptionForItem: function(/* item */ item){
+		// summary:
+		//		Creates (and adds) the option for the given item
+		var store = this.store;
+		if(!store.isItemLoaded(item)){
+			// We are not loaded - so let's load it and add later
+			store.loadItem({item: item, onComplete: function(i){
+				this._addOptionForItem(item);
+			},
+			scope: this});
+			return;
+		}
+		var newOpt = this._getOptionObjForItem(item);
+		this.addOption(newOpt);
+	},
+
+	constructor: function(/* Object */ keywordArgs){
+		// summary:
+		//		Saves off our value, if we have an initial one set so we
+		//		can use it if we have a store as well (see startup())
+		this._oValue = (keywordArgs || {}).value || null;
+	},
+
+	_fillContent: function(){
+		// summary:
+		//		Loads our options and sets up our dropdown correctly.  We
+		//		don't want any content, so we don't call any inherit chain
+		//		function.
+		var opts = this.options;
+		if(!opts){
+			opts = this.options = this.srcNodeRef ? dojo.query(">",
+						this.srcNodeRef).map(function(node){
+							if(node.getAttribute("type") === "separator"){
+								return { value: "", label: "", selected: false, disabled: false };
+							}
+							return { value: node.getAttribute("value"),
+										label: String(node.innerHTML),
+										selected: node.getAttribute("selected") || false,
+										disabled: node.getAttribute("disabled") || false };
+						}, this) : [];
+		}
+		if(!this.value){
+			this.value = this._getValueFromOpts();
+		}else if(this.multiple && typeof this.value == "string"){
+			this.value = this.value.split(",");
+		}
+	},
+
+	postCreate: function(){
+		// summary:
+		//		sets up our event handling that we need for functioning
+		//		as a select
+		dojo.setSelectable(this.focusNode, false);
+		this.inherited(arguments);
+
+		// Make our event connections for updating state
+		this.connect(this, "onChange", "_updateSelection");
+		this.connect(this, "startup", "_loadChildren");
+
+		this._setValueAttr(this.value, null);
+	},
+
+	startup: function(){
+		// summary:
+		//		Connects in our store, if we have one defined
+		this.inherited(arguments);
+		var store = this.store, fetchArgs = {};
+		dojo.forEach(["query", "queryOptions", "onFetch"], function(i){
+			if(this[i]){
+				fetchArgs[i] = this[i];
+			}
+			delete this[i];
+		}, this);
+		if(store && store.getFeatures()["dojo.data.api.Identity"]){
+			// Temporarily set our store to null so that it will get set
+			// and connected appropriately
+			this.store = null;
+			this.setStore(store, this._oValue, fetchArgs);
+		}
+	},
+
+	destroy: function(){
+		// summary:
+		//		Clean up our connections
+		dojo.forEach(this._notifyConnections || [], dojo.disconnect);
+		this.inherited(arguments);
+	},
+
+	_addOptionItem: function(/* dijit.form.__SelectOption */ option){
+		// summary:
+		//		User-overridable function which, for the given option, adds an
+		//		item to the select.  If the option doesn't have a value, then a
+		//		separator is added in that place.  Make sure to store the option
+		//		in the created option widget.
+	},
+
+	_removeOptionItem: function(/* dijit.form.__SelectOption */ option){
+		// summary:
+		//		User-overridable function which, for the given option, removes
+		//		its item from the select.
+	},
+
+	_setDisplay: function(/*String or String[]*/ newDisplay){
+		// summary:
+		//		Overridable function which will set the display for the
+		//		widget.  newDisplay is either a string (in the case of
+		//		single selects) or array of strings (in the case of multi-selects)
+	},
+
+	_getChildren: function(){
+		// summary:
+		//		Overridable function to return the children that this widget contains.
+		return [];
+	},
+
+	_getSelectedOptionsAttr: function(){
+		// summary:
+		//		hooks into this.attr to provide a mechanism for getting the
+		//		option items for the current value of the widget.
+		return this.getOptions(this.get("value"));
+	},
+
+	_pseudoLoadChildren: function(/* item[] */ items){
+		// summary:
+		//		a function that will "fake" loading children, if needed, and
+		//		if we have set to not load children until the widget opens.
+		// items:
+		//		An array of items that will be loaded, when needed
+	},
+
+	onSetStore: function(){
+		// summary:
+		//		a function that can be connected to in order to receive a
+		//		notification that the store has finished loading and all options
+		//		from that store are available
+	}
+});
 
 }
 
@@ -14664,6 +15318,447 @@ dojo.declare("dijit.Menu",
 );
 
 // Back-compat (TODO: remove in 2.0)
+
+
+
+
+
+
+}
+
+if(!dojo._hasResource["dijit.form.Select"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit.form.Select"] = true;
+dojo.provide("dijit.form.Select");
+
+
+
+
+
+
+
+
+dojo.declare("dijit.form._SelectMenu", dijit.Menu, {
+	// summary:
+	//		An internally-used menu for dropdown that allows us a vertical scrollbar
+	buildRendering: function(){
+		// summary:
+		//		Stub in our own changes, so that our domNode is not a table
+		//		otherwise, we won't respond correctly to heights/overflows
+		this.inherited(arguments);
+		var o = (this.menuTableNode = this.domNode);
+		var n = (this.domNode = dojo.create("div", {style: {overflowX: "hidden", overflowY: "scroll"}}));
+		if(o.parentNode){
+			o.parentNode.replaceChild(n, o);
+		}
+		dojo.removeClass(o, "dijitMenuTable");
+		n.className = o.className + " dijitSelectMenu";
+		o.className = "dijitReset dijitMenuTable";
+		dijit.setWaiRole(o,"listbox");
+		dijit.setWaiRole(n,"presentation");
+		n.appendChild(o);
+	},
+	resize: function(/*Object*/ mb){
+		// summary:
+		//		Overridden so that we are able to handle resizing our
+		//		internal widget.  Note that this is not a "full" resize
+		//		implementation - it only works correctly if you pass it a
+		//		marginBox.
+		//
+		// mb: Object
+		//		The margin box to set this dropdown to.
+		if(mb){
+			dojo.marginBox(this.domNode, mb);
+			if("w" in mb){
+				// We've explicitly set the wrapper <div>'s width, so set <table> width to match.
+				// 100% is safer than a pixel value because there may be a scroll bar with
+				// browser/OS specific width.
+				this.menuTableNode.style.width = "100%";
+			}
+		}
+	}
+});
+
+dojo.declare("dijit.form.Select", [dijit.form._FormSelectWidget, dijit._HasDropDown], {
+	// summary:
+	//		This is a "styleable" select box - it is basically a DropDownButton which
+	//		can take a <select> as its input.
+
+	baseClass: "dijitSelect",
+
+	templateString: dojo.cache("dijit.form", "templates/Select.html", "<table class=\"dijit dijitReset dijitInline dijitLeft\"\n\tdojoAttachPoint=\"_buttonNode,tableNode,focusNode\" cellspacing='0' cellpadding='0'\n\twaiRole=\"combobox\" waiState=\"haspopup-true\"\n\t><tbody waiRole=\"presentation\"><tr waiRole=\"presentation\"\n\t\t><td class=\"dijitReset dijitStretch dijitButtonContents dijitButtonNode\" waiRole=\"presentation\"\n\t\t\t><span class=\"dijitReset dijitInline dijitButtonText\"  dojoAttachPoint=\"containerNode,_popupStateNode\"></span\n\t\t\t><input type=\"hidden\" ${!nameAttrSetting} dojoAttachPoint=\"valueNode\" value=\"${value}\" waiState=\"hidden-true\"\n\t\t/></td><td class=\"dijitReset dijitRight dijitButtonNode dijitArrowButton dijitDownArrowButton\"\n\t\t\t\tdojoAttachPoint=\"titleNode\" waiRole=\"presentation\"\n\t\t\t><div class=\"dijitReset dijitArrowButtonInner\" waiRole=\"presentation\"></div\n\t\t\t><div class=\"dijitReset dijitArrowButtonChar\" waiRole=\"presentation\">&#9660;</div\n\t\t></td\n\t></tr></tbody\n></table>\n"),
+
+	// attributeMap: Object
+	//		Add in our style to be applied to the focus node
+	attributeMap: dojo.mixin(dojo.clone(dijit.form._FormSelectWidget.prototype.attributeMap),{style:"tableNode"}),
+
+	// required: Boolean
+	//		Can be true or false, default is false.
+	required: false,
+
+	// state: String
+	//		Shows current state (ie, validation result) of input (Normal, Warning, or Error)
+	state: "",
+
+	//	tooltipPosition: String[]
+	//		See description of dijit.Tooltip.defaultPosition for details on this parameter.
+	tooltipPosition: [],
+
+	// emptyLabel: string
+	//		What to display in an "empty" dropdown
+	emptyLabel: "",
+
+	// _isLoaded: Boolean
+	//		Whether or not we have been loaded
+	_isLoaded: false,
+
+	// _childrenLoaded: Boolean
+	//		Whether or not our children have been loaded
+	_childrenLoaded: false,
+
+	_fillContent: function(){
+		// summary:
+		//		Set the value to be the first, or the selected index
+		this.inherited(arguments);
+		if(this.options.length && !this.value && this.srcNodeRef){
+			var si = this.srcNodeRef.selectedIndex;
+			this.value = this.options[si != -1 ? si : 0].value;
+		}
+
+		// Create the dropDown widget
+		this.dropDown = new dijit.form._SelectMenu({id: this.id + "_menu"});
+		dojo.addClass(this.dropDown.domNode, this.baseClass + "Menu");
+	},
+
+	_getMenuItemForOption: function(/*dijit.form.__SelectOption*/ option){
+		// summary:
+		//		For the given option, return the menu item that should be
+		//		used to display it.  This can be overridden as needed
+		if(!option.value){
+			// We are a separator (no label set for it)
+			return new dijit.MenuSeparator();
+		}else{
+			// Just a regular menu option
+			var click = dojo.hitch(this, "_setValueAttr", option);
+			var item = new dijit.MenuItem({
+				option: option,
+				label: option.label,
+				onClick: click,
+				disabled: option.disabled || false
+			});
+			dijit.setWaiRole(item.focusNode, "listitem");
+			return item;
+		}
+	},
+
+	_addOptionItem: function(/*dijit.form.__SelectOption*/ option){
+		// summary:
+		//		For the given option, add an option to our dropdown.
+		//		If the option doesn't have a value, then a separator is added
+		//		in that place.
+		if(this.dropDown){
+			this.dropDown.addChild(this._getMenuItemForOption(option));
+		}
+	},
+
+	_getChildren: function(){
+		if(!this.dropDown){
+			return [];
+		}
+		return this.dropDown.getChildren();
+	},
+
+	_loadChildren: function(/*Boolean*/ loadMenuItems){
+		// summary:
+		//		Resets the menu and the length attribute of the button - and
+		//		ensures that the label is appropriately set.
+		//	loadMenuItems: Boolean
+		//		actually loads the child menu items - we only do this when we are
+		//		populating for showing the dropdown.
+
+		if(loadMenuItems === true){
+			// this.inherited destroys this.dropDown's child widgets (MenuItems).
+			// Avoid this.dropDown (Menu widget) having a pointer to a destroyed widget (which will cause
+			// issues later in _setSelected). (see #10296)
+			if(this.dropDown){
+				delete this.dropDown.focusedChild;
+			}
+			if(this.options.length){
+				this.inherited(arguments);
+			}else{
+				// Drop down menu is blank but add one blank entry just so something appears on the screen
+				// to let users know that they are no choices (mimicing native select behavior)
+				dojo.forEach(this._getChildren(), function(child){ child.destroyRecursive(); });
+				var item = new dijit.MenuItem({label: "&nbsp;"});
+				this.dropDown.addChild(item);
+			}
+		}else{
+			this._updateSelection();
+		}
+
+		var len = this.options.length;
+		this._isLoaded = false;
+		this._childrenLoaded = true;
+
+		if(!this._loadingStore){
+			// Don't call this if we are loading - since we will handle it later
+			this._setValueAttr(this.value);
+		}
+	},
+
+	_setValueAttr: function(value){
+		this.inherited(arguments);
+		dojo.attr(this.valueNode, "value", this.get("value"));
+	},
+
+	_setDisplay: function(/*String*/ newDisplay){
+		// summary:
+		//		sets the display for the given value (or values)
+		this.containerNode.innerHTML = '<span class="dijitReset dijitInline ' + this.baseClass + 'Label">' +
+					(newDisplay || this.emptyLabel || "&nbsp;") +
+					'</span>';
+		dijit.setWaiState(this.focusNode, "valuetext", (newDisplay || this.emptyLabel || "&nbsp;") );
+	},
+
+	validate: function(/*Boolean*/ isFocused){
+		// summary:
+		//		Called by oninit, onblur, and onkeypress.
+		// description:
+		//		Show missing or invalid messages if appropriate, and highlight textbox field.
+		//		Used when a select is initially set to no value and the user is required to
+		//		set the value.
+		
+		var isValid = this.isValid(isFocused);
+		this.state = isValid ? "" : "Error";
+		this._setStateClass();
+		dijit.setWaiState(this.focusNode, "invalid", isValid ? "false" : "true");
+		var message = isValid ? "" : this._missingMsg;
+		if(this._message !== message){
+			this._message = message;
+			dijit.hideTooltip(this.domNode);
+			if(message){
+				dijit.showTooltip(message, this.domNode, this.tooltipPosition, !this.isLeftToRight());
+			}
+		}
+		return isValid;
+	},
+
+	isValid: function(/*Boolean*/ isFocused){
+		// summary:
+		//		Whether or not this is a valid value.   The only way a Select
+		//		can be invalid is when it's required but nothing is selected.
+		return (!this.required || !(/^\s*$/.test(this.value)));
+	},
+
+	reset: function(){
+		// summary:
+		//		Overridden so that the state will be cleared.
+		this.inherited(arguments);
+		dijit.hideTooltip(this.domNode);
+		this.state = "";
+		this._setStateClass();
+		delete this._message;
+	},
+
+	postMixInProperties: function(){
+		// summary:
+		//		set the missing message
+		this.inherited(arguments);
+		this._missingMsg = dojo.i18n.getLocalization("dijit.form", "validate",
+									this.lang).missingMessage;
+	},
+
+	postCreate: function(){
+		this.inherited(arguments);
+		if(this.tableNode.style.width){
+			dojo.addClass(this.domNode, this.baseClass + "FixedWidth");
+		}
+	},
+
+	isLoaded: function(){
+		return this._isLoaded;
+	},
+
+	loadDropDown: function(/*Function*/ loadCallback){
+		// summary:
+		//		populates the menu
+		this._loadChildren(true);
+		this._isLoaded = true;
+		loadCallback();
+	},
+
+	closeDropDown: function(){
+		// overriding _HasDropDown.closeDropDown()
+		this.inherited(arguments);
+
+		if(this.dropDown && this.dropDown.menuTableNode){
+			// Erase possible width: 100% setting from _SelectMenu.resize().
+			// Leaving it would interfere with the next openDropDown() call, which
+			// queries the natural size of the drop down.
+			this.dropDown.menuTableNode.style.width = "";
+		}
+	},
+
+	uninitialize: function(preserveDom){
+		if(this.dropDown && !this.dropDown._destroyed){
+			this.dropDown.destroyRecursive(preserveDom);
+			delete this.dropDown;
+		}
+		this.inherited(arguments);
+	}
+});
+
+}
+
+if(!dojo._hasResource["dijit.form.SimpleTextarea"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit.form.SimpleTextarea"] = true;
+dojo.provide("dijit.form.SimpleTextarea");
+
+
+
+dojo.declare("dijit.form.SimpleTextarea",
+	dijit.form.TextBox,
+	{
+	// summary:
+	//		A simple textarea that degrades, and responds to
+	// 		minimal LayoutContainer usage, and works with dijit.form.Form.
+	//		Doesn't automatically size according to input, like Textarea.
+	//
+	// example:
+	//	|	<textarea dojoType="dijit.form.SimpleTextarea" name="foo" value="bar" rows=30 cols=40></textarea>
+	//
+	// example:
+	//	|	new dijit.form.SimpleTextarea({ rows:20, cols:30 }, "foo");
+
+	baseClass: "dijitTextBox dijitTextArea",
+
+	attributeMap: dojo.delegate(dijit.form._FormValueWidget.prototype.attributeMap, {
+		rows:"textbox", cols: "textbox"
+	}),
+
+	// rows: Number
+	//		The number of rows of text.
+	rows: "3",
+
+	// rows: Number
+	//		The number of characters per line.
+	cols: "20",
+
+	templateString: "<textarea ${!nameAttrSetting} dojoAttachPoint='focusNode,containerNode,textbox' autocomplete='off'></textarea>",
+
+	postMixInProperties: function(){
+		// Copy value from srcNodeRef, unless user specified a value explicitly (or there is no srcNodeRef)
+		if(!this.value && this.srcNodeRef){
+			this.value = this.srcNodeRef.value;
+		}
+		this.inherited(arguments);
+	},
+
+	filter: function(/*String*/ value){
+		// Override TextBox.filter to deal with newlines... specifically (IIRC) this is for IE which writes newlines
+		// as \r\n instead of just \n
+		if(value){
+			value = value.replace(/\r/g,"");
+		}
+		return this.inherited(arguments);
+	},
+
+	postCreate: function(){
+		this.inherited(arguments);
+		if(dojo.isIE && this.cols){ // attribute selectors is not supported in IE6
+			dojo.addClass(this.textbox, "dijitTextAreaCols");
+		}
+	},
+
+	_previousValue: "",
+	_onInput: function(/*Event?*/ e){
+		// Override TextBox._onInput() to enforce maxLength restriction
+		if(this.maxLength){
+			var maxLength = parseInt(this.maxLength);
+			var value = this.textbox.value.replace(/\r/g,'');
+			var overflow = value.length - maxLength;
+			if(overflow > 0){
+				if(e){ dojo.stopEvent(e); }
+				var textarea = this.textbox;
+				if(textarea.selectionStart){
+					var pos = textarea.selectionStart;
+					var cr = 0;
+					if(dojo.isOpera){
+						cr = (this.textbox.value.substring(0,pos).match(/\r/g) || []).length;
+					}
+					this.textbox.value = value.substring(0,pos-overflow-cr)+value.substring(pos-cr);
+					textarea.setSelectionRange(pos-overflow, pos-overflow);
+				}else if(dojo.doc.selection){ //IE
+					textarea.focus();
+					var range = dojo.doc.selection.createRange();
+					// delete overflow characters
+					range.moveStart("character", -overflow);
+					range.text = '';
+					// show cursor
+					range.select();
+				}
+			}
+			this._previousValue = this.textbox.value;
+		}
+		this.inherited(arguments);
+	}
+});
+
+}
+
+if(!dojo._hasResource["dwb.ui.FeedbackDialog"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dwb.ui.FeedbackDialog"] = true;
+dojo.provide("dwb.ui.FeedbackDialog");
+
+
+
+
+
+
+
+dojo.declare("dwb.ui.FeedbackDialog", dwb.ui.PositionableDialog, {
+	title: "Leave Feedback",
+    style: "width: 464px;",
+    content: dojo.cache("dwb.ui.fragments", "FeedbackDialogContent.html", "<div class=\"introDialog\">\n    <div class=\"content\" style=\"padding-left: 8px; padding-right: 8px;\">\n        Use the form below to submit your feedback about the Dojo Web Builder. We really appreciate all comments, feature requests and bug notifications!\n        <form dojoType=\"dijit.form.Form\" dojoAttachPoint=\"feedbackForm\" dojoAttachEvent=\"onsubmit:_submission\" class=\"feedbackForm\">\n            <div>\n            <div style=\"float:left;\">\n            <label>Name</label> \n            <input dojoType=\"dijit.form.ValidationTextBox\" name=\"name\" type=\"text\"></input>\n            </div>\n            <div style=\"float: right;\">\n            <label>Email Address</label>\n            <input dojoType=\"dijit.form.TextBox\" name=\"email\" type=\"text\"></input>\n        </div>\n    </div>\n            <label style=\"clear:both;\">Feedback Category</label>\n            <select name=\"category\" dojoType=\"dijit.form.Select\" style=\"width: 200px;\">\n                <option value=\"comment\">\n                Comment\n                </option>\n                <option value=\"feature\">\n                Feature Request\n                </option>\n                <option value=\"bug\">\n                Bug Report\n                </option>\n            </select>\n            <label>Details</label>\n            <textarea name=\"text\" dojoType=\"dijit.form.SimpleTextarea\">\n            </textarea> \n            <div style=\"text-align:center; padding-top: 10px;\">\n            <button dojoType=\"dijit.form.Button\" type=\"submit\">\n                Submit \n            </button>\n        </div>\n        </form>\n    </div>\n</div>\n"),
+
+    onLoad: function () {
+        this.inherited(arguments);
+        dojo.query("form", this.domNode).forEach(dojo.hitch(this, function(node) {
+            var form = dijit.byNode(node);
+            this.connect(form, "onSubmit", function (e) {
+                dojo.stopEvent(e);
+                console.log(form.get("value"));
+                // Do the AJAX call here....
+                this.hide();
+            });
+        }));
+    }
+});
+
+}
+
+if(!dojo._hasResource["dijit.dijit"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dijit.dijit"] = true;
+dojo.provide("dijit.dijit");
+
+/*=====
+dijit.dijit = {
+	// summary:
+	//		A roll-up for common dijit methods
+	// description:
+	//	A rollup file for the build system including the core and common
+	//	dijit files.
+	//
+	// example:
+	// | <script type="text/javascript" src="js/dojo/dijit/dijit.js"></script>
+	//
+};
+=====*/
+
+// All the stuff in _base (these are the function that are guaranteed available without an explicit dojo.require)
+
+
+// And some other stuff that we tend to pull in all the time anyway
+
 
 
 
@@ -25304,102 +26399,6 @@ dojo.data.util.filter.patternToRegExp = function(/*String*/pattern, /*boolean?*/
 
 }
 
-if(!dojo._hasResource["dojo.data.util.sorter"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dojo.data.util.sorter"] = true;
-dojo.provide("dojo.data.util.sorter");
-
-dojo.data.util.sorter.basicComparator = function(	/*anything*/ a, 
-													/*anything*/ b){
-	//	summary:  
-	//		Basic comparision function that compares if an item is greater or less than another item
-	//	description:  
-	//		returns 1 if a > b, -1 if a < b, 0 if equal.
-	//		'null' values (null, undefined) are treated as larger values so that they're pushed to the end of the list.
-	//		And compared to each other, null is equivalent to undefined.
-	
-	//null is a problematic compare, so if null, we set to undefined.
-	//Makes the check logic simple, compact, and consistent
-	//And (null == undefined) === true, so the check later against null
-	//works for undefined and is less bytes.
-	var r = -1;
-	if(a === null){
-		a = undefined;
-	}
-	if(b === null){
-		b = undefined;
-	}
-	if(a == b){
-		r = 0; 
-	}else if(a > b || a == null){
-		r = 1; 
-	}
-	return r; //int {-1,0,1}
-};
-
-dojo.data.util.sorter.createSortFunction = function(	/* attributes array */sortSpec,
-														/*dojo.data.core.Read*/ store){
-	//	summary:  
-	//		Helper function to generate the sorting function based off the list of sort attributes.
-	//	description:  
-	//		The sort function creation will look for a property on the store called 'comparatorMap'.  If it exists
-	//		it will look in the mapping for comparisons function for the attributes.  If one is found, it will
-	//		use it instead of the basic comparator, which is typically used for strings, ints, booleans, and dates.
-	//		Returns the sorting function for this particular list of attributes and sorting directions.
-	//
-	//	sortSpec: array
-	//		A JS object that array that defines out what attribute names to sort on and whether it should be descenting or asending.
-	//		The objects should be formatted as follows:
-	//		{
-	//			attribute: "attributeName-string" || attribute,
-	//			descending: true|false;   // Default is false.
-	//		}
-	//	store: object
-	//		The datastore object to look up item values from.
-	//
-	var sortFunctions=[];
-
-	function createSortFunction(attr, dir, comp, s){
-		//Passing in comp and s (comparator and store), makes this
-		//function much faster.
-		return function(itemA, itemB){
-			var a = s.getValue(itemA, attr);
-			var b = s.getValue(itemB, attr);
-			return dir * comp(a,b); //int
-		};
-	}
-	var sortAttribute;
-	var map = store.comparatorMap;
-	var bc = dojo.data.util.sorter.basicComparator;
-	for(var i = 0; i < sortSpec.length; i++){
-		sortAttribute = sortSpec[i];
-		var attr = sortAttribute.attribute;
-		if(attr){
-			var dir = (sortAttribute.descending) ? -1 : 1;
-			var comp = bc;
-			if(map){
-				if(typeof attr !== "string" && ("toString" in attr)){
-					 attr = attr.toString();
-				}
-				comp = map[attr] || bc;
-			}
-			sortFunctions.push(createSortFunction(attr, 
-				dir, comp, store));
-		}
-	}
-	return function(rowA, rowB){
-		var i=0;
-		while(i < sortFunctions.length){
-			var ret = sortFunctions[i++](rowA, rowB);
-			if(ret !== 0){
-				return ret;//int
-			}
-		}
-		return 0; //int  
-	}; // Function
-};
-
-}
-
 if(!dojo._hasResource["dojo.data.util.simpleFetch"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
 dojo._hasResource["dojo.data.util.simpleFetch"] = true;
 dojo.provide("dojo.data.util.simpleFetch");
@@ -29543,866 +30542,6 @@ dojo.declare("dijit.layout.TabContainer",
 		}
 });
 
-
-}
-
-if(!dojo._hasResource["dijit.form._FormSelectWidget"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dijit.form._FormSelectWidget"] = true;
-dojo.provide("dijit.form._FormSelectWidget");
-
-
-
-
-/*=====
-dijit.form.__SelectOption = function(){
-	// value: String
-	//		The value of the option.  Setting to empty (or missing) will
-	//		place a separator at that location
-	// label: String
-	//		The label for our option.  It can contain html tags.
-	//  selected: Boolean
-	//		Whether or not we are a selected option
-	// disabled: Boolean
-	//		Whether or not this specific option is disabled
-	this.value = value;
-	this.label = label;
-	this.selected = selected;
-	this.disabled = disabled;
-}
-=====*/
-
-dojo.declare("dijit.form._FormSelectWidget", dijit.form._FormValueWidget, {
-	// summary:
-	//		Extends _FormValueWidget in order to provide "select-specific"
-	//		values - i.e., those values that are unique to <select> elements.
-	//		This also provides the mechanism for reading the elements from
-	//		a store, if desired.
-
-	// multiple: Boolean
-	//		Whether or not we are multi-valued
-	multiple: false,
-
-	// options: dijit.form.__SelectOption[]
-	//		The set of options for our select item.  Roughly corresponds to
-	//      the html <option> tag.
-	options: null,
-
-	// store: dojo.data.api.Identity
-	//		A store which, at the very least impelements dojo.data.api.Identity
-	//		to use for getting our list of options - rather than reading them
-	//		from the <option> html tags.
-	store: null,
-
-	// query: object
-	//		A query to use when fetching items from our store
-	query: null,
-
-	// queryOptions: object
-	//		Query options to use when fetching from the store
-	queryOptions: null,
-
-	// onFetch: Function
-	//		A callback to do with an onFetch - but before any items are actually
-	//		iterated over (i.e. to filter even futher what you want to add)
-	onFetch: null,
-
-	// sortByLabel: boolean
-	//		Flag to sort the options returned from a store by the label of
-	//		the store.
-	sortByLabel: true,
-
-
-	// loadChildrenOnOpen: boolean
-	//		By default loadChildren is called when the items are fetched from the
-	//		store.  This property allows delaying loadChildren (and the creation
-	//		of the options/menuitems) until the user opens the click the button.
-	//		dropdown
-	loadChildrenOnOpen: false,
-
-	getOptions: function(/* anything */ valueOrIdx){
-		// summary:
-		//		Returns a given option (or options).
-		// valueOrIdx:
-		//		If passed in as a string, that string is used to look up the option
-		//		in the array of options - based on the value property.
-		//		(See dijit.form.__SelectOption).
-		//
-		//		If passed in a number, then the option with the given index (0-based)
-		//		within this select will be returned.
-		//
-		//		If passed in a dijit.form.__SelectOption, the same option will be
-		//		returned if and only if it exists within this select.
-		//
-		//		If passed an array, then an array will be returned with each element
-		//		in the array being looked up.
-		//
-		//		If not passed a value, then all options will be returned
-		//
-		// returns:
-		//		The option corresponding with the given value or index.  null
-		//		is returned if any of the following are true:
-		//			- A string value is passed in which doesn't exist
-		//			- An index is passed in which is outside the bounds of the array of options
-		//			- A dijit.form.__SelectOption is passed in which is not a part of the select
-
-		// NOTE: the compare for passing in a dijit.form.__SelectOption checks
-		//		if the value property matches - NOT if the exact option exists
-		// NOTE: if passing in an array, null elements will be placed in the returned
-		//		array when a value is not found.
-		var lookupValue = valueOrIdx, opts = this.options || [], l = opts.length;
-
-		if(lookupValue === undefined){
-			return opts; // dijit.form.__SelectOption[]
-		}
-		if(dojo.isArray(lookupValue)){
-			return dojo.map(lookupValue, "return this.getOptions(item);", this); // dijit.form.__SelectOption[]
-		}
-		if(dojo.isObject(valueOrIdx)){
-			// We were passed an option - so see if it's in our array (directly),
-			// and if it's not, try and find it by value.
-			if(!dojo.some(this.options, function(o, idx){
-				if(o === lookupValue ||
-					(o.value && o.value === lookupValue.value)){
-					lookupValue = idx;
-					return true;
-				}
-				return false;
-			})){
-				lookupValue = -1;
-			}
-		}
-		if(typeof lookupValue == "string"){
-			for(var i=0; i<l; i++){
-				if(opts[i].value === lookupValue){
-					lookupValue = i;
-					break;
-				}
-			}
-		}
-		if(typeof lookupValue == "number" && lookupValue >= 0 && lookupValue < l){
-			return this.options[lookupValue] // dijit.form.__SelectOption
-		}
-		return null; // null
-	},
-
-	addOption: function(/* dijit.form.__SelectOption, dijit.form.__SelectOption[] */ option){
-		// summary:
-		//		Adds an option or options to the end of the select.  If value
-		//		of the option is empty or missing, a separator is created instead.
-		//		Passing in an array of options will yield slightly better performance
-		//		since the children are only loaded once.
-		if(!dojo.isArray(option)){ option = [option]; }
-		dojo.forEach(option, function(i){
-			if(i && dojo.isObject(i)){
-				this.options.push(i);
-			}
-		}, this);
-		this._loadChildren();
-	},
-
-	removeOption: function(/* string, dijit.form.__SelectOption, number, or array */ valueOrIdx){
-		// summary:
-		//		Removes the given option or options.  You can remove by string
-		//		(in which case the value is removed), number (in which case the
-		//		index in the options array is removed), or select option (in
-		//		which case, the select option with a matching value is removed).
-		//		You can also pass in an array of those values for a slightly
-		//		better performance since the children are only loaded once.
-		if(!dojo.isArray(valueOrIdx)){ valueOrIdx = [valueOrIdx]; }
-		var oldOpts = this.getOptions(valueOrIdx);
-		dojo.forEach(oldOpts, function(i){
-			// We can get null back in our array - if our option was not found.  In
-			// that case, we don't want to blow up...
-			if(i){
-				this.options = dojo.filter(this.options, function(node, idx){
-					return (node.value !== i.value);
-				});
-				this._removeOptionItem(i);
-			}
-		}, this);
-		this._loadChildren();
-	},
-
-	updateOption: function(/* dijit.form.__SelectOption, dijit.form.__SelectOption[] */ newOption){
-		// summary:
-		//		Updates the values of the given option.  The option to update
-		//		is matched based on the value of the entered option.  Passing
-		//		in an array of new options will yeild better performance since
-		//		the children will only be loaded once.
-		if(!dojo.isArray(newOption)){ newOption = [newOption]; }
-		dojo.forEach(newOption, function(i){
-			var oldOpt = this.getOptions(i), k;
-			if(oldOpt){
-				for(k in i){ oldOpt[k] = i[k]; }
-			}
-		}, this);
-		this._loadChildren();
-	},
-
-	setStore: function(/* dojo.data.api.Identity */ store,
-						/* anything? */ selectedValue,
-						/* Object? */ fetchArgs){
-		// summary:
-		//		Sets the store you would like to use with this select widget.
-		//		The selected value is the value of the new store to set.  This
-		//		function returns the original store, in case you want to reuse
-		//		it or something.
-		// store: dojo.data.api.Identity
-		//		The store you would like to use - it MUST implement Identity,
-		//		and MAY implement Notification.
-		// selectedValue: anything?
-		//		The value that this widget should set itself to *after* the store
-		//		has been loaded
-		// fetchArgs: Object?
-		//		The arguments that will be passed to the store's fetch() function
-		var oStore = this.store;
-		fetchArgs = fetchArgs || {};
-		if(oStore !== store){
-			// Our store has changed, so update our notifications
-			dojo.forEach(this._notifyConnections || [], dojo.disconnect);
-			delete this._notifyConnections;
-			if(store && store.getFeatures()["dojo.data.api.Notification"]){
-				this._notifyConnections = [
-					dojo.connect(store, "onNew", this, "_onNewItem"),
-					dojo.connect(store, "onDelete", this, "_onDeleteItem"),
-					dojo.connect(store, "onSet", this, "_onSetItem")
-				];
-			}
-			this.store = store;
-		}
-
-		// Turn off change notifications while we make all these changes
-		this._onChangeActive = false;
-
-		// Remove existing options (if there are any)
-		if(this.options && this.options.length){
-			this.removeOption(this.options);
-		}
-
-		// Add our new options
-		if(store){
-			var cb = function(items){
-				if(this.sortByLabel && !fetchArgs.sort && items.length){
-					items.sort(dojo.data.util.sorter.createSortFunction([{
-						attribute: store.getLabelAttributes(items[0])[0]
-					}], store));
-				}
-
-				if(fetchArgs.onFetch){
-					items = fetchArgs.onFetch(items);
-				}
-				// TODO: Add these guys as a batch, instead of separately
-				dojo.forEach(items, function(i){
-					this._addOptionForItem(i);
-				}, this);
-
-				// Set our value (which might be undefined), and then tweak
-				// it to send a change event with the real value
-				this._loadingStore = false;
-				this.set("value", (("_pendingValue" in this) ? this._pendingValue : selectedValue));
-				delete this._pendingValue;
-
-				if(!this.loadChildrenOnOpen){
-					this._loadChildren();
-				}else{
-					this._pseudoLoadChildren(items);
-				}
-				this._fetchedWith = opts;
-				this._lastValueReported = this.multiple ? [] : null;
-				this._onChangeActive = true;
-				this.onSetStore();
-				this._handleOnChange(this.value);
-			};
-			var opts = dojo.mixin({onComplete:cb, scope: this}, fetchArgs);
-			this._loadingStore = true;
-			store.fetch(opts);
-		}else{
-			delete this._fetchedWith;
-		}
-		return oStore;	// dojo.data.api.Identity
-	},
-
-	_setValueAttr: function(/*anything*/ newValue, /*Boolean, optional*/ priorityChange){
-		// summary:
-		//		set the value of the widget.
-		//		If a string is passed, then we set our value from looking it up.
-		if(this._loadingStore){
-			// Our store is loading - so save our value, and we'll set it when
-			// we're done
-			this._pendingValue = newValue;
-			return;
-		}
-		var opts = this.getOptions() || [];
-		if(!dojo.isArray(newValue)){
-			newValue = [newValue];
-		}
-		dojo.forEach(newValue, function(i, idx){
-			if(!dojo.isObject(i)){
-				i = i + "";
-			}
-			if(typeof i === "string"){
-				newValue[idx] = dojo.filter(opts, function(node){
-					return node.value === i;
-				})[0] || {value: "", label: ""};
-			}
-		}, this);
-
-		// Make sure some sane default is set
-		newValue = dojo.filter(newValue, function(i){ return i && i.value; });
-		if(!this.multiple && (!newValue[0] || !newValue[0].value) && opts.length){
-			newValue[0] = opts[0];
-		}
-		dojo.forEach(opts, function(i){
-			i.selected = dojo.some(newValue, function(v){ return v.value === i.value; });
-		});
-		var val = dojo.map(newValue, function(i){ return i.value; }),
-			disp = dojo.map(newValue, function(i){ return i.label; });
-
-		this.value = this.multiple ? val : val[0];
-		this._setDisplay(this.multiple ? disp : disp[0]);
-		this._updateSelection();
-		this._handleOnChange(this.value, priorityChange);
-	},
-
-	_getDisplayedValueAttr: function(){
-		// summary:
-		//		returns the displayed value of the widget
-		var val = this.get("value");
-		if(!dojo.isArray(val)){
-			val = [val];
-		}
-		var ret = dojo.map(this.getOptions(val), function(v){
-			if(v && "label" in v){
-				return v.label;
-			}else if(v){
-				return v.value;
-			}
-			return null;
-		}, this);
-		return this.multiple ? ret : ret[0];
-	},
-
-	_getValueDeprecated: false, // remove when _FormWidget:getValue is removed
-	getValue: function(){
-		// summary:
-		//		get the value of the widget.
-		return this._lastValue;
-	},
-
-	undo: function(){
-		// summary:
-		//		restore the value to the last value passed to onChange
-		this._setValueAttr(this._lastValueReported, false);
-	},
-
-	_loadChildren: function(){
-		// summary:
-		//		Loads the children represented by this widget's options.
-		//		reset the menu to make it "populatable on the next click
-		if(this._loadingStore){ return; }
-		dojo.forEach(this._getChildren(), function(child){
-			child.destroyRecursive();
-		});
-		// Add each menu item
-		dojo.forEach(this.options, this._addOptionItem, this);
-
-		// Update states
-		this._updateSelection();
-	},
-
-	_updateSelection: function(){
-		// summary:
-		//		Sets the "selected" class on the item for styling purposes
-		this.value = this._getValueFromOpts();
-		var val = this.value;
-		if(!dojo.isArray(val)){
-			val = [val];
-		}
-		if(val && val[0]){
-			dojo.forEach(this._getChildren(), function(child){
-				var isSelected = dojo.some(val, function(v){
-					return child.option && (v === child.option.value);
-				});
-				dojo.toggleClass(child.domNode, this.baseClass + "SelectedOption", isSelected);
-				dijit.setWaiState(child.domNode, "selected", isSelected);
-			}, this);
-		}
-		this._handleOnChange(this.value);
-	},
-
-	_getValueFromOpts: function(){
-		// summary:
-		//		Returns the value of the widget by reading the options for
-		//		the selected flag
-		var opts = this.getOptions() || [];
-		if(!this.multiple && opts.length){
-			// Mirror what a select does - choose the first one
-			var opt = dojo.filter(opts, function(i){
-				return i.selected;
-			})[0];
-			if(opt && opt.value){
-				return opt.value
-			}else{
-				opts[0].selected = true;
-				return opts[0].value;
-			}
-		}else if(this.multiple){
-			// Set value to be the sum of all selected
-			return dojo.map(dojo.filter(opts, function(i){
-				return i.selected;
-			}), function(i){
-				return i.value;
-			}) || [];
-		}
-		return "";
-	},
-
-	// Internal functions to call when we have store notifications come in
-	_onNewItem: function(/* item */ item, /* Object? */ parentInfo){
-		if(!parentInfo || !parentInfo.parent){
-			// Only add it if we are top-level
-			this._addOptionForItem(item);
-		}
-	},
-	_onDeleteItem: function(/* item */ item){
-		var store = this.store;
-		this.removeOption(store.getIdentity(item));
-	},
-	_onSetItem: function(/* item */ item){
-		this.updateOption(this._getOptionObjForItem(item));
-	},
-
-	_getOptionObjForItem: function(item){
-		// summary:
-		//		Returns an option object based off the given item.  The "value"
-		//		of the option item will be the identity of the item, the "label"
-		//		of the option will be the label of the item.  If the item contains
-		//		children, the children value of the item will be set
-		var store = this.store, label = store.getLabel(item),
-			value = (label ? store.getIdentity(item) : null);
-		return {value: value, label: label, item:item}; // dijit.form.__SelectOption
-	},
-
-	_addOptionForItem: function(/* item */ item){
-		// summary:
-		//		Creates (and adds) the option for the given item
-		var store = this.store;
-		if(!store.isItemLoaded(item)){
-			// We are not loaded - so let's load it and add later
-			store.loadItem({item: item, onComplete: function(i){
-				this._addOptionForItem(item);
-			},
-			scope: this});
-			return;
-		}
-		var newOpt = this._getOptionObjForItem(item);
-		this.addOption(newOpt);
-	},
-
-	constructor: function(/* Object */ keywordArgs){
-		// summary:
-		//		Saves off our value, if we have an initial one set so we
-		//		can use it if we have a store as well (see startup())
-		this._oValue = (keywordArgs || {}).value || null;
-	},
-
-	_fillContent: function(){
-		// summary:
-		//		Loads our options and sets up our dropdown correctly.  We
-		//		don't want any content, so we don't call any inherit chain
-		//		function.
-		var opts = this.options;
-		if(!opts){
-			opts = this.options = this.srcNodeRef ? dojo.query(">",
-						this.srcNodeRef).map(function(node){
-							if(node.getAttribute("type") === "separator"){
-								return { value: "", label: "", selected: false, disabled: false };
-							}
-							return { value: node.getAttribute("value"),
-										label: String(node.innerHTML),
-										selected: node.getAttribute("selected") || false,
-										disabled: node.getAttribute("disabled") || false };
-						}, this) : [];
-		}
-		if(!this.value){
-			this.value = this._getValueFromOpts();
-		}else if(this.multiple && typeof this.value == "string"){
-			this.value = this.value.split(",");
-		}
-	},
-
-	postCreate: function(){
-		// summary:
-		//		sets up our event handling that we need for functioning
-		//		as a select
-		dojo.setSelectable(this.focusNode, false);
-		this.inherited(arguments);
-
-		// Make our event connections for updating state
-		this.connect(this, "onChange", "_updateSelection");
-		this.connect(this, "startup", "_loadChildren");
-
-		this._setValueAttr(this.value, null);
-	},
-
-	startup: function(){
-		// summary:
-		//		Connects in our store, if we have one defined
-		this.inherited(arguments);
-		var store = this.store, fetchArgs = {};
-		dojo.forEach(["query", "queryOptions", "onFetch"], function(i){
-			if(this[i]){
-				fetchArgs[i] = this[i];
-			}
-			delete this[i];
-		}, this);
-		if(store && store.getFeatures()["dojo.data.api.Identity"]){
-			// Temporarily set our store to null so that it will get set
-			// and connected appropriately
-			this.store = null;
-			this.setStore(store, this._oValue, fetchArgs);
-		}
-	},
-
-	destroy: function(){
-		// summary:
-		//		Clean up our connections
-		dojo.forEach(this._notifyConnections || [], dojo.disconnect);
-		this.inherited(arguments);
-	},
-
-	_addOptionItem: function(/* dijit.form.__SelectOption */ option){
-		// summary:
-		//		User-overridable function which, for the given option, adds an
-		//		item to the select.  If the option doesn't have a value, then a
-		//		separator is added in that place.  Make sure to store the option
-		//		in the created option widget.
-	},
-
-	_removeOptionItem: function(/* dijit.form.__SelectOption */ option){
-		// summary:
-		//		User-overridable function which, for the given option, removes
-		//		its item from the select.
-	},
-
-	_setDisplay: function(/*String or String[]*/ newDisplay){
-		// summary:
-		//		Overridable function which will set the display for the
-		//		widget.  newDisplay is either a string (in the case of
-		//		single selects) or array of strings (in the case of multi-selects)
-	},
-
-	_getChildren: function(){
-		// summary:
-		//		Overridable function to return the children that this widget contains.
-		return [];
-	},
-
-	_getSelectedOptionsAttr: function(){
-		// summary:
-		//		hooks into this.attr to provide a mechanism for getting the
-		//		option items for the current value of the widget.
-		return this.getOptions(this.get("value"));
-	},
-
-	_pseudoLoadChildren: function(/* item[] */ items){
-		// summary:
-		//		a function that will "fake" loading children, if needed, and
-		//		if we have set to not load children until the widget opens.
-		// items:
-		//		An array of items that will be loaded, when needed
-	},
-
-	onSetStore: function(){
-		// summary:
-		//		a function that can be connected to in order to receive a
-		//		notification that the store has finished loading and all options
-		//		from that store are available
-	}
-});
-
-}
-
-if(!dojo._hasResource["dijit.form.Select"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
-dojo._hasResource["dijit.form.Select"] = true;
-dojo.provide("dijit.form.Select");
-
-
-
-
-
-
-
-
-dojo.declare("dijit.form._SelectMenu", dijit.Menu, {
-	// summary:
-	//		An internally-used menu for dropdown that allows us a vertical scrollbar
-	buildRendering: function(){
-		// summary:
-		//		Stub in our own changes, so that our domNode is not a table
-		//		otherwise, we won't respond correctly to heights/overflows
-		this.inherited(arguments);
-		var o = (this.menuTableNode = this.domNode);
-		var n = (this.domNode = dojo.create("div", {style: {overflowX: "hidden", overflowY: "scroll"}}));
-		if(o.parentNode){
-			o.parentNode.replaceChild(n, o);
-		}
-		dojo.removeClass(o, "dijitMenuTable");
-		n.className = o.className + " dijitSelectMenu";
-		o.className = "dijitReset dijitMenuTable";
-		dijit.setWaiRole(o,"listbox");
-		dijit.setWaiRole(n,"presentation");
-		n.appendChild(o);
-	},
-	resize: function(/*Object*/ mb){
-		// summary:
-		//		Overridden so that we are able to handle resizing our
-		//		internal widget.  Note that this is not a "full" resize
-		//		implementation - it only works correctly if you pass it a
-		//		marginBox.
-		//
-		// mb: Object
-		//		The margin box to set this dropdown to.
-		if(mb){
-			dojo.marginBox(this.domNode, mb);
-			if("w" in mb){
-				// We've explicitly set the wrapper <div>'s width, so set <table> width to match.
-				// 100% is safer than a pixel value because there may be a scroll bar with
-				// browser/OS specific width.
-				this.menuTableNode.style.width = "100%";
-			}
-		}
-	}
-});
-
-dojo.declare("dijit.form.Select", [dijit.form._FormSelectWidget, dijit._HasDropDown], {
-	// summary:
-	//		This is a "styleable" select box - it is basically a DropDownButton which
-	//		can take a <select> as its input.
-
-	baseClass: "dijitSelect",
-
-	templateString: dojo.cache("dijit.form", "templates/Select.html", "<table class=\"dijit dijitReset dijitInline dijitLeft\"\n\tdojoAttachPoint=\"_buttonNode,tableNode,focusNode\" cellspacing='0' cellpadding='0'\n\twaiRole=\"combobox\" waiState=\"haspopup-true\"\n\t><tbody waiRole=\"presentation\"><tr waiRole=\"presentation\"\n\t\t><td class=\"dijitReset dijitStretch dijitButtonContents dijitButtonNode\" waiRole=\"presentation\"\n\t\t\t><span class=\"dijitReset dijitInline dijitButtonText\"  dojoAttachPoint=\"containerNode,_popupStateNode\"></span\n\t\t\t><input type=\"hidden\" ${!nameAttrSetting} dojoAttachPoint=\"valueNode\" value=\"${value}\" waiState=\"hidden-true\"\n\t\t/></td><td class=\"dijitReset dijitRight dijitButtonNode dijitArrowButton dijitDownArrowButton\"\n\t\t\t\tdojoAttachPoint=\"titleNode\" waiRole=\"presentation\"\n\t\t\t><div class=\"dijitReset dijitArrowButtonInner\" waiRole=\"presentation\"></div\n\t\t\t><div class=\"dijitReset dijitArrowButtonChar\" waiRole=\"presentation\">&#9660;</div\n\t\t></td\n\t></tr></tbody\n></table>\n"),
-
-	// attributeMap: Object
-	//		Add in our style to be applied to the focus node
-	attributeMap: dojo.mixin(dojo.clone(dijit.form._FormSelectWidget.prototype.attributeMap),{style:"tableNode"}),
-
-	// required: Boolean
-	//		Can be true or false, default is false.
-	required: false,
-
-	// state: String
-	//		Shows current state (ie, validation result) of input (Normal, Warning, or Error)
-	state: "",
-
-	//	tooltipPosition: String[]
-	//		See description of dijit.Tooltip.defaultPosition for details on this parameter.
-	tooltipPosition: [],
-
-	// emptyLabel: string
-	//		What to display in an "empty" dropdown
-	emptyLabel: "",
-
-	// _isLoaded: Boolean
-	//		Whether or not we have been loaded
-	_isLoaded: false,
-
-	// _childrenLoaded: Boolean
-	//		Whether or not our children have been loaded
-	_childrenLoaded: false,
-
-	_fillContent: function(){
-		// summary:
-		//		Set the value to be the first, or the selected index
-		this.inherited(arguments);
-		if(this.options.length && !this.value && this.srcNodeRef){
-			var si = this.srcNodeRef.selectedIndex;
-			this.value = this.options[si != -1 ? si : 0].value;
-		}
-
-		// Create the dropDown widget
-		this.dropDown = new dijit.form._SelectMenu({id: this.id + "_menu"});
-		dojo.addClass(this.dropDown.domNode, this.baseClass + "Menu");
-	},
-
-	_getMenuItemForOption: function(/*dijit.form.__SelectOption*/ option){
-		// summary:
-		//		For the given option, return the menu item that should be
-		//		used to display it.  This can be overridden as needed
-		if(!option.value){
-			// We are a separator (no label set for it)
-			return new dijit.MenuSeparator();
-		}else{
-			// Just a regular menu option
-			var click = dojo.hitch(this, "_setValueAttr", option);
-			var item = new dijit.MenuItem({
-				option: option,
-				label: option.label,
-				onClick: click,
-				disabled: option.disabled || false
-			});
-			dijit.setWaiRole(item.focusNode, "listitem");
-			return item;
-		}
-	},
-
-	_addOptionItem: function(/*dijit.form.__SelectOption*/ option){
-		// summary:
-		//		For the given option, add an option to our dropdown.
-		//		If the option doesn't have a value, then a separator is added
-		//		in that place.
-		if(this.dropDown){
-			this.dropDown.addChild(this._getMenuItemForOption(option));
-		}
-	},
-
-	_getChildren: function(){
-		if(!this.dropDown){
-			return [];
-		}
-		return this.dropDown.getChildren();
-	},
-
-	_loadChildren: function(/*Boolean*/ loadMenuItems){
-		// summary:
-		//		Resets the menu and the length attribute of the button - and
-		//		ensures that the label is appropriately set.
-		//	loadMenuItems: Boolean
-		//		actually loads the child menu items - we only do this when we are
-		//		populating for showing the dropdown.
-
-		if(loadMenuItems === true){
-			// this.inherited destroys this.dropDown's child widgets (MenuItems).
-			// Avoid this.dropDown (Menu widget) having a pointer to a destroyed widget (which will cause
-			// issues later in _setSelected). (see #10296)
-			if(this.dropDown){
-				delete this.dropDown.focusedChild;
-			}
-			if(this.options.length){
-				this.inherited(arguments);
-			}else{
-				// Drop down menu is blank but add one blank entry just so something appears on the screen
-				// to let users know that they are no choices (mimicing native select behavior)
-				dojo.forEach(this._getChildren(), function(child){ child.destroyRecursive(); });
-				var item = new dijit.MenuItem({label: "&nbsp;"});
-				this.dropDown.addChild(item);
-			}
-		}else{
-			this._updateSelection();
-		}
-
-		var len = this.options.length;
-		this._isLoaded = false;
-		this._childrenLoaded = true;
-
-		if(!this._loadingStore){
-			// Don't call this if we are loading - since we will handle it later
-			this._setValueAttr(this.value);
-		}
-	},
-
-	_setValueAttr: function(value){
-		this.inherited(arguments);
-		dojo.attr(this.valueNode, "value", this.get("value"));
-	},
-
-	_setDisplay: function(/*String*/ newDisplay){
-		// summary:
-		//		sets the display for the given value (or values)
-		this.containerNode.innerHTML = '<span class="dijitReset dijitInline ' + this.baseClass + 'Label">' +
-					(newDisplay || this.emptyLabel || "&nbsp;") +
-					'</span>';
-		dijit.setWaiState(this.focusNode, "valuetext", (newDisplay || this.emptyLabel || "&nbsp;") );
-	},
-
-	validate: function(/*Boolean*/ isFocused){
-		// summary:
-		//		Called by oninit, onblur, and onkeypress.
-		// description:
-		//		Show missing or invalid messages if appropriate, and highlight textbox field.
-		//		Used when a select is initially set to no value and the user is required to
-		//		set the value.
-		
-		var isValid = this.isValid(isFocused);
-		this.state = isValid ? "" : "Error";
-		this._setStateClass();
-		dijit.setWaiState(this.focusNode, "invalid", isValid ? "false" : "true");
-		var message = isValid ? "" : this._missingMsg;
-		if(this._message !== message){
-			this._message = message;
-			dijit.hideTooltip(this.domNode);
-			if(message){
-				dijit.showTooltip(message, this.domNode, this.tooltipPosition, !this.isLeftToRight());
-			}
-		}
-		return isValid;
-	},
-
-	isValid: function(/*Boolean*/ isFocused){
-		// summary:
-		//		Whether or not this is a valid value.   The only way a Select
-		//		can be invalid is when it's required but nothing is selected.
-		return (!this.required || !(/^\s*$/.test(this.value)));
-	},
-
-	reset: function(){
-		// summary:
-		//		Overridden so that the state will be cleared.
-		this.inherited(arguments);
-		dijit.hideTooltip(this.domNode);
-		this.state = "";
-		this._setStateClass();
-		delete this._message;
-	},
-
-	postMixInProperties: function(){
-		// summary:
-		//		set the missing message
-		this.inherited(arguments);
-		this._missingMsg = dojo.i18n.getLocalization("dijit.form", "validate",
-									this.lang).missingMessage;
-	},
-
-	postCreate: function(){
-		this.inherited(arguments);
-		if(this.tableNode.style.width){
-			dojo.addClass(this.domNode, this.baseClass + "FixedWidth");
-		}
-	},
-
-	isLoaded: function(){
-		return this._isLoaded;
-	},
-
-	loadDropDown: function(/*Function*/ loadCallback){
-		// summary:
-		//		populates the menu
-		this._loadChildren(true);
-		this._isLoaded = true;
-		loadCallback();
-	},
-
-	closeDropDown: function(){
-		// overriding _HasDropDown.closeDropDown()
-		this.inherited(arguments);
-
-		if(this.dropDown && this.dropDown.menuTableNode){
-			// Erase possible width: 100% setting from _SelectMenu.resize().
-			// Leaving it would interfere with the next openDropDown() call, which
-			// queries the natural size of the drop down.
-			this.dropDown.menuTableNode.style.width = "";
-		}
-	},
-
-	uninitialize: function(preserveDom){
-		if(this.dropDown && !this.dropDown._destroyed){
-			this.dropDown.destroyRecursive(preserveDom);
-			delete this.dropDown;
-		}
-		this.inherited(arguments);
-	}
-});
 
 }
 
@@ -43806,6 +43945,7 @@ dojo._hasResource["dwb.Main._base"] = true;
 dojo.provide("dwb.Main._base");
 
 // Custom modules
+
 
 
 
