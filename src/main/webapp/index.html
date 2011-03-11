@@ -97,6 +97,10 @@
  	</div>
 	<div id="dwb_main" class="centre_panel" dojoType="dwb.Main">				
 	</div>	
+    <div id="feedback" class="hidden"> 
+        <img src="./img/star.png"></img>
+        <a href="javascript:void(0);">Got feedback? Want a new feature? Found a bug? Send us a message here!</a>
+    </div>
 </body>
 <script>
 	dojo.require("dwb.Main");
@@ -106,18 +110,34 @@
 		if (!dojo.cookie(cookieId)) {
 			// Create and show dialog.
 	        var dialog = new dwb.ui.IntroDialog({topOffset: 108});
-			dialog.show();
+            dialog.show();
 		}
-		
+        
 		// Parse page widget and fade out preloading screen when complete
 		dojo.parser.parse();
 		dojo.fadeOut({
-               node:"preloader",
-               duration:700,
-               onEnd: function(){
-                       dojo.style("preloader", "display", "none"); 
-               }
+            node:"preloader",
+            duration:700,
+            onEnd: function(){
+                dojo.style("preloader", "display", "none"); 
+            }
        	}).play();					
+
+        // Show a new feedback submission form when a user
+        // clicks the link.
+        var feedback = dojo.byId("feedback");
+        dojo.connect(feedback, "onclick", function () {
+            var dialog = new dwb.ui.FeedbackDialog({topOffset: 108});
+            dialog.show();
+
+            // Destroy the widget when it's closed by the user or after
+            // feedback submission.
+            dojo.connect(dialog, "onHide", function () {
+                dialog.destroyRecursive();
+            });
+            window.scrollTo(0,0);
+        });
+        dojo.removeClass(feedback, "hidden");
 	});
 </script>
 </html>
