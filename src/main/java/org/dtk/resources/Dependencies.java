@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -21,6 +23,7 @@ import org.dtk.resources.dependencies.InputType;
 import org.dtk.resources.dependencies.WebPage;
 import org.dtk.resources.exceptions.ConfigurationException;
 import org.dtk.resources.exceptions.IncorrectParameterException;
+import org.dtk.util.ContextListener;
 import org.dtk.util.FileUtil;
 import org.dtk.util.HttpUtil;
 import org.dtk.util.JsonUtil;
@@ -64,12 +67,32 @@ public class Dependencies {
 	/** Evaluator exception thrown parsing JavaScript build profile */
 	protected static final String buildProfileParseErrorText = "Error parsing JavaScript build profile. Check parameter source.";
 	
+	/** Error log message formats **/
+	/** Unable to generate and save JSON encoded HTML **/
+	protected static final String errorGeneratingJsonLogMsg = "Exception caught generating HTML encoded JSON for input " +
+		"type, %1$s, and input value, %2$s.";
+	
+	/** New dependency request details **/
+	protected static final String analyseDependenciesLogMsg = "New analyse dependencies request for input type, %1$s, and input value, %2$s";
+	
+	/** Unable to parse build profile details **/
+	protected static final String buildProfileParseLogMsg = "Unable to parse the following build profile submitted, %1$s.";
+	
+	/** WebPage class threw error parsing source material. Log root exception **/
+	protected static final String failedWebPageParseLogMsg = "Fatal error parsing user submitted web page for dependencies, root exception: %1$s";
+	
+	/** Information log about modules and package discovered **/
+	protected static final String webPageParseLogMsg = "Web page analysis discovered %1$s modules and created %2$s temporary packages";
+	
 	/** Request parameter containing the input type */
 	protected static final String typeParameter = "type";
 
 	/** Request parameter containing the input type */
 	protected static final String valueParameter = "value";
 
+	/** Listener logging class */
+	protected static Logger logger = Logger.getLogger(Dependencies.class.getName());
+	
 	/**
 	 * Analyse source input for Dojo module dependencies. Allows a request
 	 * to provide a html page, remote URL, build profile, which will be parsed
@@ -83,16 +106,20 @@ public class Dependencies {
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.TEXT_HTML)
 	public String analyseDependencies(BufferedInMultiPart multiPartForm) {
+		logger.entering(this.getClass().getName(), "analyseDependencies");
+
 		String encodedJson = null;
 		Map<String, Object> dependencies = null;
-
+		
 		// Process form submission, parsing text strings from values.
 		MultivaluedMap<String, Object> formFields = HttpUtil.retrieveMultiPartFormValues(multiPartForm, String.class);
 
 		// Check request contains valid input parameters, value and type. 
 		InputType inputType = retrieveInputType(formFields); 
 		String inputValue = retrieveInputValue(formFields);
-
+		
+		logger.log(Level.INFO, String.format(analyseDependenciesLogMsg, inputType.name(), inputValue));
+		
 		// Invoke analysis based upon input type (web_page, url or profile).
 		switch(inputType) {
 		case WEB_PAGE:
@@ -112,9 +139,12 @@ public class Dependencies {
 		try {
 			encodedJson = JsonUtil.writeJavaToHtmlEncodedJson(dependencies);
 		} catch(IOException e) {
+			logger.log(Level.SEVERE, String.format(errorGeneratingJsonLogMsg, inputType.name(), inputValue));					
 			throw new ConfigurationException(internalServerErrorText);
 		}
 
+		logger.exiting(this.getClass().getName(), "analyseDependencies");
+		
 		// Encoded response and return 
 		return encodedJson;
 	}
@@ -149,6 +179,7 @@ public class Dependencies {
 			moduleAnalysis.put("layers", profileLayers);
 		// Caught error from JS engine parsing source file, return to user as 400 status. 
 		} catch (EvaluatorException e) {
+			logger.log(Level.SEVERE, String.format(buildProfileParseLogMsg, buildProfile));
 			throw new IncorrectParameterException(buildProfileParseErrorText);
 		}
 		
@@ -196,6 +227,10 @@ public class Dependencies {
 	protected Map<String, Object> analyseModulesFromUrl(String textUrl)  {
 		URL url;
 		try {
+			// Prefix http protocol when URL is missing a protocol identifier.
+			if (!textUrl.startsWith("http")) {
+				textUrl = "http://" + textUrl;
+			}
 			url = new URL(textUrl);
 			WebPage webPage = new WebPage(url);
 			return analyseModulesFromWebpage(webPage);
@@ -234,11 +269,13 @@ public class Dependencies {
 		// If web page fails to parse, invalid source or unable to contact 
 		// remote resources, flag to user as an error.
 		if (!webPage.parse()) {
+			logger.log(Level.SEVERE, String.format(failedWebPageParseLogMsg, webPage.getParsingFailure()));
 			throw new IncorrectParameterException(parsingFailureErrorText);
 		} 
 
+		List<String> modules = webPage.getModules();
 		// Store list of discovered modules within repsonse map.
-		moduleAnalysis.put("requiredDojoModules", webPage.getModules());
+		moduleAnalysis.put("requiredDojoModules", modules);
 
 		// Turn discovered custom modules into temporary packages, allowing reference 
 		// when building. 
@@ -246,6 +283,8 @@ public class Dependencies {
 		// Store temporary package references into response
 		moduleAnalysis.put("packages", temporaryPackages);
 
+		logger.log(Level.INFO, String.format(webPageParseLogMsg, modules.size(), temporaryPackages.size()));
+		
 		return moduleAnalysis;
 	}
 
