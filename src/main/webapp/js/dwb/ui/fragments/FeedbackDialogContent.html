@@ -1,7 +1,7 @@
 <div class="introDialog">
     <div class="content" style="padding-left: 8px; padding-right: 8px;">
         Use the form below to submit your feedback about the Dojo Web Builder. We really appreciate all comments, feature requests and bug notifications!
-        <form dojoType="dijit.form.Form" dojoAttachPoint="feedbackForm" dojoAttachEvent="onsubmit:_submission" class="feedbackForm">
+        <form dojoType="dijit.form.Form" class="feedbackForm">
             <div>
             <div style="float:left;">
             <label>Name</label> 
@@ -25,10 +25,9 @@
                 </option>
             </select>
             <label>Details</label>
-            <textarea name="text" dojoType="dijit.form.SimpleTextarea">
-            </textarea> 
+            <textarea name="details" dojoType="dijit.form.SimpleTextarea"></textarea>
             <div style="text-align:center; padding-top: 10px;">
-            <button dojoType="dijit.form.Button" type="submit">
+            <button dojoType="dijit.form.Button" type="submit" disabled="true">
                 Submit 
             </button>
         </div>

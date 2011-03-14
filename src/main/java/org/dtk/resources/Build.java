@@ -46,8 +46,6 @@ import org.dtk.util.HttpUtil;
 public class Build {
 	@Context ServletConfig config;
 
-	private String tempBuildPathPrefix;
-
 	protected static final String tempBuildPrefix = "dojo";
 
 	protected static final String tempBuildSuffix = ".temp";

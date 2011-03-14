@@ -1,4 +1,5 @@
 org.dtk.resources.Packages
 org.dtk.resources.Build
 org.dtk.resources.Dependencies
+org.dtk.util.Feedback
 org.codehaus.jackson.jaxrs.JacksonJsonProvider
