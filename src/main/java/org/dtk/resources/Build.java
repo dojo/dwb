@@ -6,6 +6,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
@@ -32,6 +34,7 @@ import org.dtk.resources.exceptions.IncorrectParameterException;
 import org.dtk.resources.exceptions.MissingResourceException;
 import org.dtk.util.FileUtil;
 import org.dtk.util.HttpUtil;
+import org.dtk.util.JsonUtil;
 
 /**
  * RESTful Build API. This API provides access to the package build system, 
@@ -69,6 +72,18 @@ public class Build {
 	/** Error text when user has requested a build result that isn't available */
 	protected static final String missingBuildResourceErrorText 
 	= "Unable to access build result, build process hasn't completed.";
+
+	/** We have successfully parsed a user's new build request */
+	protected static final String newBuildRequestLogMsg 
+	= "New build request submitted using request object: %1$s";
+
+	/** Fatal error caught trying to process user's build request. Log all details. **/
+	protected static final String fatalBuildRequestLogMsg 
+	= "Fatal error occurred processing the following build request, %1$s. " +
+		"The following exceptions was caught: %2$s";
+	
+	/** Logging class instance */
+	protected static final Logger logger = Logger.getLogger(Build.class.getName());
 
 	/**
 	 * Initiate a build request, passing parameters to the Dojo build system, generating
@@ -212,11 +227,15 @@ public class Build {
 		BuildRequest buildRequest;
 		try {
 			buildRequest = new BuildRequest(packageName, version, cdn, optimise, cssOptimise, platforms, themes, userPackages, layers);
+			logger.log(Level.INFO, String.format(newBuildRequestLogMsg, buildRequest.serialise()));
 		} catch (JsonMappingException e) {
+			logFatalBuildRequest(buildDetails, e);
 			throw new IncorrectParameterException(layersParsingErrorText);
 		} catch (JsonParseException e) {
+			logFatalBuildRequest(buildDetails, e);
 			throw new IncorrectParameterException(layersParsingErrorText);
 		} catch (IOException e) {
+			logFatalBuildRequest(buildDetails, e);
 			throw new IncorrectParameterException(layersParsingErrorText);
 		} catch (NoSuchAlgorithmException e) {
 			throw new ConfigurationException(missingAlgorithmErrorText);
@@ -289,5 +308,27 @@ public class Build {
 		} else if (cssOptimise == null) {
 			throw new IncorrectParameterException(String.format(missingParameterErrorText, "cssOptimise"));
 		}
+	}
+	
+	/**
+	 * Log details of the error caught when trying to process a user's
+	 * build request. Attempt to serialise original build request object.
+	 * 
+	 * @param buildDetails - User's build request
+	 * @param e - Exception throw during processing
+	 */
+	protected void logFatalBuildRequest(Map<String, Object> buildDetails, Exception e) {
+		String serialisedBuildDetails;
+		try {
+			serialisedBuildDetails = JsonUtil.writeJavaToJson(buildDetails);
+		} catch (JsonParseException exception) {
+			serialisedBuildDetails = exception.getMessage();
+		} catch (JsonMappingException exception) {
+			serialisedBuildDetails = exception.getMessage();
+		} catch (IOException exception) {
+			serialisedBuildDetails = exception.getMessage();
+		}
+		
+		logger.log(Level.SEVERE, String.format(fatalBuildRequestLogMsg, e.getMessage(), serialisedBuildDetails));
 	}
 }

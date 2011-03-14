@@ -2,7 +2,11 @@ package org.dtk.resources.build;
 
 import java.io.File;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import org.dtk.resources.Build;
+import org.dtk.resources.Dependencies;
 import org.dtk.resources.build.manager.BuildState;
 import org.dtk.resources.build.manager.BuildStatusManager;
 import org.dtk.util.FileUtil;
@@ -24,6 +28,16 @@ public class BuildProcess implements Runnable {
 	/** Handle to build status manager */
 	BuildStatusManager buildStatusManager;
 
+	/** Logging class for build errors, use global builder log rather than individual
+	 *  log for this class */
+	protected static Logger logger = Logger.getLogger(Build.class.getName());
+	
+	/** Log message when the build process throws an exception **/
+	protected static final String fatalBuildErrorLogMsg = "Fatal error returned by build process, root exception: %1$s";
+	
+	/** Log message when build has successfully completed **/
+	protected static final String finishedBuildLogMsg = "Successfully processed build request (%1$s), caching result at %2$s";
+	
     public BuildProcess(BuildRequest buildRequest) {
     	this.buildRequest = buildRequest;
     	this.buildStatusManager = BuildStatusManager.getInstance();
@@ -83,15 +97,18 @@ public class BuildProcess implements Runnable {
 	        // Check script executed without any errors
 	        if (exception != null) {
 	        	buildStatusManager.addNewBuildLog(reference, exception.getMessage());
+	        	logger.log(Level.SEVERE, String.format(fatalBuildErrorLogMsg, exception.getMessage()));
 	        } else {
 	        	// Retrieve the result of JS build function and write to file path given.
 	            Map<String, String> builtLayers = contextAction.getResult();
 	            FileUtil.writeToZipFile(resultPath, builtLayers);
 	            finishState = BuildState.COMPLETED;
+	            logger.log(Level.INFO, String.format(finishedBuildLogMsg, reference, resultPath));
 	        }
 	    // Log any script failures
 		} catch (Exception e) {
 			buildStatusManager.addNewBuildLog(reference, e.getMessage());
+			logger.log(Level.SEVERE, String.format(fatalBuildErrorLogMsg, e.getMessage()));
         }
 		
 		return finishState;

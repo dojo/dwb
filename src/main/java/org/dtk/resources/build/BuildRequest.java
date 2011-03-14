@@ -5,10 +5,15 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.dtk.resources.build.manager.BuildStatusManager;
@@ -43,6 +48,10 @@ public class BuildRequest {
 
 	/** File path format for cached build results, base_dir/build_id/dojo.zip */
 	protected static final String cachedBuildFileFormat = "%1$s/dojo.zip";
+	
+	/** Formatter string for toString() output **/
+	protected static final String format = "org.dtk.resources.build.BuildRequest: packageName=%1$s, version=%2$s, " +
+		"cdn=%3$s, optimise=%4$s, cssOptimise=%5$s, platforms=%6$s, themes=%7$s, tempAppIds=%8$s, layers=%9$s";
 	
 	/**
 	 * Create a new build request from constructor parameters.
@@ -262,5 +271,18 @@ public class BuildRequest {
 
 	public List<Map<String, Object>> getLayers() {
 		return layers;
+	}
+	
+	/** 
+	 * Return human-readable string representation of this 
+	 * object and its internal members. 
+	 * 
+	 * @throws IOException - Error mapping layers to JSON
+	 * @throws JsonMappingException - Error mapping layers to JSON
+	 * @throws JsonParseException - Error mapping layers to JSON
+	 */
+	public String serialise() throws JsonParseException, JsonMappingException, IOException  {
+		return String.format(format, packageName, version, cdn, optimise, cssOptimise, 
+			platforms, themes, StringUtils.join(tempAppIds, "/"), JsonUtil.writeJavaToJson(layers));
 	}
 }

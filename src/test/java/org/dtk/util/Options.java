@@ -26,7 +26,7 @@ public class Options {
 	private static final Map<String, String> defaultParameterValues = new HashMap<String, String>() {{
 		put(TEST_HOST_PARAM, "localhost");
 		put(TEST_PORT_PARAM, "8080");
-		put(TEST_APP_PATH_PARAM, "/dwb");
+		put(TEST_APP_PATH_PARAM, "");
 		put(TEST_PROTOCOL_PARAM, "http");
 	}};
 	
