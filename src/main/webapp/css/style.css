@@ -145,6 +145,11 @@ body.claro {
 	top: -10px;
 }
 
+/* Remove top padding on the border container children */
+.centre_panel .dijitBorderContainer > .dijitContentPane {
+    padding-top: 0;
+}
+
 /* Size of the build options content container */
 .rightContentPane {
 	width: 260px;
@@ -372,7 +377,8 @@ body.claro {
 /* Fix maximum height for title pane when one panel is visible and closed */
 .buildConfigPanel.simpleMode .moduleOverviewTitlePane .dijitTitlePaneContentInner {
 	max-height:493px;
-	overflow:auto;
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 /* Fix maximum height for overview pane when two panels are open */
@@ -384,7 +390,8 @@ body.claro {
 /* Fix maximum height for title pane when both panels are visible and closed */
 .buildConfigPanel.advancedMode .moduleOverviewTitlePane .dijitTitlePaneContentInner {
 	max-height:459px;
-	overflow:auto;
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 /* Fix maximum height for overview pane when search options panel is open */
@@ -509,8 +516,8 @@ body.claro {
 }
 
 /* Show raised remove icon on hovering over module overview */
-.rowCloseIcon:hover{
-	background-position:-14px 50%;
+.rowCloseIcon:hover {
+	background-position: -14px 50%;
 }
 
 /* Layout rules for panels contents on the analyse tab */
@@ -668,35 +675,48 @@ body.claro {
     color: #505050;
 }
 
-.feedbackForm {
-    text-align:left;
-    margin-top: 10px;
+
+/* Feedback submission form layout */
+.feedbackDialog .content {
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
+/* Fixed label style and padding */
 .feedbackForm label {
     font-style:italic;
-    margin-bottom: 5px;
-}
-
-.feedbackForm > label {
+    padding-bottom: 5px;
     padding-top: 10px;
 }
 
+/* Clear default margin around elements */
 .feedbackForm .dijitSelect, .feedbackForm .dijitTextArea {
     margin: 0;
 }
 
+/* Vertical line up of form elements */
 .feedbackForm > div, label  {
     display: block;
 }
 
+.feedbackForm > .categoryLabel {
+    clear: both;
+}
+
+/* Feedback input fields, fixed width */
 .feedbackForm .dijitTextBox {
     width: 200px;
 }
 
+/* Feedback details area, min. size */
 .feedbackForm .dijitTextArea {
     width: 426px;
     height: 120px;
+}
+
+.feedbackForm .submit {
+    padding-top: 10px;
+    text-align: center;
 }
 
 /* Used to cover screen while application is loading. */

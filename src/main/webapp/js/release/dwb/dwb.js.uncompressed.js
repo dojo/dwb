@@ -10086,7 +10086,6 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	
 	// Background upload of HTML file, returning modules found.
 	_onSubmit : function (e) {		
-		console.log(e);
 		dojo.stopEvent(e);
 		
 		// Check user has filled in form fields before submission
@@ -15715,22 +15714,60 @@ dojo.provide("dwb.ui.FeedbackDialog");
 
 
 
+
 dojo.declare("dwb.ui.FeedbackDialog", dwb.ui.PositionableDialog, {
 	title: "Leave Feedback",
     style: "width: 464px;",
-    content: dojo.cache("dwb.ui.fragments", "FeedbackDialogContent.html", "<div class=\"introDialog\">\n    <div class=\"content\" style=\"padding-left: 8px; padding-right: 8px;\">\n        Use the form below to submit your feedback about the Dojo Web Builder. We really appreciate all comments, feature requests and bug notifications!\n        <form dojoType=\"dijit.form.Form\" dojoAttachPoint=\"feedbackForm\" dojoAttachEvent=\"onsubmit:_submission\" class=\"feedbackForm\">\n            <div>\n            <div style=\"float:left;\">\n            <label>Name</label> \n            <input dojoType=\"dijit.form.ValidationTextBox\" name=\"name\" type=\"text\"></input>\n            </div>\n            <div style=\"float: right;\">\n            <label>Email Address</label>\n            <input dojoType=\"dijit.form.TextBox\" name=\"email\" type=\"text\"></input>\n        </div>\n    </div>\n            <label style=\"clear:both;\">Feedback Category</label>\n            <select name=\"category\" dojoType=\"dijit.form.Select\" style=\"width: 200px;\">\n                <option value=\"comment\">\n                Comment\n                </option>\n                <option value=\"feature\">\n                Feature Request\n                </option>\n                <option value=\"bug\">\n                Bug Report\n                </option>\n            </select>\n            <label>Details</label>\n            <textarea name=\"text\" dojoType=\"dijit.form.SimpleTextarea\">\n            </textarea> \n            <div style=\"text-align:center; padding-top: 10px;\">\n            <button dojoType=\"dijit.form.Button\" type=\"submit\">\n                Submit \n            </button>\n        </div>\n        </form>\n    </div>\n</div>\n"),
+    content: dojo.cache("dwb.ui.fragments", "FeedbackDialogContent.html", "<div class=\"introDialog\">\n    <div class=\"content\" style=\"padding-left: 8px; padding-right: 8px;\">\n        Use the form below to submit your feedback about the Dojo Web Builder. We really appreciate all comments, feature requests and bug notifications!\n        <form dojoType=\"dijit.form.Form\" class=\"feedbackForm\">\n            <div>\n            <div style=\"float:left;\">\n            <label>Name</label> \n            <input dojoType=\"dijit.form.ValidationTextBox\" name=\"name\" type=\"text\"></input>\n            </div>\n            <div style=\"float: right;\">\n            <label>Email Address</label>\n            <input dojoType=\"dijit.form.TextBox\" name=\"email\" type=\"text\"></input>\n        </div>\n    </div>\n            <label style=\"clear:both;\">Feedback Category</label>\n            <select name=\"category\" dojoType=\"dijit.form.Select\" style=\"width: 200px;\">\n                <option value=\"comment\">\n                Comment\n                </option>\n                <option value=\"feature\">\n                Feature Request\n                </option>\n                <option value=\"bug\">\n                Bug Report\n                </option>\n            </select>\n            <label>Details</label>\n            <textarea name=\"details\" dojoType=\"dijit.form.SimpleTextarea\"></textarea>\n            <div style=\"text-align:center; padding-top: 10px;\">\n            <button dojoType=\"dijit.form.Button\" type=\"submit\" disabled=\"true\">\n                Submit \n            </button>\n        </div>\n        </form>\n    </div>\n</div>\n"),
+
+    feedbackForm: null,
+    feedbackContent: null,
+    submitBtn: null,
 
     onLoad: function () {
         this.inherited(arguments);
+
+        // Once content has rendered, set up event handlers for form submission
+        // and button enabling.
         dojo.query("form", this.domNode).forEach(dojo.hitch(this, function(node) {
-            var form = dijit.byNode(node);
-            this.connect(form, "onSubmit", function (e) {
-                dojo.stopEvent(e);
-                console.log(form.get("value"));
-                // Do the AJAX call here....
-                this.hide();
-            });
+            this.feedbackForm = dijit.byNode(node);
+            this.connect(this.feedbackForm, "onSubmit", "_onSubmission");
+
+            // Find submit button 
+            dojo.query(".dijitButton", node).forEach(dojo.hitch(this, function (btn) {
+                this.submitBtn = dijit.byNode(btn);
+            }));
+
+            // Submit button enabled when user has typed some actual content
+            dojo.query("textarea", node).forEach(dojo.hitch(this, function(textarea) {
+                this.feedbackContent = dijit.byNode(textarea);
+                this.connect(this.feedbackContent, "onKeyUp", "_onFeedbackContentChanged");
+            }));
         }));
+    },
+
+    _onSubmission: function (e) {
+        dojo.stopEvent(e);
+        // Fire and forget the feedback to utility api 
+        // to log all the submissions. 
+        
+        var fields = this.feedbackForm.get("value");
+        dojo.xhrPost({
+            url:"/api/feedback", 
+            handleAs:"json", 
+            headers:{"Content-Type": "application/json"},
+            postData:dojo.toJson(fields)
+        });
+        
+        // Hide the dialog and overlay.
+        this.hide();
+    }, 
+
+    _onFeedbackContentChanged : function () {
+        // We want non-empty content string from textarea
+        var content = dojo.string.trim(this.feedbackContent.get("value"));
+        // Enable button when we have some content!
+        this.submitBtn.set("disabled", (content.length > 0) ? false : true);
     }
 });
 

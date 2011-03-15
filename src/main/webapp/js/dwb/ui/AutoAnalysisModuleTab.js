@@ -189,7 +189,6 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	
 	// Background upload of HTML file, returning modules found.
 	_onSubmit : function (e) {		
-		console.log(e);
 		dojo.stopEvent(e);
 		
 		// Check user has filled in form fields before submission
