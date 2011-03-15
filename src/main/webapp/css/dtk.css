@@ -1,0 +1,104 @@
+/* CSS pulled from the Dojo Toolkit to layout Dojo page header */
+#header {
+    background: url("../img/header.jpg") repeat-x scroll left bottom transparent;
+    height: 101px;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+#header .container {
+    height: 8.3em;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    text-align: left;
+    width: 960px;
+}
+
+#header #logo {
+    display: inline-block;
+    font-size: 3em;
+    font-weight: bold;
+    line-height: 1.65em;
+    margin: 0;
+    position: absolute;
+}
+
+#header #logo a {
+    color: #FFFFFF;
+    display: block;
+    padding-top: 27px;
+    text-decoration: none;
+}
+
+#header #logo a img {
+    border: medium none;
+    padding: 0;
+}
+
+#header ul {
+    font-family: "Helvetica","Arial",sans-serif;
+    margin: 50px 0 0;
+    padding: 0 0 0 11.55em;
+    position: absolute;
+    right: 190px;
+}
+
+#header ul li {
+    display: inline;
+    list-style: none outside none;
+}
+
+#header ul li a {
+    color: #FFFFFF;
+    display: block;
+    float: left;
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: -0.0035em;
+    line-height: 1.5em;
+    margin: 0 0 0 0.5825em;
+    padding: 0 0.76em;
+    text-decoration: none;
+}
+
+#header ul li a:link, #header ul li a:visited, #header ul li a:hover, #header ul li a:active {
+    color: #FFFFFF;
+}
+
+#header ul li a:hover {
+    border-bottom: 3px solid #0099CC;
+}
+
+#header ul li.active a {
+    border-bottom: 3px solid #0099CC;
+    font-weight: bold;
+}
+
+#header form {
+    margin-top: 45px;
+    position: absolute;
+    right: 0;
+}
+
+#header form span {
+    background: url("../img/search.gif") no-repeat scroll 0 0 transparent;
+    display: block;
+    height: 25px;
+    line-height: 25px;
+    width: 178px;
+}
+
+#header form input {
+    background: none repeat scroll 0 0 transparent;
+    border: medium none;
+    outline: medium none;
+    padding-left: 14px;
+    width: 150px;
+}
+
+#header form label, #header form button {
+    display: none;
+}
+
