@@ -53,6 +53,7 @@ public class Build {
 
 	protected static final String tempBuildSuffix = ".temp";
 
+	/** Response messages **/
 	/** Error text when build request misses mandatory parameter */
 	protected static final String missingParameterErrorText 
 	= "Missing mandatory parameter, %1$s, from build request.";
@@ -73,6 +74,7 @@ public class Build {
 	protected static final String missingBuildResourceErrorText 
 	= "Unable to access build result, build process hasn't completed.";
 
+	/** Log messages **/
 	/** We have successfully parsed a user's new build request */
 	protected static final String newBuildRequestLogMsg 
 	= "New build request submitted using request object: %1$s";
@@ -100,6 +102,8 @@ public class Build {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response  generateBuild(@Context HttpServletRequest request, HashMap<String, Object> buildDetails) {
+		logger.entering(this.getClass().getName(), "generateBuild");
+		
 		// We need to generate a non-standard HTTP response, 201.
 		Response accepted = null;
 		
@@ -127,6 +131,8 @@ public class Build {
 		//	FileUtil.deleteDirectory(new File(userAppPath));
 		///}		
 
+		logger.exiting(this.getClass().getName(), "generateBuild");
+		
 		return accepted;
 	}
 
@@ -145,6 +151,8 @@ public class Build {
 	@Produces(MediaType.APPLICATION_JSON)
 	public HashMap<String, String> retrieveBuildStatus(@Context HttpServletRequest request, @Context HttpServletResponse response, 
 		@PathParam("ref") String reference) {
+		logger.entering(this.getClass().getName(), "retrieveBuildStatus");
+		
 		HashMap<String, String> buildStatus = new HashMap<String, String>();
 
 		BuildStatusManager buildStateManager = BuildStatusManager.getInstance();
@@ -166,6 +174,7 @@ public class Build {
 			response.addHeader("Pragma", "no-cache");
 		}
 		
+		logger.exiting(this.getClass().getName(), "retrieveBuildStatus");		
 		return buildStatus;
 	}
 
@@ -181,6 +190,7 @@ public class Build {
 	@Path("{reference}")
 	@Produces("application/zip")
 	public StreamingOutput retrieveBuildResult(@Context HttpServletResponse response, @PathParam("reference") String reference) {
+		logger.entering(this.getClass().getName(), "retrieveBuildResult");
 		BuildStatusManager buildStateManager = BuildStatusManager.getInstance();
 		
 		// Retrieve current build state for reference build
@@ -193,6 +203,7 @@ public class Build {
 		// Set header to force download of content rather than display.
 		response.setHeader(HttpUtil.contentDisposition, HttpUtil.contentDispositionAttachment);
 		
+		logger.exiting(this.getClass().getName(), "retrieveBuildResult");			
 		// Stream file output back to the user
 		return FileUtil.streamingFileOutput(buildStateManager.getBuildResultPath(reference), false);
 	}

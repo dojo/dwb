@@ -45,6 +45,13 @@ import org.mozilla.javascript.ScriptableObject;
 
 @Path("/dependencies")
 public class Dependencies {
+	/** Request parameter containing the input type */
+	protected static final String typeParameter = "type";
+
+	/** Request parameter containing the input type */
+	protected static final String valueParameter = "value";
+
+	/** Response messages **/
 	/** Error text when module analysis uses missing or invalid source type. */
 	protected static final String invalidTypeErrorText = "Request contains an invalid value for the " +
 	"\"type\" parameter. Valid values for this mandatory parameter include \"web_page\", \"url\" or \"profile\"";
@@ -67,7 +74,7 @@ public class Dependencies {
 	/** Evaluator exception thrown parsing JavaScript build profile */
 	protected static final String buildProfileParseErrorText = "Error parsing JavaScript build profile. Check parameter source.";
 	
-	/** Error log message formats **/
+	/** Log messages **/
 	/** Unable to generate and save JSON encoded HTML **/
 	protected static final String errorGeneratingJsonLogMsg = "Exception caught generating HTML encoded JSON for input " +
 		"type, %1$s, and input value, %2$s.";
@@ -84,12 +91,6 @@ public class Dependencies {
 	/** Information log about modules and package discovered **/
 	protected static final String webPageParseLogMsg = "Web page analysis discovered %1$s modules and created %2$s temporary packages";
 	
-	/** Request parameter containing the input type */
-	protected static final String typeParameter = "type";
-
-	/** Request parameter containing the input type */
-	protected static final String valueParameter = "value";
-
 	/** Listener logging class */
 	protected static Logger logger = Logger.getLogger(Dependencies.class.getName());
 	

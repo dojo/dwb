@@ -102,9 +102,7 @@ public class FileUtil {
 
 			for(String modulePath : modulePaths) {
 				File moduleLocation = new File(temporaryPackageLocation, modulePath);
-				writeToFile(moduleLocation.getAbsolutePath(), packageModules.get(modulePath), null, false);
-				System.out.print("Writing module to location");
-				System.out.println(moduleLocation.getAbsolutePath());
+				writeToFile(moduleLocation.getAbsolutePath(), packageModules.get(modulePath), null, false);				
 			}
 
 			temporaryPackageId = temporaryPackageLocation.getName();

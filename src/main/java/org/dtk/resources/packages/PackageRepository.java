@@ -8,10 +8,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.commons.io.IOUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
+import org.dtk.resources.Packages;
 import org.dtk.resources.build.manager.BuildStatusManager;
 import org.dtk.resources.exceptions.ConfigurationException;
 import org.dtk.resources.exceptions.MissingResourceException;
@@ -34,11 +37,36 @@ public class PackageRepository {
 	protected String buildParametersLocation;
 	
 	/** Package details configuration file */
-	private final String DEFAULT_PACKAGE_METADATA = "%1$s/%2$s/package.json"; 
+	protected static final String DEFAULT_PACKAGE_METADATA = "%1$s/%2$s/package.json"; 
+	
+	/** Log messages */
+	/** Fatal accessing accessing package repository for package & version */
+	protected static final  String invalidMetaDataErrorMsg 
+	= "Unable to access meta-data for valid package (%1$s) & version (%2$s). Error in package repository location.";
+	
+	/** Build configuration file is not accessible **/
+	protected static final String buildConfigNotFoundErrorMsg 
+	= "Unable to access package repository build configuration @ %1$s";
+	
+	/** Fatal error parsing JSON build configuration */
+	protected static final String jsonParsingErrorMsg
+	= "Unable to parse JSON from package repository build configuration.";
+	
+	/** Fatal error mapping to Java Objects from build configuration from JSON */
+	protected static final String jsonMappingErrorMsg 
+	= "Unable to parse JSON Object from package repository build configuration.";
+	
+	/** Package repository is empty, unable to find any package meta-data. */
+	protected static final String packagesDirectoryEmptyErrorMsg 
+	= "Fatal error, unable to find any packages in the package repository location (%1$s).";
 	
 	/** Single instance of package repository */
 	private static final PackageRepository INSTANCE = new PackageRepository();
 
+	/** Packages logging class - All package error should be logged in global
+	 *  packages log rather than instance log */
+	protected static Logger logger = Logger.getLogger(Packages.class.getName());
+	
 	/**
 	 * Private constructor to enforce singleton pattern.
 	 */
@@ -103,7 +131,9 @@ public class PackageRepository {
 			String packageMetaDataPath = String.format(DEFAULT_PACKAGE_METADATA, packageName, packageVersion);
 			packageMetaData = JsonUtil.genericJSONMapper(new File(packageBaseLocation, packageMetaDataPath));
 		} catch (IOException e) {
-			throw new ConfigurationException("Unable to access meta-data for valid package version. Error in package repository location.");
+			String errorMessage = String.format(invalidMetaDataErrorMsg, packageName, packageVersion);
+			logger.log(Level.SEVERE, errorMessage);
+			throw new ConfigurationException(errorMessage);
 		}
 		
 		return packageMetaData;
@@ -120,15 +150,18 @@ public class PackageRepository {
 		
 		// Read and parse build option configuration from package repository. 
 		try {
-			buildParameters = JsonUtil.genericJSONMapper(
-				new File(buildParametersLocation));
-			} catch (JsonMappingException e) {
-				throw new ConfigurationException("Unable to parse JSON Object from package repository build configuration.");
-			} catch (JsonParseException e) {
-				throw new ConfigurationException("Unable to parse JSON from package repository build configuration.");
-			} catch (IOException e) {
-				throw new ConfigurationException("Unable to access package repository build configuration.");
-			}
+			buildParameters = JsonUtil.genericJSONMapper(new File(buildParametersLocation));
+		} catch (JsonMappingException e) {			
+			logger.log(Level.SEVERE, jsonMappingErrorMsg);
+			throw new ConfigurationException(jsonMappingErrorMsg);
+		} catch (JsonParseException e) {
+			logger.log(Level.SEVERE, jsonParsingErrorMsg);
+			throw new ConfigurationException(jsonParsingErrorMsg);
+		} catch (IOException e) {			
+			String errorMsg = String.format(buildConfigNotFoundErrorMsg, buildParametersLocation);
+			logger.log(Level.SEVERE, errorMsg);
+			throw new ConfigurationException(errorMsg);
+		}
 		
 		// Instantiate generic build options from the base level configuration file. 
 		return buildParameters; 
@@ -231,8 +264,10 @@ public class PackageRepository {
 
 		// Find all sub-directories under the root parameter path.
 		File[] packageDirectories = FileUtil.findAllDirectories(basePath);
-		if (packageDirectories == null) {
-			throw new ConfigurationException("Unable to find any sub-directories for base location: " + basePath.getAbsolutePath());
+		if (packageDirectories == null) {			
+			String errorMsg = String.format(packagesDirectoryEmptyErrorMsg, basePath.getAbsolutePath());
+			logger.log(Level.SEVERE, errorMsg);
+			throw new ConfigurationException(errorMsg);
 		}
 
 		// Loop through all directories found, adding name to global list.

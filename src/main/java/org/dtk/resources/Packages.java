@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
@@ -56,6 +58,31 @@ public class Packages {
 	/** Resource path format, "context_path/servet_path/resource_path" */
 	protected static final String resourcePathFormat = "%1$s%2$s";
 
+	/** Response messages **/
+	/** Generic failure creating temporary package from uploaded application. */
+	protected static final String fatalProcessingErrorMsg
+	= "Internal server error, unable to process new package";
+	
+	/** Unable to decompress user application error message */
+	protected static final String invalidRequestErrorMsg 
+	= "Invalid client request, unable to decompress user application.";
+	
+	/** Request missing mandatory application parameter */
+	protected static final String missingAppParameterErrorMsg
+	= "Invalid client request, missing mandatory field containing user application";
+	
+	/** Log messages **/
+	/** File path for decompressed temporary application is not valid */
+	protected static final String errorCreatingPackageLogMsg 
+	= "Fatal error decompressing user's application into a temporary package, details: %1$s";
+
+	/** Unable to construct valid URL for new temporary application */
+	protected static final String errorCreatingPackageLocationLogMsg 
+	= "Unable to construct valid URL for new temporary package, details: %1$s";
+	
+	/** Packages logging class */
+	protected static Logger logger = Logger.getLogger(Packages.class.getName());
+	
 	/**
 	 * Retrieve the global packages list and build options
 	 * available.
@@ -66,6 +93,7 @@ public class Packages {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public HashMap<String, Object> getPackages(@Context HttpServletRequest request) throws ConfigurationException {
+		logger.entering(this.getClass().getName(), "getPackages");
 		HashMap<String, Object> packageBuildOptions = null;
 
 		// Instantiate package repository and retrieve default build options
@@ -76,6 +104,7 @@ public class Packages {
 		List<String> packageNames = packageRepo.getPackages();
 		packageBuildOptions.put("packages", getResourceDetails(request, packageNames));
 
+		logger.exiting(this.getClass().getName(), "getPackages");
 		return packageBuildOptions;
 	}	
 
@@ -90,10 +119,14 @@ public class Packages {
 	@Path("{name}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, String>> getPackage(@Context HttpServletRequest request, @PathParam("name") String name) {	
-		PackageRepository packageRepo = PackageRepository.getInstance();
-		List<String> packageNames = packageRepo.getPackageVersions(name);
+		logger.entering(this.getClass().getName(), "getPackage");
 		
-		return getResourceDetails(request, packageNames);
+		PackageRepository packageRepo = PackageRepository.getInstance();
+		List<String> packageVersions = packageRepo.getPackageVersions(name);		
+		List<Map<String, String>> packageDetails = getResourceDetails(request, packageVersions);
+		
+		logger.exiting(this.getClass().getName(), "getPackage");
+		return packageDetails;
 	}
 
 	/**
@@ -107,12 +140,15 @@ public class Packages {
 	@Path("{name}/{version}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public HashMap<String, Object> getPackageDetails(@PathParam("name") String id, @PathParam("version") String version) {
+		logger.entering(this.getClass().getName(), "getPackageDetails");
+		
 		HashMap<String, Object> packageDetails = null;
 
 		// Retrieve package meta-data, HTTP 404 if invalid name/version given.
 		PackageRepository packageRepo = PackageRepository.getInstance();
 		packageDetails = packageRepo.getPackageDetails(id, version);
 
+		logger.exiting(this.getClass().getName(), "getPackageDetails");		
 		return packageDetails;
 	}
 	
@@ -130,6 +166,7 @@ public class Packages {
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.TEXT_HTML)    
 	public Response createTemporaryPackage(BufferedInMultiPart multiPartForm) {		
+		logger.entering(this.getClass().getName(), "createTemporaryPackage");
 		// Complex response needed, HTTP 201.
 		Response created = null;
 		
@@ -180,17 +217,20 @@ public class Packages {
 				// Construct HTTP 201 response, containing text body.
 				created = Response.created(new URI(packageLocation)).entity(htmlEncodedJsonPackageDetails).build();
 			} catch (FileNotFoundException e) {
-				throw new ConfigurationException("Internal server error, unable to access temporary application");
+				logger.log(Level.SEVERE, String.format(errorCreatingPackageLogMsg, e.getMessage()));
+				throw new ConfigurationException(fatalProcessingErrorMsg);
 			} catch (IOException e) {
-				throw new IncorrectParameterException("Invalid client request, unable to decompress user application.");
+				logger.log(Level.SEVERE, String.format(errorCreatingPackageLogMsg, e.getMessage()));
+				throw new IncorrectParameterException(invalidRequestErrorMsg);
 			} catch (URISyntaxException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				logger.log(Level.SEVERE, String.format(errorCreatingPackageLocationLogMsg, e.getMessage()));
+				throw new ConfigurationException(fatalProcessingErrorMsg);
 			} 
 		} else {
-			throw new IncorrectParameterException("Invalid client request, missing mandatory field containing user application");
+			throw new IncorrectParameterException(missingAppParameterErrorMsg);
 		}
 
+		logger.exiting(this.getClass().getName(), "createTemporaryPackage");	
 		return created;
 	}
 
