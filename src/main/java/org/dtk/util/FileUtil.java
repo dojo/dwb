@@ -257,8 +257,7 @@ public class FileUtil {
 		try {
 			zipEntry = zis.getNextEntry();
 
-			while (zipEntry != null) {
-				System.out.println("Unzipping " + zipEntry.getName());		        
+			while (zipEntry != null) {						        
 				if (zipEntry.isDirectory()) {
 					File dirFile = new File(baseDirectory, zipEntry.getName());	
 					dirFile.mkdir();

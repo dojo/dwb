@@ -42,39 +42,17 @@ public class ScriptParser {
 		this.scriptSource = scriptSource;
 	}
 	
-	// TODO: Fill this out
-	private class CustomErrorReporter implements ErrorReporter {
-
-		@Override
-		public void error(String message, String sourceName, int line, String lineSource, int lineOffset) {
-			System.out.println("ERROR: " + message);
-		}
-
-		@Override
-		public EvaluatorException runtimeError(String message, String sourceName, int line, String lineSource, int lineOffset) {
-			System.out.println("Evaluator Exception: " + message);
-			return new EvaluatorException(message);
-		}
-
-		@Override
-		public void warning(String message, String sourceName, int line, String lineSource, int lineOffset) {
-			System.out.println("WARNING: " + message);
-		}
-		
-	}
 	
 	protected void parse() throws EvaluatorException {
 		// Parse script source 
 		CompilerEnvirons ce = new CompilerEnvirons(); 
-		ce.setGenerateDebugInfo(true);
+		ScriptParserErrorReporter errorReporter = new ScriptParserErrorReporter();
 		
+		ce.setGenerateDebugInfo(true);		
 		ce.initFromContext(ContextFactory.getGlobal().enterContext());
+		ce.setErrorReporter(errorReporter);
 		
-		CustomErrorReporter cer = new CustomErrorReporter();
-		
-		ce.setErrorReporter(cer);
-		
-		Parser p = new Parser(ce, cer); 
+		Parser p = new Parser(ce, errorReporter); 
 		ScriptOrFnNode ast = p.parse(this.scriptSource, "script", 0);
 		
 		recursiveParse(ast);
