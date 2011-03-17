@@ -84,10 +84,10 @@ function i18nUtil_setup (/*Object*/kwArgs){
         // Replace the load function to transform all source input before 
         // eval'ing 
         dojo._loadUri = function (uri, cb) {
-            buildUtil._load(uri);
+            var content = buildUtil._load(uri);
 
             if (cb) {
-                cb();
+                cb(content);
             }
             return true;
         };
@@ -143,6 +143,7 @@ function flattenLayerFileBundles (/*String*/fileName, /*String*/fileContents, /*
 		var djBundlesByLocale = {};
 		var jsLocale, entry, bundle;
 		
+
 		for (var i = 0; i < djLoadedBundles.length; i++){
 			entry = djLoadedBundles[i];
 			bundle = entry.module.nls[entry.bundlename];
@@ -179,7 +180,7 @@ function flattenLayerFileBundles (/*String*/fileName, /*String*/fileContents, /*
 			}
 			
 			resultFileArchive[resourceFilePath] = resourceContents;
-				
+
 			localeList.push(locale);
 		}
 		
