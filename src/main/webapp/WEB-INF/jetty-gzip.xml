@@ -1,10 +1,15 @@
 <web-app xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5"> 
+    <init-param>
+      <param-name>cacheControl</param-name>
+      <param-value>max-age=3600,public</param-value>
+    </init-param>
+    
     <filter>
         <filter-name>GzipFilter</filter-name>
         <filter-class>org.eclipse.jetty.servlets.GzipFilter</filter-class>
         <init-param>
             <param-name>mimeTypes</param-name>
-            <param-value>text/html,text/plain,text/xml,application/xhtml+xml,text/css,application/javascript,image/svg+xml</param-value>
+            <param-value>text/html,text/plain,text/xml,application/xhtml+xml,text/css,application/javascript,application/x-javascript,application/json</param-value>
         </init-param>
     </filter>
     <filter-mapping>
