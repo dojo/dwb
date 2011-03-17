@@ -229,9 +229,17 @@ dojo.declare("dwb.ui.ModuleTab", [dijit.layout.ContentPane], {
 					try {
 						modulesStore.newItem(module);
 					} catch (e) {
-						console.warn(e);
+                        // .... left empty
 					}
 				}));
+
+                // Timing issue(?) when adding small collections of modules to 
+                // an existing tab means that they aren't always shown to the user 
+                // even though the store has the items added. Manually force another
+                // rendering of the grid to fix this. 
+                if (this.moduleGrid) {
+                    this.moduleGrid.render();
+                }
 				modulesStore.save();						
 			}));
 		}

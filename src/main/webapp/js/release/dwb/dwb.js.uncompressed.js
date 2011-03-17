@@ -6970,9 +6970,17 @@ dojo.declare("dwb.ui.ModuleTab", [dijit.layout.ContentPane], {
 					try {
 						modulesStore.newItem(module);
 					} catch (e) {
-						console.warn(e);
+                        // .... left empty
 					}
 				}));
+
+                // Timing issue(?) when adding small collections of modules to 
+                // an existing tab means that they aren't always shown to the user 
+                // even though the store has the items added. Manually force another
+                // rendering of the grid to fix this. 
+                if (this.moduleGrid) {
+                    this.moduleGrid.render();
+                }
 				modulesStore.save();						
 			}));
 		}
@@ -44491,6 +44499,13 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 			// Extract first module component from name
 			var baseModule = name.split(".")[0];
+
+            // Trim description, lines over ~300 chars cause issues
+            // with grid height being larger than background image
+            // used for styling.
+            if (desc.length > 340) {
+                desc = desc.substring(0, 300).trim()  + "...";
+            }
 
 			modulesInfo.push({"name":name,"desc": desc, "baseModule": baseModule});			
 		});

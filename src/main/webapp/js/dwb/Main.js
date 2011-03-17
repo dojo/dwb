@@ -446,6 +446,13 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			// Extract first module component from name
 			var baseModule = name.split(".")[0];
 
+            // Trim description, lines over ~300 chars cause issues
+            // with grid height being larger than background image
+            // used for styling.
+            if (desc.length > 340) {
+                desc = desc.substring(0, 300).trim()  + "...";
+            }
+
 			modulesInfo.push({"name":name,"desc": desc, "baseModule": baseModule});			
 		});
 
