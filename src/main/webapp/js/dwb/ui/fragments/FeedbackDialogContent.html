@@ -3,15 +3,15 @@
         Use the form below to submit your feedback about the Dojo Web Builder. We really appreciate all comments, feature requests and bug notifications!
         <form dojoType="dijit.form.Form" class="feedbackForm">
             <div>
-            <div style="float:left;">
-            <label>Name</label> 
-            <input dojoType="dijit.form.ValidationTextBox" name="name" type="text"></input>
+                <div class="name">
+                    <label>Name</label> 
+                    <input dojoType="dijit.form.ValidationTextBox" name="name" type="text"></input>
+                </div>
+                <div class="email">
+                    <label>Email Address</label>
+                    <input dojoType="dijit.form.TextBox" name="email" type="text"></input>
+                </div>
             </div>
-            <div style="float: right;">
-            <label>Email Address</label>
-            <input dojoType="dijit.form.TextBox" name="email" type="text"></input>
-        </div>
-    </div>
             <label class="categoryLabel">Feedback Category</label>
             <select name="category" dojoType="dijit.form.Select" style="width: 200px;">
                 <option value="comment">

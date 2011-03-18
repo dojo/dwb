@@ -4,7 +4,7 @@
 			<div dojoAttachPoint="buildOptionsContent" dojoAttachEvent="onPackageSelect:_newPackageSelected" class="buildConfigPanel Modules simpleMode SearchOptionsOpen ModuleLayersOptionsOpen" dojoType="dwb.ui.BuildConfigPanel"></div>	    	
 		</div>					    	
 		<div dojoAttachPoint="center" dojoType="dijit.layout.ContentPane" region="center">		        
-			 <div dojoAttachPoint="tabContainer" dojoAttachEvent="selectChild:_tabChildSelect" dojoType="dijit.layout.TabContainer" style="width: 90%; height: 95%;">
+			 <div dojoAttachPoint="tabContainer" dojoAttachEvent="selectChild:_tabChildSelect" dojoType="dijit.layout.TabContainer">
 				<div class="modulesPanel" dojoAttachPoint="modulesPane" dojoType="dijit.layout.ContentPane" title="Modules" selected="true">
 					<div class="failureMessage">
 						<img src="img/cross_48.png">	
@@ -34,7 +34,7 @@
 			    <div dojoAttachPoint="analysePane" dojoType="dwb.ui.AutoAnalysisModuleTab" title="Auto-Analyse">  
 		        </div>			
 			    <div dojoAttachPoint="layersPane" dojoType="dijit.layout.ContentPane" title="Layers" class="advancedMode">
-					<div dojoAttachPoint="layersTabContainer" dojoAttachEvent="selectChild:_layersTabChildSelect" dojoType="dijit.layout.TabContainer" style="width: 100%; height: 100%;" tabPosition="top" tabStrip="true">	
+					<div dojoAttachPoint="layersTabContainer" dojoAttachEvent="selectChild:_layersTabChildSelect" dojoType="dijit.layout.TabContainer" tabPosition="top" tabStrip="true">	
 			        	<div dojoAttachPoint="baseLayerPane" title="dojo.js" closable="false" labelChange="false" dojoType="dwb.ui.ModuleTab" class="baseModuleLayerPane">			        	
 			        	</div>			        			            		
 					</div>
@@ -44,7 +44,7 @@
 			</div>
 		</div>
 	</div> 
-	<div dojoAttachPoint="buildProgress" dojoType="dijit.Dialog" title="Building Dojo Package..." class="buildProgressDialog" style="width: 450px">
+	<div dojoAttachPoint="buildProgress" dojoType="dijit.Dialog" title="Building Dojo Package..." class="buildProgressDialog">
 		<div class="successMessage endMessages">
 			<img src="img/accepted_48.png">	
 			<div>
@@ -60,14 +60,16 @@
 			</div>
 		</div>
 		<div class="buildProgressMessage">
-			<div dojoType="dijit.ProgressBar" style="width: 434px" indeterminate="true"></div>
+			<div dojoType="dijit.ProgressBar" indeterminate="true"></div>
 			<div class="buildProgressContainer">
-				<table width="100%" height="100%">
-					<tr height="18px"><td style="font-family: courier new; overflow:hidden;white-space:nowrap;"></td></tr>
-					<tr height="18px"><td style="font-family: courier new; overflow:hidden;white-space:nowrap;"></td></tr>
-					<tr height="18px"><td style="font-family: courier new; overflow:hidden;white-space:nowrap;"></td></tr>
-					<tr height="18px"><td style="font-family: courier new; overflow:hidden;white-space:nowrap;"></td></tr>
-					<tr height="18px"><td style="font-family: courier new; overflow:hidden;white-space:nowrap;"></td></tr>
+				<table>
+                    <tbody>
+		    			<tr><td></td></tr>
+	    				<tr><td></td></tr>
+    					<tr><td></td></tr>
+					    <tr><td></td></tr>
+					    <tr><td></td></tr>
+                    </tbody>
 				</table>  
 			</div>
 		</div>

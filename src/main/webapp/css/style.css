@@ -415,6 +415,22 @@ body.claro {
 	height: 111px;
 }
 
+.analyse_container > .analyse_form_container { 
+    padding-top: 50px;
+}
+
+/* Analyse button, normal */
+.analyse_container > .analyse_form_container .build { 
+    padding-top: 40px;
+}
+
+/* Analyse button, larger text field parent so less padding */
+.analyse_container > .analyse_form_container .build_small { 
+    padding-top: 38px;
+}
+
+.analyse_container > .analyse_form_container 
+
 /* Text shown on base module layer, when empty */
 .analyse_container > .baseLayerHintText {
 	font-size: 0.75em;
@@ -429,7 +445,6 @@ body.claro {
 .analyse_container > .baseLayerHintText > p:first-child {
 	margin-top: 70px;
 }
-
 
 /* Styling for the failure message on the analyse container */
 .analyse_container.failureMessage {
@@ -538,6 +553,26 @@ body.claro {
 	margin-bottom: 0px;
 }
 
+.buildProgressDialog .dijitProgressBar { 
+    width: 434px;
+}
+
+/* Formatting for build log lines */
+.buildProgressDialog .buildProgressMessage table {
+    width: 100%;
+    height: 100%;
+}  
+
+.buildProgressDialog .buildProgressMessage table tr {
+    height: 18px;
+}
+
+.buildProgressDialog .buildProgressMessage table td {
+    font-family: "Courier New";
+    overflow: hidden;
+    white-space: nowrap;
+}
+
 /* Feedback section at the bottom of the page */
 #feedback {
     margin: 0 auto;
@@ -580,6 +615,14 @@ body.claro {
     display: block;
 }
 
+.feedbackForm .name {
+    float: left;
+}
+
+.feedbackForm .email {
+    float: right;
+}
+
 .feedbackForm > .categoryLabel {
     clear: both;
 }
@@ -598,6 +641,11 @@ body.claro {
 .feedbackForm .submit {
     padding-top: 10px;
     text-align: center;
+}
+
+.closeIcon {
+    margin: 0 auto; 
+    width: 28px;
 }
 
 /* Used to cover screen while application is loading. */

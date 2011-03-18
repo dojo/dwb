@@ -1,12 +1,11 @@
 <div class="analyse_container">
 	<div>Provide the address for an existing Web Application to analyse Dojo modules.</div>
-	<div style="padding-top: 50px">
+	<div class="analyse_form_container">
 		<form action="./api/dependencies" method="post" enctype="multipart/form-data">
 			<input class="remoteWebAddr" name="value" dojoType="dwb.ui.ValidationTextBox" required="true" placeholder="Enter the address here..." type="text"></input>
 			<input name="type" type="hidden" value="URL"></input>
-			<div class="build" style="padding-top: 38px">
+			<div class="build build_small">
 				<button dojoType="dojox.form.BusyButton" busyLabel="Analysing..." label="Analyse" timeout="100000">
-					<span style="font-size: 1em"></span>
 				</button>
 			</div>
 		</form>
