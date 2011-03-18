@@ -884,12 +884,16 @@ buildUtil.addPrefixesFromDependencies = function(/*Array*/prefixStore, /*Array*/
 	}
 }
 
-buildUtil.loadDependencyList = function(/*Object*/profile, /*Object?*/kwArgs, /*String?*/buildscriptsPath){
+buildUtil.loadDependencyList = function(/*Object*/profile, /*Object?*/kwArgs, /*String?*/buildscriptsPath, packageRef){
 	//summary: Traverses the dependencies in the profile object.
 	//profile:
 	//		The profile object that is a result of a buildUtil.evalProfile() call.
+	writeLog(packageRef, "Loading dependency list for this profile...");
+
 	var depResult = buildUtil.getDependencyList(profile.dependencies, profile.hostenvType, kwArgs, buildscriptsPath);
 	depResult.dependencies = profile.dependencies;
+
+    writeLogLine(packageRef, "done");
 	
 	return depResult;
 }
@@ -1033,7 +1037,7 @@ buildUtil.changeVersion = function(/*String*/version, /*String*/fileContents){
 	return fileContents; //String
 }
 
-buildUtil.makeDojoJs = function(/*Object*/dependencyResult, /*String*/version, /*Object?*/kwArgs){
+buildUtil.makeDojoJs = function(/*Object*/dependencyResult, /*String*/version, /*Object?*/kwArgs, packageRef){
 	//summary: Makes the uncompressed contents for dojo.js using the object
 	//returned from buildUtil.getDependencyList()
 
@@ -1042,7 +1046,9 @@ buildUtil.makeDojoJs = function(/*Object*/dependencyResult, /*String*/version, /
 	//Cycle through the layers to create the content for each layer.
 	for(var i = 0; i< dependencyResult.length; i++){
 		var layerResult = dependencyResult[i];
+		writeLog(packageRef, "Importing layer contents ("+ layerResult.layerName+ ")... ");
 		layerResult.contents = buildUtil.createLayerContents(layerResult.layerName, layerResult.resourceName, layerResult.depList, layerResult.provideList, version, kwArgs);
+		writeLogLine(packageRef, "done");
 	}
 
 	//Object with properties:

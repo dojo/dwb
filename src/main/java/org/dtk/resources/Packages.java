@@ -148,6 +148,9 @@ public class Packages {
 		PackageRepository packageRepo = PackageRepository.getInstance();
 		packageDetails = packageRepo.getPackageDetails(id, version);
 
+		// Remove package location from response, not relevant for the user. 
+		packageDetails.remove("location");
+		
 		logger.exiting(this.getClass().getName(), "getPackageDetails");		
 		return packageDetails;
 	}

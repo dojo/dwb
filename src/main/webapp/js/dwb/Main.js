@@ -48,6 +48,10 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		"cssOptimise": null
 	},
 
+    // Deferred object representing current in-flight 
+    // build result polling XHR request. 
+    _inflight: null,
+
 	constructor : function () {
 		// Fire off module loading service call straight away
 		var d = dojo.xhrGet({
@@ -225,7 +229,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			var url = dwb.util.Config.get("buildApi");
 
 			// Push build request over XHR. 
-			var d = dojo.xhrPost({
+			this._inflight = dojo.xhrPost({
 				url: url,
 				handleAs: "json",
 				headers: {"Content-Type":"application/json"},
@@ -240,13 +244,13 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			
 			// Once complete, cancel build button animation 
 			// and forward user to response location
-			d.then(dojo.hitch(this, function (response) {
-				var d = dojo.xhrGet({
+			this._inflight.then(dojo.hitch(this, function (response) {
+				this._inflight = dojo.xhrGet({
 					url: response.buildStatusLink,
 					handleAs: "json"
 				});
 
-				d.then(dojo.hitch(this, "buildStatusPoller", response.buildStatusLink), errorHandling);
+				this._inflight.then(dojo.hitch(this, "buildStatusPoller", response.buildStatusLink), errorHandling);
 			}), errorHandling);
 
 			// Clear any previous log lines and show progress indicator
@@ -399,14 +403,18 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			// Otherwise, keep polling for log changes.
 		} else if (response.state === "BUILDING" || response.state === "NOT_STARTED") {
 			setTimeout(dojo.hitch(this, function () {
-				var d = dojo.xhrGet({
-					url: statusUrl,
-					handleAs: "json"
-				});
+                // Check user hasn't tried to cancel build 
+                // during the time we were asleep....
+                if (this._inflight) {
+				    this._inflight = dojo.xhrGet({
+			    		url: statusUrl,
+		    			handleAs: "json"
+	    			});
 
-				d.then(dojo.hitch(this, "buildStatusPoller", statusUrl), function () {
-					this._buildProgressFinished("failure")
-				});	
+    				this._inflight.then(dojo.hitch(this, "buildStatusPoller", statusUrl), dojo.hitch(this, function () {
+    				    this._buildProgressFinished("failure");
+				    }));	
+                }
 			}), 500);
 		// An error occurred, indicate this.
 		} else {
@@ -415,24 +423,43 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	},
 
 	_buildProgressFinished : function(status, callback) {
-		// Show associated status message
-		dojo.addClass(this.buildProgress.domNode, status);
+        // If user has signalled to end the build before finishing, 
+        // inflight XHR will haven been manually cleared. Don't need
+        // to take any further action.
+        if (this._inflight) {
+	    	// Show associated status message
+		    dojo.addClass(this.buildProgress.domNode, status);
 		
-		// After brief period, hide the dialog and remove message
-		setTimeout(dojo.hitch(this, function () {
-			this.buildProgress.hide();
-			dojo.removeClass(this.buildProgress.domNode, status);
+    		// After brief period, hide the dialog and remove message
+	    	setTimeout(dojo.hitch(this, function () {
+		    	this.buildProgress.hide();
+			    dojo.removeClass(this.buildProgress.domNode, status);
 			
-			// If the user has asked for notification, execute callback.
-			if (callback) {
-				callback();
-			}
-		}), 500);
+			    // If the user has asked for notification, execute callback.
+    			if (callback) {
+    				callback();
+	    		}
+		    }), 500);
 		
-		// Inform all listeners we have finished building.
-		dojo.publish("dwb/build/finished");
+            // No more in-flight build requests.
+            this._inflight = null;
+		    
+            // Inform all listeners we have finished building.
+    		dojo.publish("dwb/build/finished");    
+        }
 	},
 	
+    // Prematurely finish polling of the build status
+    // over XHR. 
+    cancelBuildPolling : function () {
+        if (this._inflight !== null) {
+            this._inflight.cancel();
+            this._inflight = null;
+            // Inform all listeners we have finished building.
+    		dojo.publish("dwb/build/finished");    
+        }
+    },
+
 	// Packages modules have been retrieved and can be rendered 
 	// using the module grid. 
 	_modulesAvailable : function(modules) {		
@@ -643,39 +670,55 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	},
 	
 	_handlePackagesResponse: function (response) {
-		// TODO: Just use first Dojo package until 
-		// we can handle switching versions.
-		var packageObj = response.packages[0];
+		var packages = response.packages, pkge = null;
 
-		var d = dojo.xhrGet({
-			url: packageObj.link,
-			handleAs: "json"
-		});
+        // Run through entire package list, breaking when we find
+        // the "dojo" package.
+        while(packages.length > 0 && 
+            (pkge = packages.pop()).name !== "dojo");
 
-		
-		d.then(dojo.hitch(this, "_handlePackageVersionsResponse"), dojo.hitch(this, "_moduleLoadingError"));
+        // Unable to find base Dojo package, something has gone 
+        // wrong in the backend service. 
+        if (pkge === null) {
+            this._moduleLoadingError();
+        }
+
+        // Send off request for all package versions, we'll select the 
+        // newest version
+        var versionReq = {url: pkge.link, handleAs: "json"};
+
+        // Retrieve version information for the dojo package
+		dojo.xhrGet(versionReq).then(dojo.hitch(this, "_handlePackageVersionsResponse"), 
+            dojo.hitch(this, "_moduleLoadingError"));
 
 		// Store result to use when building
-		this.baseProfile["package"] = packageObj.name;
+		this.baseProfile["package"] = pkge.name;
 
 		this.buildOptionsContent.addBuildParameters(response);
 
-		// TODO: We shouldn't do this....
-		this.baseProfile["cdn"] = response.cdn[0].value;
-		this.baseProfile["optimise"] = response.optimise[0].value;
-		this.baseProfile["platforms"] = response.platforms[0].value;
-		this.baseProfile["themes"] = response.themes[0].value;
-		this.baseProfile["cssOptimise"] = response.cssOptimise[0].value;
+        // Pick default build values for simple mode build by selecting 
+        // first option from service response. Would be nice to have service
+        // select the default and not include these.
+        dojo.forEach(["cdn", "optimise", "platforms", "themes", "cssOptimise"], dojo.hitch(this, function (key) {
+            var options = response[key];
+            if (options && options.length > 0) {
+                this.baseProfile[key] = options[0].value;
+            }
+        }));
 	},
 
 	_handlePackageVersionsResponse: function (packageVersions) {
-		// TODO: Just use first Dojo package version until 
-		// we can handle switching versions.
-		var packageVersion = packageVersions[0];
+        var newest = packageVersions.sort(function(a,b) {
+            return (a.name > b.name) ? 1 : (a.name < b.name) ? -1 : 0;
+        }).pop();
 
-		this._newPackageSelected(packageVersion.link);
+        // We should always have module version information.
+        if (!newest) {
+            this._moduleLoadingError();
+        }
 
-		this.baseProfile.version = packageVersion.name;
+		this._newPackageSelected(newest.link);
+		this.baseProfile.version = newest.name;
 	},
 
 	checkForEnter: function(keyEvent) {

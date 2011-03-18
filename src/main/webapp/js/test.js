@@ -22,13 +22,8 @@ var theme = "none";
 
 var layers = [{
     "name":"dojo.js", 
-    "dependencies": []
-}, {
-  "name": "editor.js",
-  "dependencies": ["dijit.Editor", "dijit.Dialog"]
+    "dependencies": ["dijit.Dialog"]
 }];
-
-var layers = [];
 
 var optimizeType = "shrinksafe";
 var cssOptimise = "none";

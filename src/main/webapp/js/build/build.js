@@ -13,45 +13,6 @@ function writeLog(reference, logLine) {
 	logger.addNewBuildLog(reference, logLine);
 }
 
-
-//function load(/*String*/fileName){
-	//summary: opens the file at fileName and evals the contents as JavaScript.
-	
-	//Read the file
-//	var fileContents = readFile(fileName);
-
-	//Eval the contents.
-//	var Context = Packages.org.mozilla.javascript.Context;
-//	var context = Context.enter();
-//	try{
-//		return context.evaluateString(this, fileContents, fileName, 1, null);
-//	}finally{
-//		Context.exit();
-//	}
-//}
-
-//function readFile(/*String*/path, /*String?*/encoding){
-/*    return fileUtil.readFile(path, encoding);
-	//summary: reads a file and returns a string
-	encoding = encoding || "utf-8";
-	var file = new java.io.File(path);
-	var lineSeparator = "\n";
-	var input = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(file), encoding));
-	try {
-		var stringBuffer = new java.lang.StringBuffer();
-		var line = "";
-		while((line = input.readLine()) !== null){
-			stringBuffer.append(line);
-			stringBuffer.append(lineSeparator);
-		}
-		//Make sure we return a JavaScript string and not a Java string.
-		return new String(stringBuffer.toString()); //String
-	} finally {
-		input.close();
-	}
-}*/
-
-
 /* Our build process has modified multiple parts of the existing Dojo build scripts.
  * All modified functions are included below and used instead of their original versions */
 
@@ -224,10 +185,12 @@ function optimizeJs(/*String fileName*/fileName, /*String*/fileContents, /*Strin
 			writeLog(packageRef, "Running Shrinksafe compression on the layer contents...");
 			//Apply compression using custom compression call in Dojo-modified rhino.
 			fileContents = new String(Packages.org.dojotoolkit.shrinksafe.Compressor.compressScript(fileContents, 0, 1, stripConsole));
-			if(optimizeType.indexOf(".keepLines") == -1){
-				fileContents = fileContents.replace(/[\r\n]/g, "");
-			}
 			writeLogLine(packageRef, " done");
+			if(optimizeType.indexOf(".keepLines") == -1){
+			    writeLog(packageRef, "Stripping line breaks from optimised build output...");
+				fileContents = fileContents.replace(/[\r\n]/g, "");
+			    writeLogLine(packageRef, " done");
+			}
 		}else if (optimizeType.indexOf("closure") == 0) {
 			writeLog(packageRef, "Running Closure compression on the layer contents...");
 			var jscomp = com.google.javascript.jscomp;
@@ -715,16 +678,16 @@ build = {
 		//and subfunctions would take kwArgs directly.
 		dependencies.loader = kwArgs.loader;
 		
-		writeLog(packageRef, "Creating layer contents from profile... ");
+		writeLogLine(packageRef, "Creating layer contents from profile... ");
 		
 		//Build the layer contents.
-		var depResult = buildUtil.makeDojoJs(buildUtil.loadDependencyList(kwArgs.profileProperties, null, buildscriptDir), kwArgs.version, kwArgs);
+		var depResult = buildUtil.makeDojoJs(buildUtil.loadDependencyList(kwArgs.profileProperties, null, buildscriptDir, packageRef), kwArgs.version, kwArgs, packageRef);
 		var compressedLayers = {};
 		
 		// Check for i18n resource in layer depencies, if so we'll need to include the 
 		// files.
 		var i18n = false;
-		writeLogLine(packageRef, "done");
+		writeLogLine(packageRef, "Finished creating layers contents.");
 		
 		for (var i = 0; i < depResult.length; i++) {			
 			//Grab the content from the "dojo.xd.js" layer.

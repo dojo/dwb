@@ -44,7 +44,7 @@
 			</div>
 		</div>
 	</div> 
-	<div dojoAttachPoint="buildProgress" dojoType="dijit.Dialog" title="Building Dojo Package..." class="buildProgressDialog">
+	<div dojoAttachPoint="buildProgress" dojoAttachEvent="onHide:cancelBuildPolling" dojoType="dijit.Dialog" title="Building Dojo Package..." class="buildProgressDialog">
 		<div class="successMessage endMessages">
 			<img src="img/accepted_48.png">	
 			<div>

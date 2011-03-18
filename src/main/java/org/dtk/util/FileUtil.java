@@ -107,8 +107,6 @@ public class FileUtil {
 
 			temporaryPackageId = temporaryPackageLocation.getName();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 
 		return temporaryPackageId;
@@ -190,7 +188,6 @@ public class FileUtil {
 			childDirectories = parentDirectory.listFiles(new FileFilter() {				
 				@Override
 				public boolean accept(File pathname) {
-					// TODO Auto-generated method stub
 					return pathname.isDirectory();
 				}
 			});			
@@ -275,7 +272,6 @@ public class FileUtil {
 			}
 			zis.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			success = false;
 		} 		
