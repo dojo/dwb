@@ -631,9 +631,15 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		
 		// Disable all action buttons, radio buttons, select boxes. Don't want
 		// user triggered that interact with the module list.
-		dojo.query(".dijitButton, .dijitRadio, .dijitCheckBox, .dijitSelect, .dijitComboBox").forEach(function (node) {
+		dojo.query(".dijitButton, .dijitRadio, .dijitCheckBox, .dijitSelect, .dijitComboBox, .dijitDropDownButton").forEach(function (node) {
 			dijit.byNode(node).set("disabled", true)
 		});
+
+        // No easy way to disable tab list, override the onclick handler
+        // to swallow the event. 
+        this.tabContainer.tablist.onButtonClick = function () {
+            return false;
+        };
 	},
 	
 	_handlePackagesResponse: function (response) {
