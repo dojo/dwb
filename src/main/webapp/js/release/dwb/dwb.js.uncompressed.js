@@ -44441,7 +44441,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 		dojo.query("td", this.buildProgress.domNode).forEach(function (elem) {
 			var line = logLines.pop();
-			elem.innerHTML = (line === undefined) ? "" : line; 
+			elem.innerHTML = (typeof line == "undefined") ? "" : line; 
 		});
 	},
 
@@ -44728,12 +44728,11 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
         // Run through entire package list, breaking when we find
         // the "dojo" package.
-        while(packages.length > 0 && 
-            (pkge = packages.pop()).name !== "dojo");
+        while((pkge = packages.pop()) && pkge.name !== "dojo");
 
         // Unable to find base Dojo package, something has gone 
         // wrong in the backend service. 
-        if (pkge === null) {
+        if (typeof pkge == "undefined") {
             this._moduleLoadingError();
         }
 
