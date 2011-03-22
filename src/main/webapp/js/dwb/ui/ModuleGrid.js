@@ -44,7 +44,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 			// manually toggle row selection if found.
 			idx = items.indexOf(item);
 			if (idx !== -1) {
-				this.rowSelectCell.toggleRow(idx, true)
+				this.rowSelectCell.toggleRow(idx, true);
 			} else {
 				remainingSelection.push(item);
 			}
@@ -57,15 +57,16 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 	},
 	
 	_onFetchComplete : function () {
-		this.inherited(arguments);
+        this.inherited(arguments);
 		
-		// Run a secondary fetch to return all results that match the new query.
-		// We need a reference to the entire result set when selecting/deselecting
-		// by item.
-		this.store.fetch({
-			query: this.query,
-			onComplete: dojo.hitch(this, "_onFetchAllComplete")
-		});
+        // Run a secondary fetch to return all results that match the new query.
+        // We need a reference to the entire result set when selecting/deselecting
+        // by item.
+        this.store.fetch({
+            query: this.query,
+            queryOptions: this.queryOptions,
+            onComplete: dojo.hitch(this, "_onFetchAllComplete")
+        });
 	},
 	
 	// When module results are filtered, we must maintain reference to selected items
