@@ -1,8 +1,8 @@
 {
   "optimise":[
     {"label":"Standard JS minification", "value":"shrinksafe"},
-    {"label":"Standard JS minification, but keep lines", "value":"shrinksafe.keepLines"}, 
-    {"label":"JavaScript minification plus re-factoring", "value":"closure"},
+    {"label":"Standard JS minification, keep newlines", "value":"shrinksafe.keepLines"}, 
+    {"label":"Aggressive JS minification", "value":"closure"},
     {"label":"Just remove comments", "value":"comments"},
     {"label":"Don't minimise JavaScript", "value":"none"}
   ],
@@ -25,7 +25,7 @@
   ],
   "cssOptimise" : [
     {"label": "Standard CSS minification", "value":"comments"},
-    {"label": "Standard CSS minification, but keep lines", "value":"comments.keepLines"},
+    {"label": "Standard CSS minification, keep newlines", "value":"comments.keepLines"},
     {"label": "Don't optimise CSS files", "value": "none"}
   ]
 }
