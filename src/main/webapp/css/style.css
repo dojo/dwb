@@ -429,8 +429,6 @@ body.claro {
     padding-top: 38px;
 }
 
-.analyse_container > .analyse_form_container 
-
 /* Text shown on base module layer, when empty */
 .analyse_container > .baseLayerHintText {
 	font-size: 0.75em;
