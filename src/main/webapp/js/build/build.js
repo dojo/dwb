@@ -441,12 +441,18 @@ function findDijitThemeFiles(/*String filename*/ dojoSrcDir, /*String dirName*/ 
 	    dojoSrcDir + "dijit/themes/dijit_rtl.css"
 	];
 	
+    // Find all theme files apart from LESS files. 
+    var filters = {
+        include: /./,
+        exclude: /\.less$/
+    };
+
 	// Find all theme related files, i.e. any files under the dijit/themename directory. 
 	var themeDir = dojoSrcDir + "dijit/themes/" + dijitThemeName;
-	fileList = fileList.concat(fileUtil.getFilteredFileList(themeDir, /./, true));
+	fileList = fileList.concat(fileUtil.getFilteredFileList(themeDir, filters, true));
 
 	// Add all theme icons
-	fileList = fileList.concat(fileUtil.getFilteredFileList(dojoSrcDir + "dijit/icons", /./, true));
+	fileList = fileList.concat(fileUtil.getFilteredFileList(dojoSrcDir + "dijit/icons", filters, true));
 	
 	// Convert to relative paths and read contents
 	for (var i = 0, file, trimmed; i < fileList.length; i++) {
