@@ -132,9 +132,6 @@ public class BuildTest {
 	}
 
 	/**
-	 * FIXME: This test will fail until we have abstracted build process
-	 * into an actual state manager.
-	 *  
 	 * Test retrieval of the status for an invalid build request
 	 * identifier. We should have HTTP error code 404 returned. 
 	 * 

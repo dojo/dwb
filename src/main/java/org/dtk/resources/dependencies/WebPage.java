@@ -120,10 +120,20 @@ public class WebPage {
 		return moduleContents;
 	}
 
+	/**
+	 * Return the absolute URL path for a custom Dojo module, given the module
+	 * name. Trace through the defined module paths, looking for matches, otherwise
+	 * we assume module is sibling to dojo's parent directory.
+	 * 
+	 * TODO: Refactor this method, it's grown too big.
+	 * 
+	 * @param moduleName - Full dojo package name 
+	 * @return Absolute URL for module source
+	 */
 	protected String customModuleLocation(String moduleName) {
-		// Custom module locations are relevant to base Dojo path. Find parent
+		// Custom module locations are relative to parent of base Dojo path. Find parent
 		// location of core DTK modules.
-		String moduleLocation = this.modulePaths.get("dojo");
+		String moduleLocation = null;
 
 		// Search through defined paths for match, specific to generic. 
 		String[] moduleSearchPaths = moduleName.split("\\.");
@@ -142,7 +152,7 @@ public class WebPage {
 				if (modulePath.startsWith("./") || modulePath.startsWith("/") || modulePath.startsWith("http://")) {
 					moduleLocation = modulePath;
 				} else {
-					moduleLocation += modulePath;
+					moduleLocation = this.modulePaths.get("dojo") + modulePath + "/";
 				}
 				break;
 			}
@@ -153,11 +163,17 @@ public class WebPage {
 			moduleSearchPaths = (String[]) ArrayUtils.remove(moduleSearchPaths, moduleSearchPaths.length - 1);
 		}
 
+		// If user hasn't explicitly registered any matching path for this module, assume it starts
+		// in a sibling directory to the dojo directory.
+		if (moduleLocation == null) {
+			moduleLocation = this.modulePaths.get("dojo") + "../";
+		}
+		
 		while(!nonMatchingModulePaths.isEmpty()) {
 			String path = nonMatchingModulePaths.pop();
 			moduleLocation += "/" + path;
 		}
-
+		
 		// Append JavaScript file extension to module path.
 		moduleLocation += ".js";
 
@@ -255,11 +271,22 @@ public class WebPage {
 		return isDojoScript;
 	}
 
+	/**
+	 * Extract complete script contents and search through
+ 	 * for any dojo.require calls. 
+ 	 * 
+	 * @param script - <script> tag element 
+	 * @throws ParseException - Error parsing this script 
+	 * @throws IOException - Error retrieving this element
+	 */
 	protected void parsePostDojoScript(Element script) throws ParseException, IOException {
-		// Extract complete script contents and search through
-		// for any dojo.require calls
 		String scriptContents = retrieveScriptContents(script);
-		analyseModuleDependencies(scriptContents);
+		
+		// If there was a problem retrieving this script source, don't try
+		// to parse result.
+		if (scriptContents != null) {
+			analyseModuleDependencies(scriptContents);
+		}
 	}
 
 	protected String retrieveScriptContents(Element script) throws ParseException, IOException {

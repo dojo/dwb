@@ -51,16 +51,16 @@ public class DependenciesTest {
 	final protected String baseResourcePath = "/api/dependencies/";
 	
 	/** Sample web address with Dojo application */
-	final protected String validWebAddress = "http://jthomas.vm.bytemark.co.uk/sample.html";
+	final protected String validWebAddress = "http://jamesthom.as/sample.html";
 	
 	/** Simple invalid web address */
 	final protected String invalidWebAddress = "\\";
 	
 	/** Valid URL which doesn't resolve to a known host */
-	final protected String nonExistentWebAddress = "http://jthomas.vm.bytemark.co.me/";
+	final protected String nonExistentWebAddress = "http://some.unknown.url/";
 	
 	/** Sample web address with no Dojo modules */
-	final protected String validWebAddressNoModules = "http://jthomas.vm.bytemark.co.uk/no_modules.html";
+	final protected String validWebAddressNoModules = "http://jamesthom.as/no_modules.html";
 	
 	/**
 	 * Test dependency analysis for a blank form submission. Verify HTTP
