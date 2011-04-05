@@ -17,42 +17,7 @@
         <link rel="stylesheet" type="text/css" href="./css/style-ie7.css" />
 	<![endif]-->
 
-	<link rel="shortcut icon" href="./img/favicon.png"/>  
-	
-	<script>
-	// Flag to show whether we are in debug or production mode. Replaced automatically
-	// during deployment.
-	var inDebug=true;
-	
-	// During development mode, load cross domain uncompressed Dojo. Otherwise, include release versions of the 
-	// code.
-	var sourceScripts = inDebug ? ["http://ajax.googleapis.com/ajax/libs/dojo/1.5/dojo/dojo.xd.js.uncompressed.js"]
-		: ["./js/release/dojo/dojo.js", "./js/release/dwb/dwb.js"];
-	
-	var djConfig = {
-		parseOnLoad: false
-	};
-	
-	// Set up djConfig values for different modes
-	if (inDebug) {
-		djConfig.dojoBlankHtmlUrl = "./blank.html";
-		djConfig.isDebug = true;
-		djConfig.baseUrl = "./";
-		djConfig.modulePaths = {
-			dwb: "./js/dwb"
-		};
-	}
-	
-	// Dynamically add source scripts to document before anything else is parsed
-	var head= document.getElementsByTagName('head')[0];
-	
-	for(var i = 0; i < sourceScripts.length; i++) {
-		// Ensure dynamically inserted scripts block further parsing until dojo has loaded.
-		// Using method detailed here, http://hsivonen.iki.fi/script-execution/
-		document.write("\u003Cscript src='" + sourceScripts[i] + "'>\u003C/script>");
-	}
-	
-	</script> 
+	<link rel="shortcut icon" href="./img/favicon.png"/>  	
 	<title>Dojo Toolkit Web Builder</title>
 </head>
 <body class="claro">
@@ -104,6 +69,40 @@
         <a href="javascript:void(0);">Got feedback? Want a new feature? Found a bug? Send us a message here!</a>
     </div>
 </body>
+<script>
+	// Flag to show whether we are in debug or production mode. Replaced automatically
+	// during deployment.
+	var inDebug=false;
+	
+	// During development mode, load cross domain uncompressed Dojo. Otherwise, include release versions of the 
+	// code.
+	var sourceScripts = inDebug ? ["http://ajax.googleapis.com/ajax/libs/dojo/1.5/dojo/dojo.xd.js.uncompressed.js"]
+		: ["./js/release/dojo/dojo.js", "./js/release/dwb/dwb.js"];
+	
+	var djConfig = {
+		parseOnLoad: false
+	};
+	
+	// Set up djConfig values for different modes
+	if (inDebug) {
+		djConfig.dojoBlankHtmlUrl = "./blank.html";
+		djConfig.isDebug = true;
+		djConfig.baseUrl = "./";
+		djConfig.modulePaths = {
+			dwb: "./js/dwb"
+		};
+	}
+	
+	// Dynamically add source scripts to document before anything else is parsed
+	var head= document.getElementsByTagName('head')[0];
+	
+	for(var i = 0; i < sourceScripts.length; i++) {
+		// Ensure dynamically inserted scripts block further parsing until dojo has loaded.
+		// Using method detailed here, http://hsivonen.iki.fi/script-execution/
+		document.write("\u003Cscript src='" + sourceScripts[i] + "'>\u003C/script>");
+	}
+	
+</script> 
 <script>
 	dojo.require("dwb.Main");
 
