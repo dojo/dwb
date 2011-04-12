@@ -19,7 +19,7 @@ quickstart with minimal configuration using either embedded Jetty or Tomcat
 plugins, see details below. 
 
 To connect the application, once running, point your web browser 
-at [http://localhost:8080/)](http://localhost:8080/).
+at [http://localhost:8080/](http://localhost:8080/).
 
 In addition, the application is not tied to these
 platforms, allowing you to build a WAR file and deploy to the application
@@ -127,7 +127,7 @@ Feedback
 --------
 
 File bug reports at [http://bugs.dojotoolkit.org](http://bugs.dojotoolkit.org) 
-or contact James Thomas (twitter.com/thomasj) for anything else.
+or contact [James Thomas](http://github.com/jthomas) [http://twitter.com/thomasj](twitter.com/thomasj) for anything else.
 
 TODO
 --
