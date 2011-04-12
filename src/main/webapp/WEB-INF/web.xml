@@ -1,10 +1,6 @@
 <web-app xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
   <display-name>dwb</display-name>
   <description></description>
-  <context-param>
-  	<param-name>cachePath</param-name>
-    <param-value>/tmp/dwb</param-value>
-  </context-param>
   <servlet>
     <servlet-name>restSdkService</servlet-name>
     <servlet-class>

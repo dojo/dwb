@@ -28,8 +28,11 @@ import org.dtk.resources.packages.PackageRepository;
 
 public class ContextListener implements ServletContextListener {
 
+	/** Current application context, reference passed in during initialization */
+	protected ServletContext currentContext;
+	
 	/** System property for fixed build result cache path */
-	protected static final String cachePathParam = "dwb.cachepath";
+	protected static final String cachePathParam = "cachepath";
 
 	/** Relative path to custom Dojo build script */
 	protected static final String buildScriptsDirParam = "/js/build/";
@@ -75,15 +78,15 @@ public class ContextListener implements ServletContextListener {
 	 */
 	@Override
 	public void contextInitialized(ServletContextEvent contextEvent) {
-		ServletContext servletContext = contextEvent.getServletContext();
+		currentContext = contextEvent.getServletContext();
 		
 		String cachePath = getCacheDirectoryPath();
-		String packagePath = servletContext.getRealPath(packageRepoPath);
-		String buildScriptsDir = servletContext.getRealPath(buildScriptsDirParam);
+		String packagePath = currentContext.getRealPath(packageRepoPath);
+		String buildScriptsDir = currentContext.getRealPath(buildScriptsDirParam);
 
 		PackageRepository packageRepo = PackageRepository.getInstance();
 		packageRepo.setPackageBaseLocation(packagePath);
-		packageRepo.setBuildParametersLocation(servletContext.getRealPath(buildParametersConfig));
+		packageRepo.setBuildParametersLocation(currentContext.getRealPath(buildParametersConfig));
 		
 		BuildStatusManager buildStatusManager = BuildStatusManager.getInstance();
 		buildStatusManager.setBuildResultCachePath(cachePath);
@@ -117,30 +120,62 @@ public class ContextListener implements ServletContextListener {
     /**
      * Retrieve the cache directory for build results. By default, create a new temporary
      * directory to hold the build results unless the user has manually specified the location
-     * using the system property, dwb.cachepath.
+     * using the context parameter property or system property, dwb.cachepath.
      * 
      * @return Directory path for built result cache
      */
     protected String getCacheDirectoryPath() {
-    	String dirPath = System.getProperty(cachePathParam);
+    	String dirPath = getUsersCachePathParam();
 
     	// If parameter wasn't specified or it's an empty string, create a new temporary
     	// cache path.
-		if (dirPath == null || dirPath.isEmpty()) {
+		if (isParameterMissing(dirPath)) {
 			try {
 				dirPath = FileUtil.createTempDirectory().getAbsolutePath();
 			} catch (IOException ioe) {
 				throw new NullPointerException("Fatal error create temporary cache path, try to specify this " +
-					"manually using system property: dwb.cachepath");
+					"manually using context parameter or system property: cachepath");
 			}
-		}
+		} 
     	
 		// Sanity check the path value to ensure it exists and is a directory.
 		File dirPathFile = new File(dirPath);
 		if (!dirPathFile.exists() || !dirPathFile.isDirectory()) {
-			throw new NullPointerException("Init param, "+ dirPath +", does not exist or is not a directory.");
+			throw new NullPointerException("Cache path, "+ dirPath +", does not exist or is not a directory.");
 		}
-        
+		
         return dirPath;
+    }
+    
+    /**
+     * Access user configurable cache path parameter. Check local
+     * application context param, and if missing global system properties, 
+     * for "dwb.cachepath". 
+     * 
+     * @return User's cache path parameter if available
+     */
+    protected String getUsersCachePathParam() {
+		String dirPath = currentContext.getInitParameter(cachePathParam);
+		
+		if (isParameterMissing(dirPath)) {
+			dirPath = System.getProperty(cachePathParam);
+		}
+		
+		// Resolve environment variables in user's path to 
+		// actual locations.
+		dirPath = FileUtil.resolveEnvironmentVariables(dirPath);
+		
+    	return dirPath;
+    }
+    
+    /**
+     * Missing parameter values are either null values of empty
+     * strings. 
+     * 
+     * @param parameterValue - User configuration parameter value
+     * @return Parameter is missing valid value
+     */
+    private boolean isParameterMissing(String parameterValue) {
+    	return (parameterValue == null || parameterValue.isEmpty());
     }
 }

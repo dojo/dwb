@@ -130,6 +130,11 @@ public class PackageRepository {
 		try {
 			String packageMetaDataPath = String.format(DEFAULT_PACKAGE_METADATA, packageName, packageVersion);
 			packageMetaData = JsonUtil.genericJSONMapper(new File(packageBaseLocation, packageMetaDataPath));
+			
+			// Package locations may reference environment variables, resolve these into 
+			// actual file paths
+			String packageLocation = (String) packageMetaData.get("location");
+			packageMetaData.put("location", FileUtil.resolveEnvironmentVariables(packageLocation));
 		} catch (IOException e) {
 			String errorMessage = String.format(invalidMetaDataErrorMsg, packageName, packageVersion);
 			logger.log(Level.SEVERE, errorMessage);

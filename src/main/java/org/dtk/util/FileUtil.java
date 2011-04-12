@@ -16,6 +16,8 @@ import java.io.OutputStreamWriter;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -311,5 +313,43 @@ public class FileUtil {
 			}
 		};
 	}
-
+	
+	/**
+	 * Substitute any environment variables in the file path
+	 * for actual values. 
+	 * 
+	 * @param filePath - String that may contain environment variables
+	 * @return String Resolved file path
+	 */
+	public static String resolveEnvironmentVariables(String filePath) {		
+		String resolvedPath = null;
+		
+		// Can't resolve empty values!
+		if (filePath != null) {
+			// Position index to allow copying of non-matching path sections
+			int lastMatch = 0;
+			StringBuilder pathBuilder = new StringBuilder();
+			
+			Pattern pattern = Pattern.compile("\\%(.+)\\%");
+			Matcher matcher = pattern.matcher(filePath);
+			
+			while(matcher.find()) {				
+				// Add all file path sections after last match but before current match.
+				pathBuilder.append(filePath.substring(lastMatch, matcher.start()));
+				
+				// Add resolved environment variable path
+				String envVarName = filePath.substring(matcher.start(1), matcher.end(1));
+				pathBuilder.append(System.getenv(envVarName));
+				
+				// Advanced index past the end of environment variable.
+				lastMatch = matcher.end();
+			}
+			
+			// Finally, all all remaining path sections & create full resolved path
+			pathBuilder.append(filePath.substring(lastMatch, filePath.length()));
+			resolvedPath = pathBuilder.toString();
+		}
+		
+		return resolvedPath;
+	}
 }

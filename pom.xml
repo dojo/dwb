@@ -20,6 +20,7 @@
 			<groupId>javax.servlet</groupId>
 			<artifactId>jstl</artifactId>
 			<version>1.2</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>javax.servlet</groupId>
@@ -64,11 +65,6 @@
 			<version>4.0.3</version>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-build-plugin</artifactId>
-			<version>1.3</version>
-		</dependency>
-		<dependency>
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>
 			<version>1.3.3</version>
@@ -87,11 +83,30 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.8.2</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.google.javascript</groupId>
 			<artifactId>closure-compiler</artifactId>
 			<version>r706</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.ant</groupId>
+                    <artifactId>ant</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>args4j</groupId>
+                    <artifactId>args4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.json</groupId>
+                    <artifactId>json</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.code.findbugs</groupId>
+                    <artifactId>jsr305</artifactId>
+                </exclusion>
+            </exclusions>
 		</dependency>
 		<dependency>
 			<groupId>shrinksafe</groupId>
@@ -147,16 +162,19 @@
 								<groupId>ant</groupId>
 								<artifactId>ant-nodeps</artifactId>
 								<version>1.6.5</version>
+                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<groupId>ant</groupId>
 								<artifactId>ant-apache-regexp</artifactId>
 								<version>1.6.5</version>
+                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<artifactId>jakarta-regexp</artifactId>
 								<groupId>jakarta-regexp</groupId>
 								<version>1.4</version>
+                                <scope>provided</scope>
 							</dependency>
 						</dependencies>
 					</plugin>
@@ -205,16 +223,19 @@
 								<groupId>ant</groupId>
 								<artifactId>ant-nodeps</artifactId>
 								<version>1.6.5</version>
+                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<groupId>ant</groupId>
 								<artifactId>ant-apache-regexp</artifactId>
 								<version>1.6.5</version>
+                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<artifactId>jakarta-regexp</artifactId>
 								<groupId>jakarta-regexp</groupId>
 								<version>1.4</version>
+                                <scope>provided</scope>
 							</dependency>
 						</dependencies>
 					</plugin>
@@ -291,16 +312,19 @@
 								<groupId>ant</groupId>
 								<artifactId>ant-nodeps</artifactId>
 								<version>1.6.5</version>
+                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<groupId>ant</groupId>
 								<artifactId>ant-apache-regexp</artifactId>
 								<version>1.6.5</version>
+                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<artifactId>jakarta-regexp</artifactId>
 								<groupId>jakarta-regexp</groupId>
 								<version>1.4</version>
+                                <scope>provided</scope>
 							</dependency>
 						</dependencies>
 					</plugin>
