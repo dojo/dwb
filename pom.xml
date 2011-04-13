@@ -141,10 +141,17 @@
 										</delete>
 
 										<!-- Copy package meta-data for desired version of Dojo -->
-										<copy
-											todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
-											<fileset dir="src/main/packages/dojo/${dojo.version}" />
+										<copy todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
+											<fileset dir="src/main/config/packages/dojo/${dojo.version}" />
 										</copy>
+
+										<!-- Copy all additional package meta-data files, these have been manually generated
+										 by the user. Exclude Dojo packages, we've already copied the single Dojo instance we want. -->
+										  <copy todir="src/main/webapp/WEB-INF/config/packages/">
+											<fileset dir="src/main/config/packages/">
+												<exclude name="**/dojo/**"/>
+											</fileset>											
+										</copy> 
 		
 										<!-- Update meta-data to point to actual Dojo source location -->
 										<replaceregexp
@@ -204,7 +211,7 @@
 										<!-- Copy package meta-data for desired version of Dojo -->
 										<copy
 											todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
-											<fileset dir="src/main/packages/dojo/${dojo.version}" />
+											<fileset dir="src/main/config/packages/dojo/${dojo.version}" />
 										</copy>
 		
 										<!-- Update meta-data to point to actual Dojo source location -->
@@ -260,7 +267,7 @@
 								<argument>../shrinksafe/js.jar:../shrinksafe/shrinksafe.jar</argument>
 								<argument>org.mozilla.javascript.tools.shell.Main</argument>
 								<argument>build.js</argument>
-								<argument>profileFile=${project.basedir}/src/main/webapp/js/dwb.profile.js</argument>
+								<argument>profileFile=${project.basedir}/src/main/resources/dwb.profile.js</argument>
 								<argument>action=release</argument>
 							</arguments>
 						</configuration>
@@ -282,7 +289,7 @@
 								<phase>initialize</phase>
 								<configuration>
 									<tasks>
-										<replaceregexp file="src/main/webapp/js/dwb.profile.js"
+										<replaceregexp file="src/main/resources/dwb.profile.js"
 											match='dwb\",.*]' replace='dwb\", \"${project.basedir}/src/main/webapp/js/dwb\"]' />
 									</tasks>
 								</configuration>

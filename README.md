@@ -26,13 +26,13 @@ platforms, allowing you to build a WAR file and deploy to the application
 server of your choice. 
 
 ### Quickstart with Jetty
-	$ mvn -Ddojo.source=/some/path/to/dojo-source jetty:run
+	$ mvn -Ddojo.source=/some/path/to/dojo-1.6-source jetty:run
 
 ### Quickstart with Tomcat
-	$ mvn -Ddojo.source=/some/path/to/dojo-source tomcat:run
+	$ mvn -Ddojo.source=/some/path/to/dojo-1.6-source tomcat:run
 
-### Quickstart with Jetty, using custom Dojo release
-	$ mvn -Ddojo.source=/some/path/to/dojo-source -Ddojo.version=1.5.0 jetty:run
+### Quickstart with Jetty, using older Dojo release
+	$ mvn -Ddojo.source=/some/path/to/dojo-1.5-source -Ddojo.version=1.5.0 jetty:run
 
 ### Quickstart with Jetty, setting build cache path 
     $ mvn -Dcachepath=/tmp/ -Ddojo.source=/some/path/to/dojo-source jetty:run
@@ -127,7 +127,7 @@ Feedback
 --------
 
 File bug reports at [http://bugs.dojotoolkit.org](http://bugs.dojotoolkit.org) 
-or contact [James Thomas](http://github.com/jthomas) [http://twitter.com/thomasj](twitter.com/thomasj) for anything else.
+or contact [James Thomas](http://github.com/jthomas) [(thomasj @ twitter)](twitter.com/thomasj) for anything else.
 
 TODO
 --
