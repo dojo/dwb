@@ -7168,9 +7168,6 @@ dojo.declare("dwb.ui.BuildConfigPanel", [dijit._Widget, dijit._Templated], {
 		return buildParams;
 	},
 	
-	onPackageSelect : function () {
-	},
-	
 	onUpdateLayerTitle : function () {
 	},
 	
@@ -25970,6 +25967,92 @@ dwb.ui.ModuleGrid.markupFactory = function(props, node, ctor, cellFunc){
 
 }
 
+if(!dojo._hasResource["dwb.service.Package"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dwb.service.Package"] = true;
+dojo.provide("dwb.service.Package");
+
+// Data controller exposing RESTful packages API. 
+// Used to load and access meta-data for the packages 
+// system. 
+
+dojo.declare("dwb.service.Package", null, {
+	serviceEndPoint: dwb.util.Config.get("packagesApi"),
+
+    // Load package meta-data for this endpoint 
+    load: function () {
+		var d = dojo.xhrGet({
+			url: this.serviceEndPoint,
+			handleAs: "json"
+		});
+
+		d.then(dojo.hitch(this, "_processPackages"), this._loadingError);
+    }, 
+
+    // List of packages available returned, find versions 
+    // information for each one package.
+    _processPackages: function (response) {
+        var packages = response.packages, pkge = null;
+
+        // Run through entire package list, breaking when we find
+        // the "dojo" package.
+        while((pkge = packages.pop()) && pkge.name !== "dojo");
+
+        // Unable to find base Dojo package, something has gone 
+        // wrong in the backend service. 
+        if (typeof pkge == "undefined") {
+            this._loadingError();
+            return;
+        }
+
+        // Send off request for all package versions, we'll select the 
+        // newest version
+        var versionReq = {url: pkge.link, handleAs: "json"};
+
+        // Retrieve version information for the dojo package
+		dojo.xhrGet(versionReq).then(dojo.hitch(this, "_processPackageVersions"), this._loadingError);
+
+        // Publish default package name and all build options
+        dojo.publish("dwb/package/default", [{"package": pkge.name}]);
+        dojo.publish("dwb/build/options", [response]);
+    },
+    
+    // Package version meta-data received, find latest version
+    // and fire off request for package details.
+    _processPackageVersions: function (versions) {
+         var newest = versions.sort(function(a,b) {
+            return (a.name > b.name) ? 1 : (a.name < b.name) ? -1 : 0;
+        }).pop();
+
+        // We should always have module version information.
+        if (!newest) {
+            this._loadingError();
+            return;
+        }
+
+        dojo.publish("dwb/package/default", [{version: newest.name}]);
+
+       var d = dojo.xhrGet({
+			url: newest.link,
+			handleAs: "json"
+		});
+
+		d.then(dojo.hitch(this, "_processPackageModules"), dojo.hitch(this, "_loadingError"));
+    },
+
+    _processPackageModules : function (response) {
+        dojo.publish("dwb/package/modules", [response.modules]);
+    },
+
+    // When there's an error accessing or processing service response, 
+    // generate error message. Error handling component will take the 
+    // appropriate action.
+    _loadingError: function () {
+        dojo.publish("dwb/error/loading_packages");
+    }
+});
+
+}
+
 if(!dojo._hasResource["dojo.io.iframe"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
 dojo._hasResource["dojo.io.iframe"] = true;
 dojo.provide("dojo.io.iframe");
@@ -43999,6 +44082,7 @@ dojo.provide("dwb.Main._base");
 
 
 
+
 // Dojo Toolkit Modules
 
 
@@ -44059,11 +44143,11 @@ dojo.provide("dwb.Main");
 
 
 dojo.declare("dwb.Main", dwb.Main._base, {
-	templateString: dojo.cache("dwb.ui.templates", "Main.html", "<div>\n\t<div dojoAttachPoint=\"borderContainer\" dojoType=\"dijit.layout.BorderContainer\" design=\"sidebar\">\t\t\n\t\t<div dojoType=\"dijit.layout.ContentPane\" region=\"trailing\" class=\"rightContentPane\">\n\t\t\t<div dojoAttachPoint=\"buildOptionsContent\" dojoAttachEvent=\"onPackageSelect:_newPackageSelected\" class=\"buildConfigPanel Modules simpleMode SearchOptionsOpen ModuleLayersOptionsOpen\" dojoType=\"dwb.ui.BuildConfigPanel\"></div>\t    \t\n\t\t</div>\t\t\t\t\t    \t\n\t\t<div dojoAttachPoint=\"center\" dojoType=\"dijit.layout.ContentPane\" region=\"center\">\t\t        \n\t\t\t <div dojoAttachPoint=\"tabContainer\" dojoAttachEvent=\"selectChild:_tabChildSelect\" dojoType=\"dijit.layout.TabContainer\">\n\t\t\t\t<div class=\"modulesPanel\" dojoAttachPoint=\"modulesPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Modules\" selected=\"true\">\n\t\t\t\t\t<div class=\"failureMessage\">\n\t\t\t\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t\t\t\t<h2>Error!</h2>\n\t\t\t\t\t\t<p>Unable to retrieve module list from server, error occurred. Please contact the system administrator.</p>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"searchBox\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<input type=\"text\" class=\"searchBoxInput\" placeHolder=\"Enter search text here...\" dojoAttachEvent=\"onKeyUp: checkForEnter\" dojoAttachPoint=\"_searchInputField\" dojoType=\"dijit.form.TextBox\"></input>\t\t\n\t\t\t\t\t\t\t<button class=\"searchButton\" dojoType=\"dijit.form.Button\" dojoAttachEvent=\"onClick:updateModuleFilter\">Search</button>\n\t\t\t\t\t\t</div> \t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"modulesGrid\">\n\t\t\t\t\t\t<div dojoAttachPoint=\"moduleCounter\" class=\"moduleCounter\">\n\t\t\t\t\t\t0 - 0 of 0 modules\t\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<table dojoType=\"dwb.ui.ModuleGrid\" dojoAttachEvent=\"onRowClick:_moduleGridRowClick\" dojoAttachPoint=\"module_grid\" height=\"100%\" queryOptions=\"{'ignoreCase': true }\" plugins=\"{indirectSelection: {name: 'Include', width: '70px', styles: 'text-align: center;'}}\" >\n\t\t\t\t\t\t\t<thead>\n\t\t\t\t\t\t    \t<tr>\n\t\t\t\t\t\t      \t\t<th field=\"name\" width=\"30%\">Module Name</th>\n\t\t\t\t\t\t      \t\t<th field=\"desc\" width=\"70%\">Description</th>\n\t\t\t\t\t\t    \t</tr>\n\t\t\t\t\t\t\t</thead>\n\t\t\t\t\t\t</table>\n\t\t\t\t\t</div>\t\t            \n\t\t\t    </div>\n\t\t\t    <div dojoAttachPoint=\"analysePane\" dojoType=\"dwb.ui.AutoAnalysisModuleTab\" title=\"Auto-Analyse\">  \n\t\t        </div>\t\t\t\n\t\t\t    <div dojoAttachPoint=\"layersPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Layers\" class=\"advancedMode\">\n\t\t\t\t\t<div dojoAttachPoint=\"layersTabContainer\" dojoAttachEvent=\"selectChild:_layersTabChildSelect\" dojoType=\"dijit.layout.TabContainer\" tabPosition=\"top\" tabStrip=\"true\">\t\n\t\t\t        \t<div dojoAttachPoint=\"baseLayerPane\" title=\"dojo.js\" closable=\"false\" labelChange=\"false\" dojoType=\"dwb.ui.ModuleTab\" class=\"baseModuleLayerPane\">\t\t\t        \t\n\t\t\t        \t</div>\t\t\t        \t\t\t            \t\t\n\t\t\t\t\t</div>\n\t\t\t\t</div>        \n\t\t\t\t<div dojoAttachPoint=\"helpPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Help\" href=\"js/dwb/ui/fragments/HelpPanelContent.html\">\t\t\t            \n\t\t        </div>\n\t\t\t</div>\n\t\t</div>\n\t</div> \n\t<div dojoAttachPoint=\"buildProgress\" dojoAttachEvent=\"onHide:cancelBuildPolling\" dojoType=\"dijit.Dialog\" title=\"Building Dojo Package...\" class=\"buildProgressDialog\">\n\t\t<div class=\"successMessage endMessages\">\n\t\t\t<img src=\"img/accepted_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Success!</h2>\n\t\t\t\t<p >Build completed successfully, downloading...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"failureMessage endMessages\">\n\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Failure!</h2>\n\t\t\t\t<p>Error completing build, please try again...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"buildProgressMessage\">\n\t\t\t<div dojoType=\"dijit.ProgressBar\" indeterminate=\"true\"></div>\n\t\t\t<div class=\"buildProgressContainer\">\n\t\t\t\t<table>\n                    <tbody>\n\t\t    \t\t\t<tr><td></td></tr>\n\t    \t\t\t\t<tr><td></td></tr>\n    \t\t\t\t\t<tr><td></td></tr>\n\t\t\t\t\t    <tr><td></td></tr>\n\t\t\t\t\t    <tr><td></td></tr>\n                    </tbody>\n\t\t\t\t</table>  \n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n\n\n\n\n\n\n\n\n\n\n"),	
+	templateString: dojo.cache("dwb.ui.templates", "Main.html", "<div>\n\t<div dojoAttachPoint=\"borderContainer\" dojoType=\"dijit.layout.BorderContainer\" design=\"sidebar\">\t\t\n\t\t<div dojoType=\"dijit.layout.ContentPane\" region=\"trailing\" class=\"rightContentPane\">\n\t\t\t<div dojoAttachPoint=\"buildOptionsContent\" class=\"buildConfigPanel Modules simpleMode SearchOptionsOpen ModuleLayersOptionsOpen\" dojoType=\"dwb.ui.BuildConfigPanel\"></div>\t    \t\n\t\t</div>\t\t\t\t\t    \t\n\t\t<div dojoAttachPoint=\"center\" dojoType=\"dijit.layout.ContentPane\" region=\"center\">\t\t        \n\t\t\t <div dojoAttachPoint=\"tabContainer\" dojoAttachEvent=\"selectChild:_tabChildSelect\" dojoType=\"dijit.layout.TabContainer\">\n\t\t\t\t<div class=\"modulesPanel\" dojoAttachPoint=\"modulesPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Modules\" selected=\"true\">\n\t\t\t\t\t<div class=\"failureMessage\">\n\t\t\t\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t\t\t\t<h2>Error!</h2>\n\t\t\t\t\t\t<p>Unable to retrieve module list from server, error occurred. Please contact the system administrator.</p>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"searchBox\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<input type=\"text\" class=\"searchBoxInput\" placeHolder=\"Enter search text here...\" dojoAttachEvent=\"onKeyUp: checkForEnter\" dojoAttachPoint=\"_searchInputField\" dojoType=\"dijit.form.TextBox\"></input>\t\t\n\t\t\t\t\t\t\t<button class=\"searchButton\" dojoType=\"dijit.form.Button\" dojoAttachEvent=\"onClick:updateModuleFilter\">Search</button>\n\t\t\t\t\t\t</div> \t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"modulesGrid\">\n\t\t\t\t\t\t<div dojoAttachPoint=\"moduleCounter\" class=\"moduleCounter\">\n\t\t\t\t\t\t0 - 0 of 0 modules\t\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<table dojoType=\"dwb.ui.ModuleGrid\" dojoAttachEvent=\"onRowClick:_moduleGridRowClick\" dojoAttachPoint=\"module_grid\" height=\"100%\" queryOptions=\"{'ignoreCase': true }\" plugins=\"{indirectSelection: {name: 'Include', width: '70px', styles: 'text-align: center;'}}\" >\n\t\t\t\t\t\t\t<thead>\n\t\t\t\t\t\t    \t<tr>\n\t\t\t\t\t\t      \t\t<th field=\"name\" width=\"30%\">Module Name</th>\n\t\t\t\t\t\t      \t\t<th field=\"desc\" width=\"70%\">Description</th>\n\t\t\t\t\t\t    \t</tr>\n\t\t\t\t\t\t\t</thead>\n\t\t\t\t\t\t</table>\n\t\t\t\t\t</div>\t\t            \n\t\t\t    </div>\n\t\t\t    <div dojoAttachPoint=\"analysePane\" dojoType=\"dwb.ui.AutoAnalysisModuleTab\" title=\"Auto-Analyse\">  \n\t\t        </div>\t\t\t\n\t\t\t    <div dojoAttachPoint=\"layersPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Layers\" class=\"advancedMode\">\n\t\t\t\t\t<div dojoAttachPoint=\"layersTabContainer\" dojoAttachEvent=\"selectChild:_layersTabChildSelect\" dojoType=\"dijit.layout.TabContainer\" tabPosition=\"top\" tabStrip=\"true\">\t\n\t\t\t        \t<div dojoAttachPoint=\"baseLayerPane\" title=\"dojo.js\" closable=\"false\" labelChange=\"false\" dojoType=\"dwb.ui.ModuleTab\" class=\"baseModuleLayerPane\">\t\t\t        \t\n\t\t\t        \t</div>\t\t\t        \t\t\t            \t\t\n\t\t\t\t\t</div>\n\t\t\t\t</div>        \n\t\t\t\t<div dojoAttachPoint=\"helpPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Help\" href=\"js/dwb/ui/fragments/HelpPanelContent.html\">\t\t\t            \n\t\t        </div>\n\t\t\t</div>\n\t\t</div>\n\t</div> \n\t<div dojoAttachPoint=\"buildProgress\" dojoAttachEvent=\"onHide:cancelBuildPolling\" dojoType=\"dijit.Dialog\" title=\"Building Dojo Package...\" class=\"buildProgressDialog\">\n\t\t<div class=\"successMessage endMessages\">\n\t\t\t<img src=\"img/accepted_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Success!</h2>\n\t\t\t\t<p >Build completed successfully, downloading...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"failureMessage endMessages\">\n\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Failure!</h2>\n\t\t\t\t<p>Error completing build, please try again...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"buildProgressMessage\">\n\t\t\t<div dojoType=\"dijit.ProgressBar\" indeterminate=\"true\"></div>\n\t\t\t<div class=\"buildProgressContainer\">\n\t\t\t\t<table>\n                    <tbody>\n\t\t    \t\t\t<tr><td></td></tr>\n\t    \t\t\t\t<tr><td></td></tr>\n    \t\t\t\t\t<tr><td></td></tr>\n\t\t\t\t\t    <tr><td></td></tr>\n\t\t\t\t\t    <tr><td></td></tr>\n                    </tbody>\n\t\t\t\t</table>  \n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n\n\n\n\n\n\n\n\n\n\n"),	
 	widgetsInTemplate: true,
 
 	// Global store for Dojo modules
-	store: null, 		
+    store: null,
 
 	// Enhanced Grid displaying Dojo modules
 	module_grid: null,
@@ -44075,8 +44159,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	// suffix
 	newLayersCount: null,
 
-	packageEndPoint: dwb.util.Config.get("packagesApi"),
-
 	_lastQuery : "",
 
 	_modulesDisplayedFormat: "Showing ${0} - ${1} of ${2} modules",
@@ -44084,6 +44166,8 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	displayMode: "simple",
 
 	content: dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html", "<div class=\"analyse_container\">\n\t<div>Choose an existing build profile to analyse for Dojo modules.</div>\n\t<div class=\"analyse_form_container\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input name=\"value\" type=\"file\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"PROFILE\"></input>\n\t\t\t<div class=\"build\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n"),
+
+    packageService: null,
 
 	// When we are manually updating selection 
 	// rows for a new filter result set, lots of selection
@@ -44108,12 +44192,12 @@ dojo.declare("dwb.Main", dwb.Main._base, {
     _inflight: null,
 
 	constructor : function () {
-		// Fire off module loading service call straight away
-		var d = dojo.xhrGet({
-			url: this.packageEndPoint,
-			handleAs: "json"
-		});
-		d.then(dojo.hitch(this, "_handlePackagesResponse"), dojo.hitch(this, "_moduleLoadingError"));
+        // Instantiate the package service controller
+        // and ask it to load all package data. Package 
+        // details are published to appropriate topics when 
+        // loaded.
+        this.packageService = new dwb.service.Package();
+        this.packageService.load();
 
 		dojo.subscribe("dwb/search/updateFilter", dojo.hitch(this, "updateModuleFilter"));
 		dojo.subscribe("dwb/build/request", dojo.hitch(this, "triggerBuildRequest"));
@@ -44151,6 +44235,28 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		dojo.subscribe("dwb/layer/selected/titleChange", dojo.hitch(this, function (message) {
 			this.updateSelectedLayerTitle(message.title);
 		}));
+
+
+        // Add default package name and version to the base profile
+        dojo.subscribe("dwb/package/default", dojo.hitch(this, function (data) {
+            dojo.mixin(this.baseProfile, data);
+        }));
+
+        // Add build options to the build config panel
+        // TODO: Push this subscription to the actual widget
+        dojo.subscribe("dwb/build/options", dojo.hitch(this, function (response) {
+            this.buildOptionsContent.addBuildParameters(response);
+            dojo.forEach(["cdn", "optimise", "platforms", "themes", "cssOptimise"], dojo.hitch(this, function (key) {
+                var options = response[key];
+                if (options && options.length > 0) {
+                    this.baseProfile[key] = options[0].value;
+                }
+            }));
+        }));
+
+        dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_modulesAvailable"));
+
+        dojo.subscribe("dwb/error/loading_packages", dojo.hitch(this, "_moduleLoadingError"));
 
 		this.newLayersCount = 0;
 
@@ -44258,20 +44364,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		// Update tab title and associated store item
 		selectedModuleLayer.set("title", title);			
 		this.layers_store.setValue(selectedModuleLayer.get("layerItem"), "name", title);
-	},
-
-	// User has picked a package to select modules from. Fire off XHR 
-	// request to retrieve package information and hand off results 
-	// to event handler. 
-	_newPackageSelected : function (location) {
-		var d = dojo.xhrGet({
-			url: location,
-			handleAs: "json"
-		});
-
-		d.then(dojo.hitch(this, function(response) {
-			this._modulesAvailable(response.modules);
-		}), dojo.hitch(this, "_moduleLoadingError"));
 	},
 
 	triggerBuildRequest: function () {
@@ -44722,57 +44814,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         this.tabContainer.tablist.onButtonClick = function () {
             return false;
         };
-	},
-	
-	_handlePackagesResponse: function (response) {
-		var packages = response.packages, pkge = null;
-
-        // Run through entire package list, breaking when we find
-        // the "dojo" package.
-        while((pkge = packages.pop()) && pkge.name !== "dojo");
-
-        // Unable to find base Dojo package, something has gone 
-        // wrong in the backend service. 
-        if (typeof pkge == "undefined") {
-            this._moduleLoadingError();
-        }
-
-        // Send off request for all package versions, we'll select the 
-        // newest version
-        var versionReq = {url: pkge.link, handleAs: "json"};
-
-        // Retrieve version information for the dojo package
-		dojo.xhrGet(versionReq).then(dojo.hitch(this, "_handlePackageVersionsResponse"), 
-            dojo.hitch(this, "_moduleLoadingError"));
-
-		// Store result to use when building
-		this.baseProfile["package"] = pkge.name;
-
-		this.buildOptionsContent.addBuildParameters(response);
-
-        // Pick default build values for simple mode build by selecting 
-        // first option from service response. Would be nice to have service
-        // select the default and not include these.
-        dojo.forEach(["cdn", "optimise", "platforms", "themes", "cssOptimise"], dojo.hitch(this, function (key) {
-            var options = response[key];
-            if (options && options.length > 0) {
-                this.baseProfile[key] = options[0].value;
-            }
-        }));
-	},
-
-	_handlePackageVersionsResponse: function (packageVersions) {
-        var newest = packageVersions.sort(function(a,b) {
-            return (a.name > b.name) ? 1 : (a.name < b.name) ? -1 : 0;
-        }).pop();
-
-        // We should always have module version information.
-        if (!newest) {
-            this._moduleLoadingError();
-        }
-
-		this._newPackageSelected(newest.link);
-		this.baseProfile.version = newest.name;
 	},
 
 	checkForEnter: function(keyEvent) {

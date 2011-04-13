@@ -153,9 +153,6 @@ dojo.declare("dwb.ui.BuildConfigPanel", [dijit._Widget, dijit._Templated], {
 		return buildParams;
 	},
 	
-	onPackageSelect : function () {
-	},
-	
 	onUpdateLayerTitle : function () {
 	},
 	

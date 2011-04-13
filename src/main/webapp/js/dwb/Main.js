@@ -8,7 +8,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	widgetsInTemplate: true,
 
 	// Global store for Dojo modules
-	store: null, 		
+    store: null,
 
 	// Enhanced Grid displaying Dojo modules
 	module_grid: null,
@@ -20,8 +20,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	// suffix
 	newLayersCount: null,
 
-	packageEndPoint: dwb.util.Config.get("packagesApi"),
-
 	_lastQuery : "",
 
 	_modulesDisplayedFormat: "Showing ${0} - ${1} of ${2} modules",
@@ -29,6 +27,8 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	displayMode: "simple",
 
 	content: dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html"),
+
+    packageService: null,
 
 	// When we are manually updating selection 
 	// rows for a new filter result set, lots of selection
@@ -53,12 +53,12 @@ dojo.declare("dwb.Main", dwb.Main._base, {
     _inflight: null,
 
 	constructor : function () {
-		// Fire off module loading service call straight away
-		var d = dojo.xhrGet({
-			url: this.packageEndPoint,
-			handleAs: "json"
-		});
-		d.then(dojo.hitch(this, "_handlePackagesResponse"), dojo.hitch(this, "_moduleLoadingError"));
+        // Instantiate the package service controller
+        // and ask it to load all package data. Package 
+        // details are published to appropriate topics when 
+        // loaded.
+        this.packageService = new dwb.service.Package();
+        this.packageService.load();
 
 		dojo.subscribe("dwb/search/updateFilter", dojo.hitch(this, "updateModuleFilter"));
 		dojo.subscribe("dwb/build/request", dojo.hitch(this, "triggerBuildRequest"));
@@ -96,6 +96,28 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		dojo.subscribe("dwb/layer/selected/titleChange", dojo.hitch(this, function (message) {
 			this.updateSelectedLayerTitle(message.title);
 		}));
+
+
+        // Add default package name and version to the base profile
+        dojo.subscribe("dwb/package/default", dojo.hitch(this, function (data) {
+            dojo.mixin(this.baseProfile, data);
+        }));
+
+        // Add build options to the build config panel
+        // TODO: Push this subscription to the actual widget
+        dojo.subscribe("dwb/build/options", dojo.hitch(this, function (response) {
+            this.buildOptionsContent.addBuildParameters(response);
+            dojo.forEach(["cdn", "optimise", "platforms", "themes", "cssOptimise"], dojo.hitch(this, function (key) {
+                var options = response[key];
+                if (options && options.length > 0) {
+                    this.baseProfile[key] = options[0].value;
+                }
+            }));
+        }));
+
+        dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_modulesAvailable"));
+
+        dojo.subscribe("dwb/error/loading_packages", dojo.hitch(this, "_moduleLoadingError"));
 
 		this.newLayersCount = 0;
 
@@ -203,20 +225,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		// Update tab title and associated store item
 		selectedModuleLayer.set("title", title);			
 		this.layers_store.setValue(selectedModuleLayer.get("layerItem"), "name", title);
-	},
-
-	// User has picked a package to select modules from. Fire off XHR 
-	// request to retrieve package information and hand off results 
-	// to event handler. 
-	_newPackageSelected : function (location) {
-		var d = dojo.xhrGet({
-			url: location,
-			handleAs: "json"
-		});
-
-		d.then(dojo.hitch(this, function(response) {
-			this._modulesAvailable(response.modules);
-		}), dojo.hitch(this, "_moduleLoadingError"));
 	},
 
 	triggerBuildRequest: function () {
@@ -667,57 +675,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         this.tabContainer.tablist.onButtonClick = function () {
             return false;
         };
-	},
-	
-	_handlePackagesResponse: function (response) {
-		var packages = response.packages, pkge = null;
-
-        // Run through entire package list, breaking when we find
-        // the "dojo" package.
-        while((pkge = packages.pop()) && pkge.name !== "dojo");
-
-        // Unable to find base Dojo package, something has gone 
-        // wrong in the backend service. 
-        if (typeof pkge == "undefined") {
-            this._moduleLoadingError();
-        }
-
-        // Send off request for all package versions, we'll select the 
-        // newest version
-        var versionReq = {url: pkge.link, handleAs: "json"};
-
-        // Retrieve version information for the dojo package
-		dojo.xhrGet(versionReq).then(dojo.hitch(this, "_handlePackageVersionsResponse"), 
-            dojo.hitch(this, "_moduleLoadingError"));
-
-		// Store result to use when building
-		this.baseProfile["package"] = pkge.name;
-
-		this.buildOptionsContent.addBuildParameters(response);
-
-        // Pick default build values for simple mode build by selecting 
-        // first option from service response. Would be nice to have service
-        // select the default and not include these.
-        dojo.forEach(["cdn", "optimise", "platforms", "themes", "cssOptimise"], dojo.hitch(this, function (key) {
-            var options = response[key];
-            if (options && options.length > 0) {
-                this.baseProfile[key] = options[0].value;
-            }
-        }));
-	},
-
-	_handlePackageVersionsResponse: function (packageVersions) {
-        var newest = packageVersions.sort(function(a,b) {
-            return (a.name > b.name) ? 1 : (a.name < b.name) ? -1 : 0;
-        }).pop();
-
-        // We should always have module version information.
-        if (!newest) {
-            this._moduleLoadingError();
-        }
-
-		this._newPackageSelected(newest.link);
-		this.baseProfile.version = newest.name;
 	},
 
 	checkForEnter: function(keyEvent) {
