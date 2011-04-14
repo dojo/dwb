@@ -100,7 +100,47 @@ public class BuildTest {
 		String buildResultLocation = verifyCompletedBuildStatus(link);
 		verifyBuildResult(buildResultLocation);
 	}
-
+	
+	public test_ValidNewBuildRequestUsingModulesFromNonDojoPackages() {
+		
+	}
+	
+	public test_ValidNewBuildRequestUsingTemporaryPackage() {
+		
+	}
+	
+	public void test_MissingDojoPackageReferenceBuild () {
+		
+	}
+	
+	public void test_MissingDojoPackageReferenceVersionBuild () {
+		
+	}
+	
+	public void test_MissingNameInPackageReferenceBuild() {
+		
+	}
+	
+	public void test_InvalidNameInPackageReferenceBuild() {
+		
+	}
+	
+	public void test_MissingVersionForPackageReferenceBuild() {
+		
+	}
+	
+	public void test_InvalidVersionForValidPackageReferenceBuild() {
+		
+	}
+	
+	public void test_MissingPackageReferenceForModuleBuild() {
+		
+	}
+	
+	public void test_InvalidPackageReferenceForModuleBuild() {
+		
+	}
+	
 	/**
 	 * Test submission of invalid build request. Missing 
 	 * vital submission parameters. We should have a 

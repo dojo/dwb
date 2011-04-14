@@ -598,7 +598,6 @@ build = {
 
 		writeLogLine(packageRef, "done");
 		
-		var userAppLayer = ''; 
 		var userAppPrefixes = '';
 		
 		if (userAppPaths !== null) {	
@@ -610,7 +609,6 @@ build = {
 				var userAppDependencies = '"' + userAppModules.join('","') + '"';
 				var topLevelModule = userAppModules[0].split(".")[0];
 				
-				userAppLayer += ' },	{ name: "'+topLevelModule+'.js", dependencies: ['+userAppDependencies+']';			
 				userAppPrefixes += ', [ "'+topLevelModule+'", "' + userAppPath + '/' + topLevelModule + '" ]';
 				
 				writeLogLine(packageRef, "Enabled build profile for custom package " + topLevelModule);

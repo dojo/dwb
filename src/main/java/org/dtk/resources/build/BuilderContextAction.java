@@ -2,6 +2,7 @@ package org.dtk.resources.build;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.dtk.util.FileUtil;
@@ -65,18 +66,18 @@ public class BuilderContextAction implements ContextAction {
 
 			// Call build.make(builderPath)
 			Scriptable build = Context.toObject(topScope.get("build", topScope), topScope);
-
+			
 			Object args[] = {
-				buildRequest.getPackageLocation(),
+				buildRequest.getDojoLocation(),
 				this.buildScriptsPath, 
-				buildRequest.getVersion(),
+				buildRequest.getDojoVersion(),
 				buildRequest.getCdn(),
 				buildRequest.getPlatforms(),
 				buildRequest.getThemes(),
 				buildRequest.getBuildLayersArray(),
 				buildRequest.getOptimise(),
 				buildRequest.getCssOptimise(),
-				buildRequest.temporaryApplicationPaths(),
+				buildRequest.getAdditionalPackageLocations(),
 				buildRequest.getBuildReference()
 			};
 

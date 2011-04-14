@@ -53,7 +53,10 @@ public class Packages {
 	@Context UriInfo info;
 
 	/** Form submission field containing user application */
-	private static final String USER_APP_FIELD = "user_app";
+	protected static final String USER_APP_FIELD = "user_app";
+	
+	/** Arbitrary package version for temporary packages */
+	protected static final String temporaryPackageVersion = "1.0.0";
 
 	/** Resource path format, "context_path/servet_path/resource_path" */
 	protected static final String resourcePathFormat = "%1$s%2$s";
@@ -184,14 +187,14 @@ public class Packages {
 			PackageRepository packageRepo = PackageRepository.getInstance();
 
 			try {
-				// Decompress temporary package 
+				// Decompress temporary package, returning unique reference
 				String packageReference = packageRepo.createTemporaryPackage((InputStream) formFields.getFirst(USER_APP_FIELD));
-
+				
 				// Find temporary package location from identifier
-				String packageLocation = packageRepo.getTemporaryPackageLocation(packageReference);
+				String packageLocation = packageRepo.getPackageLocation(packageReference, temporaryPackageVersion);
 
 				Iterator<File> packageJsFilesIter = FileUtils.iterateFiles(new File(packageLocation), 
-						new String[]{"js"}, true);
+					new String[]{"js"}, true);
 
 				// List holding module definitions & requirements 
 				List<String> modulesProvided = new ArrayList<String>();
@@ -213,6 +216,7 @@ public class Packages {
 				
 				// Store package reference in the details object
 				temporaryPackageDetails.put("packageReference", packageReference);
+				temporaryPackageDetails.put("packageVersion", temporaryPackageVersion);
 
 				// Render provides, requires and temporary package id as JSON
 				String htmlEncodedJsonPackageDetails = JsonUtil.writeJavaToHtmlEncodedJson(temporaryPackageDetails);

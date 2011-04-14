@@ -3,9 +3,14 @@ package org.dtk.resources;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,6 +37,7 @@ import org.dtk.resources.build.manager.BuildStatusManager;
 import org.dtk.resources.exceptions.ConfigurationException;
 import org.dtk.resources.exceptions.IncorrectParameterException;
 import org.dtk.resources.exceptions.MissingResourceException;
+import org.dtk.resources.packages.PackageRepository;
 import org.dtk.util.FileUtil;
 import org.dtk.util.HttpUtil;
 import org.dtk.util.JsonUtil;
@@ -58,6 +64,14 @@ public class Build {
 	protected static final String missingParameterErrorText 
 	= "Missing mandatory parameter, %1$s, from build request.";
 
+	/** Error text when build request misses dojo package details */
+	protected static final String invalidPackageErrorText 
+	= "Invalid package reference, %1$s, in the build request.";
+	
+	/** Error text when build request misses dojo package details */
+	protected static final String invalidModulePackageErrorText 
+	= "Invalid package reference for module, %1$s, in the build request.";
+	
 	/** Error text when build request misses mandatory parameter */
 	protected static final String urlConstructionErrorText 
 	= "Internal server error generating absolute resource path. Please try again.";
@@ -86,7 +100,10 @@ public class Build {
 	
 	/** Logging class instance */
 	protected static final Logger logger = Logger.getLogger(Build.class.getName());
-
+	
+	/** Access to the package repository */
+	protected PackageRepository repo = PackageRepository.getInstance();		
+	
 	/**
 	 * Initiate a build request, passing parameters to the Dojo build system, generating
 	 * a compressed version of the requested JavaScript layers. User will have a link
@@ -220,24 +237,30 @@ public class Build {
 	 */
 	protected BuildRequest generateNewBuildRequest(Map<String, Object> buildDetails) 
 	throws IncorrectParameterException, ConfigurationException {
+		// Retrieve mandatory package descriptions, must contain Dojo package
+		List<Map<String, String>> packages = (List<Map<String, String>>) extractBuildPackages(buildDetails);
+		
 		// Retrieve standard mandatory and optional build parameters from JSON request.
-		String packageName = (String) buildDetails.get("package"), version = (String) buildDetails.get("version"), 
-			cdn = (String) buildDetails.get("cdn"), optimise = (String) buildDetails.get("optimise"), 
-			cssOptimise = (String) buildDetails.get("cssOptimise"), platforms = (String) buildDetails.get("platforms"), 
-			themes = (String) buildDetails.get("themes");
+		String cdn = (String) extractMandatoryParameter(buildDetails, "cdn"), 
+			optimise = (String) extractMandatoryParameter(buildDetails, "optimise"), 
+			cssOptimise = (String) extractMandatoryParameter(buildDetails, "cssOptimise"), 
+			platforms = (String) extractMandatoryParameter(buildDetails, "platforms"), 
+			themes = (String) extractMandatoryParameter(buildDetails, "themes");
 
-		// Valiate mandatory build arguments aren't null! Appropriate exception thrown otherwise.
-		checkMandatoryBuildParameters(packageName, version, cdn, optimise, cssOptimise, platforms, themes);
-
-		// Extract build layers and optional user packages
-		List<Map<String, Object>> layers = (List<Map<String, Object>>) buildDetails.get("layers");
-		List<String> userPackages = (List<String>) buildDetails.get("userPackages");
+		// Construct list of reference package identiers
+		Set<String> packageIds = new HashSet<String>();
+		for(Map<String, String> packageRef: packages) {
+			packageIds.add(packageRef.get("name"));
+		}
+		// Extract additional build layers, checking any module dependencies reference valid 
+		// packages. 
+		List<Map<String, Object>> layers = extractBuildLayers(buildDetails, packageIds);		
 		
 		// Instantiate new build request with user parameters, catch construction exceptions
 		// and throw extended WebApplicationException.
 		BuildRequest buildRequest;
 		try {
-			buildRequest = new BuildRequest(packageName, version, cdn, optimise, cssOptimise, platforms, themes, userPackages, layers);
+			buildRequest = new BuildRequest(packages, cdn, optimise, cssOptimise, platforms, themes, layers);
 			logger.log(Level.INFO, String.format(newBuildRequestLogMsg, buildRequest.serialise()));
 		} catch (JsonMappingException e) {
 			logFatalBuildRequest(buildDetails, e);
@@ -290,35 +313,100 @@ public class Build {
 		}
 		return absolutePath;
 	}
-
+	
 	/**
-	 * Verify that none of the mandatory build arguments in the user's request were
-	 * null.
+	 * Pull out the JavaScript packages referenced in this
+	 * build request. All packages must reference known packages in our
+	 * repository and must contain the Dojo package. 
 	 * 
-	 * @param packageName - Package name
-	 * @param version - Package version
-	 * @param cdn - Content Delivery Network
-	 * @param optimise - Optimisation level
-	 * @throws IncorrectParameterException - One of the argument is null.
+	 * @param buildRequest - User's build request
+	 * @return Reference packages for this build
+	 * @throws IncorrectParameterException - Unable to find valid dojo package reference
 	 */
-	protected void checkMandatoryBuildParameters(String packageName, String version, String cdn, String optimise, 
-		String cssOptimise, String platforms, String themes) 
-	throws IncorrectParameterException {
-		if (packageName == null) {
-			throw new IncorrectParameterException(String.format(missingParameterErrorText, "package"));
-		} else if (version == null) {
-			throw new IncorrectParameterException(String.format(missingParameterErrorText, "version"));
-		} else if (cdn == null) {
-			throw new IncorrectParameterException(String.format(missingParameterErrorText, "cdn"));
-		} else if (optimise == null) {
-			throw new IncorrectParameterException(String.format(missingParameterErrorText, "optimise"));
-		} else if (platforms == null) {
-			throw new IncorrectParameterException(String.format(missingParameterErrorText, "platforms"));
-		} else if (themes == null) {
-			throw new IncorrectParameterException(String.format(missingParameterErrorText, "themes"));
-		} else if (cssOptimise == null) {
-			throw new IncorrectParameterException(String.format(missingParameterErrorText, "cssOptimise"));
+	protected List<Map<String, String>> extractBuildPackages(Map<String, Object> buildRequest) 
+	throws IncorrectParameterException {		
+		List<Map<String, String>> packages 
+			= (List<Map<String, String>>) extractMandatoryParameter(buildRequest, "packages");
+		
+		// Dojo package reference is mandatory for all build requests
+		boolean containsDojoPackage = false;
+		
+		// Verify all reference packages are present in our repository
+		Iterator<Map<String, String>> it = packages.iterator();
+	    while (it.hasNext()) {
+	        Map<String, String> entry = it.next();
+	        String name = extractMandatoryParameter(entry, "name"), 
+	        	version = extractMandatoryParameter(entry, "version");
+	        if (!repo.packageVersionExists(name, version)) {
+	        	throw new IncorrectParameterException(String.format(invalidPackageErrorText, name));		
+	        } else if (name.equals("dojo")) {
+	        	containsDojoPackage = true;
+	        }
+	    }
+		
+	    // Dojo package is mandatory!
+		if (!containsDojoPackage) {
+			throw new IncorrectParameterException(String.format(invalidPackageErrorText, "dojo"));
 		}
+		
+		return packages;
+	}
+ 	
+	/**
+	 * Retrieve and verify (optional) layers parameters from build request. If parameter
+	 * is present, verify each dependency in every layer references a defined package.
+	 * 
+	 * @param buildRequest - Request parameters
+	 * @param validPackages - Set of referenced packages
+	 * @return User's build layers
+	 */
+	protected List<Map<String, Object>> extractBuildLayers(Map<String, Object> buildRequest, 
+		Set<String> validPackages) {
+		List<Map<String, Object>> layers;
+		
+		// If optional layers parameter is missing, just return an empty list. 
+		// Otherwise, extract object and confirm every referenced dependency 
+		// refers to a valid package.
+		if (buildRequest.containsKey("layers")) {
+			layers = (List<Map<String, Object>>) buildRequest.get("layers");
+			Iterator<Map<String, Object>> layerIter = layers.iterator();
+			while(layerIter.hasNext()) {
+				// For each module layer...
+				Map<String, Object> layer = layerIter.next();
+				List<Map<String, String>> dependencies = (List<Map<String, String>>) layer.get("modules");
+				Iterator<Map<String, String>> depIter = dependencies.iterator();
+				// ... pull out each dependency
+				while (depIter.hasNext()) {
+					Map<String, String> dependency = depIter.next();
+					String packageId = dependency.get("package");
+					// ... and check it has a valid package reference
+					if (packageId == null || !validPackages.contains(packageId)) {
+						String.format(invalidModulePackageErrorText, dependency.get("name"));
+					}
+				}
+			}
+		} else {
+			layers = new ArrayList<Map<String, Object>>();
+		}
+		
+		return layers;
+	}
+	
+	/**
+	 * Retrieve mandatory parameter from the build request. Any missing
+	 * parameters are fatal errors and cause exceptions to be thrown.
+	 * @param <T>
+	 * 
+	 * @param request - Build request details 
+	 * @param identifier - Parameter identifier 
+	 * @throws IncorrectParameterException - Missing mandatory build parameter
+	 */
+	protected <T> T extractMandatoryParameter(Map<String, T> request, String identifier) {
+		if (!request.containsKey(identifier) || request.get(identifier) == null) {
+			throw new IncorrectParameterException(String.format(missingParameterErrorText, identifier));
+		}
+		
+		return request.get(identifier);
 	}
 	
 	/**

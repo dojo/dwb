@@ -7,7 +7,9 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -35,6 +37,10 @@ public class PackageRepository {
 	
 	/** Real location for build parameters configuration file */
 	protected String buildParametersLocation;
+	
+	/** Cache temporary package identifiers created during the application. Used for
+	 *  verifying whether a package identifier refers to temporary package. */
+	protected Set<String> temporaryPackagesIdentifiers = new HashSet<String>();
 	
 	/** Package details configuration file */
 	protected static final String DEFAULT_PACKAGE_METADATA = "%1$s/%2$s/package.json"; 
@@ -145,6 +151,28 @@ public class PackageRepository {
 	}
 	
 	/**
+	 * Retrieve location for a given package reference. This may
+	 * be from the persistent or temporary package stores. 
+	 * 
+	 * @param packageName - Package reference 
+	 * @param packageVersion - Package version
+	 * @return String - Package location
+	 */
+	public String getPackageLocation(String packageName, String packageVersion) {
+		String location;
+		
+		// Version is irrelevant for temporary packages
+		if (isTemporaryPackage(packageName)) {
+			location = getTemporaryPackageLocation(packageName);
+		} else {
+			HashMap<String, Object> details = getPackageDetails(packageName, packageVersion);
+			location = (String) details.get("location");
+		}
+		
+		return location;
+	}
+	
+	/**
 	 * Retrieve build parameters, parse default file in source folder.
 	 * 
 	 * @return Converted JSON object with build parameters
@@ -192,6 +220,9 @@ public class PackageRepository {
 		// Use file class to handle extract filename from full path.
 		String packageReference = (new File(temporaryPackagePath)).getName();
 		
+		// Store reference for quick package location checking
+		temporaryPackagesIdentifiers.add(packageReference);
+		
 		return packageReference;
 	}
 	
@@ -201,14 +232,13 @@ public class PackageRepository {
 	 * 
 	 * @param packageReference - Temporary package reference 
 	 * @return Package location
-	 * @throws FileNotFoundException - Package does not exist
 	 */
-	public String getTemporaryPackageLocation(String packageReference) throws FileNotFoundException {
+	protected String getTemporaryPackageLocation(String packageReference) {
 		String tempDirectory = System.getProperty("java.io.tmpdir");
 		File temporaryPackage = new File(tempDirectory, packageReference);
 		
 		if (!temporaryPackage.exists() || !temporaryPackage.isDirectory()) {
-			throw new FileNotFoundException("Cannot find temporary package location");
+			throw new MissingResourceException("Cannot find temporary package location");
 		}
 		
 		// Return absolute package path
@@ -284,6 +314,16 @@ public class PackageRepository {
 		Collections.sort(packages);
 		
 		return packages;
+	}
+	
+	/**
+	 * Does the package reference refer to a temporary package?
+	 * 
+	 * @param packageReference - Package reference
+	 * @return Package is a temporary package
+	 */
+	protected boolean isTemporaryPackage(String packageReference) {
+		return temporaryPackagesIdentifiers.contains(packageReference);
 	}
 	
 	/**

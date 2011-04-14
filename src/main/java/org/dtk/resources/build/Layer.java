@@ -15,23 +15,23 @@ import java.util.Map;
 
 public class Layer {
 	private String name;
-	private String[] dependencies; 
+	private Module[] modules; 
 	
 	public Layer(Map<String, Object> layerProps) {
 		// Extract layer name from properties map
 		this.name = (String) layerProps.get("name");
 		
-		List<String> modulesDetails = (List<String>)  layerProps.get("modules");
+		List<Map<String, String>> layerModules = (List<Map<String, String>>) layerProps.get("modules");
 		
-		if (modulesDetails != null) {
-			this.dependencies = new String[modulesDetails.size()];
-			
+		if (layerModules != null) {
 			int moduleCount = 0; 
+			this.modules = new Module[layerModules.size()];
 			
-			Iterator<String> modulesIter = modulesDetails.iterator();
+			Iterator<Map<String, String>> modulesIter = layerModules.iterator();
 			
 			while (modulesIter.hasNext()) {
-				this.dependencies[moduleCount] = modulesIter.next();				
+				Map<String, String> layerModule = modulesIter.next();
+				this.modules[moduleCount] = new Module(layerModule.get("name"), layerModule.get("package"));				
 				moduleCount++;
 			}
 		}
@@ -45,11 +45,11 @@ public class Layer {
 		this.name = name;
 	}
 	
-	public String[] getDependencies() {
-		return this.dependencies;
+	public Module[] getDependencies() {
+		return this.modules;
 	}
 	
-	public void setDependencies(String[] dependencies) {
-		this.dependencies = dependencies;
+	public void setDependencies(Module[] modules) {
+		this.modules = modules;
 	}
 }

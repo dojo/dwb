@@ -7,6 +7,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -33,14 +34,12 @@ import org.dtk.util.JsonUtil;
 
 public class BuildRequest {
 	/** User provided build details */
-	String packageName;
-	String version;
+	List<Map<String, String>> packages;
 	String cdn;
 	String optimise;
 	String cssOptimise;
 	String platforms;
 	String themes;
-	List<String> tempAppIds;
 	List<Map<String, Object>> layers;
 	
 	/** Unique identifier for these build parameters, used to cache computed result. */
@@ -50,35 +49,31 @@ public class BuildRequest {
 	protected static final String cachedBuildFileFormat = "%1$s/dojo.zip";
 	
 	/** Formatter string for toString() output **/
-	protected static final String format = "org.dtk.resources.build.BuildRequest: packageName=%1$s, version=%2$s, " +
-		"cdn=%3$s, optimise=%4$s, cssOptimise=%5$s, platforms=%6$s, themes=%7$s, tempAppIds=%8$s, layers=%9$s";
+	protected static final String format = "org.dtk.resources.build.BuildRequest: packages=%1$s " +
+		"cdn=%2$s, optimise=%3$s, cssOptimise=%4$s, platforms=%5$s, themes=%6$s, layers=%7$s";
 	
 	/**
 	 * Create a new build request from constructor parameters.
 	 * 
-	 * @param packageName - Package to build
-	 * @param version - Package version
+	 * @param packages - Modules reference these packages
 	 * @param cdn - Content Delivery Network
 	 * @param optimise - Optimisation level
-	 * @param tempAppIds - Custom module references
 	 * @param layers - Build layers 
 	 * @throws JsonParseException
 	 * @throws JsonMappingException
 	 * @throws NoSuchAlgorithmException
 	 * @throws IOException
 	 */
-	public BuildRequest(String packageName, String version, String cdn, String optimise, String cssOptimise, String platforms,
-		String themes, List<String> tempAppIds, List<Map<String, Object>> layers) 
+	public BuildRequest(List<Map<String, String>> packages, String cdn, String optimise, String cssOptimise, String platforms,
+		String themes, List<Map<String, Object>> layers) 
 		throws JsonParseException, JsonMappingException, NoSuchAlgorithmException, IOException {
 		
-		this.packageName = packageName;
-		this.version = version;
+		this.packages = packages;
 		this.cdn = cdn;
 		this.optimise = optimise;
 		this.cssOptimise = cssOptimise;
 		this.platforms = platforms;
-		this.themes = themes;
-		this.tempAppIds = tempAppIds; 
+		this.themes = themes; 
 		this.layers = layers;
 		
 		// Generate unique build reference for this set of 
@@ -91,10 +86,6 @@ public class BuildRequest {
 	 * between requests. Variable parameters used to control the build are hashed using the SHA-1
 	 * algorithm. 
 	 * 
-	 * @param version - Dojo version
-	 * @param cdn - Content delivery network
-	 * @param layers - Build layers
-	 * @param optimise - Optimisation level
 	 * @return Build digest reference
 	 * @throws JsonParseException - Error parsing layers to Json
 	 * @throws JsonMappingException - Error parsing layers to Json
@@ -108,24 +99,19 @@ public class BuildRequest {
 
 		// Convert host object to simple JSON representation. Simple 
 		// reliable text representation of java object state.
-		String dependencies = JsonUtil.writeJavaToJson(layers);	
+		String layersJson = JsonUtil.writeJavaToJson(layers),
+			packagesJson = JsonUtil.writeJavaToJson(packages);
 
 		// Get instance of hashing algorithm and update digest with 
 		// build parameters.
 		MessageDigest md = MessageDigest.getInstance("SHA");
-		md.update(dependencies.getBytes());
-		md.update(version.getBytes());
+		md.update(layersJson.getBytes());
+		md.update(packagesJson.getBytes());
 		md.update(cdn.getBytes());
 		md.update(themes.getBytes());
 		md.update(optimise.getBytes());
 		md.update(cssOptimise.getBytes());
 		md.update(platforms.getBytes());
-		
-		// Add temporary application ids if available. 
-		if (tempAppIds != null) {
-			String tempAppIdsJson = JsonUtil.writeJavaToJson(layers);
-			md.update(tempAppIdsJson.getBytes());
-		}
 
 		// Generate BASE64 encoded result, replacing non-safe directory characters
 		String optionsDigest = (new String( (new Base64()).encode(md.digest())));
@@ -144,55 +130,15 @@ public class BuildRequest {
 	 */
 	public Layer[] getBuildLayersArray()
 	throws IncorrectParameterException {
-		Layer[] buildLayers = null;
+		int numOfLayers = this.layers.size();
+		Layer[] buildLayers = new Layer[numOfLayers];
 
-		// User must have submitted some layer details, otherwise we don't know what
-		// to build.
-		if (layers != null && layers.size() > 0) {
-			int numOfLayers = layers.size();
-			buildLayers = new Layer[numOfLayers];
-
-			// Loop through requests, converting each JSON object parameter.
-			for(int idx = 0; idx < numOfLayers; idx++) {
-				buildLayers[idx] = new Layer(layers.get(idx));
-			}
-		} else {
-			throw new IncorrectParameterException("Unable to find layer details in build request, missing or empty.");
+		// Loop through requests, converting each JSON object parameter.
+		for(int idx = 0; idx < numOfLayers; idx++) {
+			buildLayers[idx] = new Layer(layers.get(idx));
 		}
 
 		return buildLayers;
-	}
-	
-	/**
-	 * Retrieve full package locations for list of temporary packages.
-	 * We return a primitive array because it's easier to handle in 
-	 * JavaScript context.
-	 * 
-	 * @param tempAppIds - List of temporary package references
-	 * @return Array of temporary package locations 
-	 */
-	public String[] temporaryApplicationPaths() {
-		PackageRepository packageRepo = PackageRepository.getInstance();
-
-		String[] fullPaths = null;
-
-		// Look up each temporary package path for specified identifier.
-		// Use primitive array rather than generic collection because it
-		// is easier to handle in JavaScript context. 
-		if (tempAppIds != null && tempAppIds.size() > 0) {
-			fullPaths = new String[tempAppIds.size()];
-
-			for(int i = 0; i < fullPaths.length; i++) {
-				String id = tempAppIds.get(i);
-				try {
-					fullPaths[i] = packageRepo.getTemporaryPackageLocation(id);
-				} catch (FileNotFoundException e) {
-					throw new IncorrectParameterException("Unable to find temporary package referenced, " + id);
-				}
-			}
-		}
-
-		return fullPaths;
 	}
 	
 	/**
@@ -222,14 +168,27 @@ public class BuildRequest {
 	 * 
 	 * @return Package location path
 	 */
-	public String getPackageLocation() {
+	public String[] getAdditionalPackageLocations() {
 		PackageRepository packageRepo = PackageRepository.getInstance();
-		Map<String, Object> packageMetaData = packageRepo.getPackageDetails(packageName, version);
+		String[] packageLocations = new String[packages.size()-1];
+			
+		Iterator<Map<String, String>> iter = packages.iterator();
+		
+		int idx = 0;
+		
+		while(iter.hasNext()) {
+			Map<String, String> referencedPackage = iter.next();
+			
+			String name = referencedPackage.get("name"), 
+				version = referencedPackage.get("version");
+			
+			if (!"dojo".equals(name)) {
+				packageLocations[idx] = packageRepo.getPackageLocation(name, version);
+			}
+			idx++;
+		}
 
-		// Find actual Dojo package location for version and identifier.
-		String packageLocation = (String) packageMetaData.get("location");
-
-		return packageLocation;
+		return packageLocations;
 	}
 	
 	// Getter and setters...
@@ -237,12 +196,26 @@ public class BuildRequest {
 		return buildReference;
 	}
 	
-	public String getPackageName() {
-		return packageName;
+	public String getDojoLocation() {
+		PackageRepository packageRepo = PackageRepository.getInstance();
+		return packageRepo.getPackageLocation("dojo", getDojoVersion());
 	}
-
-	public String getVersion() {
-		return version;
+	
+	public String getDojoVersion() {
+		return getDojoPackage().get("version");
+	}
+	
+	protected Map<String, String> getDojoPackage() {
+		Iterator<Map<String, String>> iter = packages.iterator();
+		
+		while(iter.hasNext()) {
+			Map<String, String> referencedPackage = iter.next();
+			if ("dojo".equals(referencedPackage.get("name"))) {
+				return referencedPackage;
+			}
+		}
+		
+		return null;
 	}
 
 	public String getCdn() {
@@ -265,10 +238,6 @@ public class BuildRequest {
 		return themes;
 	}
 	
-	public List<String> getTempAppIds() {
-		return tempAppIds;
-	}
-
 	public List<Map<String, Object>> getLayers() {
 		return layers;
 	}
@@ -282,7 +251,7 @@ public class BuildRequest {
 	 * @throws JsonParseException - Error mapping layers to JSON
 	 */
 	public String serialise() throws JsonParseException, JsonMappingException, IOException  {
-		return String.format(format, packageName, version, cdn, optimise, cssOptimise, 
-			platforms, themes, StringUtils.join(tempAppIds, "/"), JsonUtil.writeJavaToJson(layers));
+		return String.format(format, JsonUtil.writeJavaToJson(packages), cdn, optimise, cssOptimise, 
+			platforms, themes, JsonUtil.writeJavaToJson(layers));
 	}
 }

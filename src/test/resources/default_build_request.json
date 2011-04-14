@@ -1,10 +1,11 @@
-{"layers":[{"name":"dojo.js", "modules":[]}],
- "userPackages":[],
- "version":"1.6.0",
+{
  "platforms":"all", 
  "cssOptimise":"none",
  "themes":"none", 
-  "optimise":"shrinksafe",
-  "cdn":"none",
-  "package":"dojo"
+ "optimise":"shrinksafe",
+ "cdn":"none",
+ "packages": [{
+  	"name": "dojo",
+  	"version": "1.6.0"
+ }]
 }
