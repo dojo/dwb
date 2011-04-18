@@ -77,7 +77,7 @@ public class BuilderContextAction implements ContextAction {
 				buildRequest.getBuildLayersArray(),
 				buildRequest.getOptimise(),
 				buildRequest.getCssOptimise(),
-				buildRequest.getAdditionalPackageLocations(),
+				buildRequest.getCustomModulesLocationsAndPrefixes(),
 				buildRequest.getBuildReference()
 			};
 

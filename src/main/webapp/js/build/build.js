@@ -544,9 +544,9 @@ build = {
 		// none, flatten
 		/*String*/ cssOptimise,
 		
-		// Array of paths to temporary packages
-		/*String*/userAppPaths,
-		
+		// Array of packages prefixes for custom packages
+		/*String*/ modulePrefixLocations,
+
 		// unique reference for built package, used for logging
 		/*String*/packageRef){
 
@@ -599,19 +599,23 @@ build = {
 		writeLogLine(packageRef, "done");
 		
 		var userAppPrefixes = '';
+        var modulePrefix, packageLocation; 
 		
-		if (userAppPaths !== null) {	
-			writeLogLine(packageRef, "Found custom user application packages, analysing...");
+        // TODO: 
+		if (modulePrefixLocations !== null) {	
+			writeLogLine(packageRef, "Found custom module package, set up build references...");
 			
-			for(var i = 0, userAppPath; i < userAppPaths.length, userAppPath = userAppPaths[i]; i++) {				
+			for(var i = 0, userAppPrefix; i < modulePrefixLocations.length, userAppPrefix = modulePrefixLocations[i]; i++) {				
 				// Find modules from top level user directory.
-				var userAppModules = findModules(userAppPath);
-				var userAppDependencies = '"' + userAppModules.join('","') + '"';
-				var topLevelModule = userAppModules[0].split(".")[0];
+			//	var userAppModules = findModules(userAppPath);
+		//		var userAppDependencies = '"' + userAppModules.join('","') + '"';
+//				var topLevelModule = userAppPackageIds[i];
 				
-				userAppPrefixes += ', [ "'+topLevelModule+'", "' + userAppPath + '/' + topLevelModule + '" ]';
+                modulePrefix = userAppPrefix[0], packageLocation = userAppPrefix[1];
+
+				userAppPrefixes += ', [ "'+modulePrefix+'", "' + packageLocation + '/' + modulePrefix + '"]';
 				
-				writeLogLine(packageRef, "Enabled build profile for custom package " + topLevelModule);
+				writeLogLine(packageRef, "Enabled build profile for custom modules: " + modulePrefix);
 			}
 			
 			writeLogLine(packageRef, "Custom user package analysis... done");

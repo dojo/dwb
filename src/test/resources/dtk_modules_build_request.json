@@ -1,0 +1,20 @@
+{
+ "platforms":"all", 
+ "cssOptimise":"none",
+ "themes":"none", 
+ "optimise":"shrinksafe",
+ "cdn":"none",
+ "layers": [{
+   "name":"dojo.js",
+   "modules":[
+     {"name": "dojo.back", "package":"dojo"},
+     {"name": "dijit.Dialog", "package":"dojo"},
+     {"name": "dojox.storage", "package":"dojo"}
+   ]
+  }
+ ],
+ "packages": [{
+  	"name": "dojo",
+  	"version": "1.6.0"
+ }]
+}

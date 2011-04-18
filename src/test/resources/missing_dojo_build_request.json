@@ -1,0 +1,8 @@
+{
+ "platforms":"all", 
+ "cssOptimise":"none",
+ "themes":"none", 
+ "optimise":"shrinksafe",
+ "cdn":"none",
+ "packages": []
+}

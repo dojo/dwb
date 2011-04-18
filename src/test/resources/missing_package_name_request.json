@@ -1,0 +1,10 @@
+{
+ "platforms":"all", 
+ "cssOptimise":"none",
+ "themes":"none", 
+ "optimise":"shrinksafe",
+ "cdn":"none",
+ "packages": [{
+  	"version": "1.6.0"
+ }]
+}

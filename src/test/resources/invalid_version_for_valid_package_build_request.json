@@ -1,0 +1,11 @@
+{
+ "platforms":"all", 
+ "cssOptimise":"none",
+ "themes":"none", 
+ "optimise":"shrinksafe",
+ "cdn":"none",
+ "packages": [{
+  	"name": "dojo",
+  	"version": "2.3.4"
+ }]
+}

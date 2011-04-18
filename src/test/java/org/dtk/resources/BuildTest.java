@@ -5,7 +5,9 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -27,8 +29,8 @@ import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.dtk.resources.build.manager.BuildState;
-import org.dtk.util.JsonUtil;
 import org.dtk.util.Options;
+import org.dtk.util.JsonUtil;
 import org.junit.Test;
 
 import static org.junit.Assert.* ;
@@ -37,6 +39,10 @@ import static org.junit.Assert.* ;
  * Test the RESTful Build API. This API provides access to the underlying 
  * Dojo build system, allowing a user to submit build jobs, check the status 
  * of a build request and access the result.  
+ * 
+ * Tests use a series of valid build request, containing DTK modules, non-DTK modules
+ * custom layers and more, alongside invalid build requests to ensure we are receiving
+ * correct HTTP responses (4xx vs 5xx). 
  * 
  * @author James Thomas
  */
@@ -58,26 +64,62 @@ public class BuildTest {
 	/**
 	 * Default build profile for base dojo.js with no added modules.
 	 */
+	final protected String dtkModulesBuildProfile = "dtk_modules_build_request.json";
+	
+	/**
+	 * Build profile for base dojo.js with additional modules from Dijit.
+	 */
+	final protected String dijitModulesBuildProfile = "dijit_modules_build_request.json";
+	
+	/**
+	 * Dojo base build with additional modules from Dojo Web Builder package.
+	 */
+	final protected String dwbModulesBuildProfile = "dwb_modules_build_request.json";
+	
+	/**
+	 * Dojo base build with additional build layer containing standard DTK modules.
+	 */
+	final protected String customLayerBuildProfile = "custom_layer_build_request.json";
+	
+	/**
+	 * Invalid build request, missing mandatory dojo package.
+	 */
+	final protected String missingDojoPackageBuildProfile = "missing_dojo_build_request.json";
+	
+	/**
+	 * Invalid build request, missing dojo package version.
+	 */
+	final protected String missingDojoPackageVersionBuildProfile = "missing_dojo_version_build_request.json";
+	
+	/**
+	 * Invalid build request, missing package name. 
+	 */
+	final protected String missingPackageNameBuildProfile = "missing_package_name_request.json";
+	
+	/**
+	 * Invalid build request, incorrect version for valid package
+	 */
+	final protected String invalidVersionForValidPackageBuildProfile = "invalid_version_for_valid_package_build_request.json";
+	
+	/**
+	 * Invalid build request, completely missing packages parameter
+	 */
+	final protected String missingPackageReferenceBuildProfile = "missing_package_reference_build_request.json";
+	
+	/**
+	 * Default build profile for base dojo.js with no added modules.
+	 */
 	final protected String emptyBuildProfile = "{}";
-
+	
 	/**
 	 * Test typical case using valid build parameters. 
 	 * We are expecting returned response to have a status
 	 * reference URL, which successfully resolves after a 
 	 * period. The HTTP response should be a HTTP 202. 
-	 * 
-	 * @throws URISyntaxException 
-	 * @throws IOException 
-	 * @throws ClientProtocolException 
-	 * @throws InterruptedException 
 	 */
 	@Test 
-	public void test_ValidNewBuildRequest () throws URISyntaxException, ClientProtocolException, IOException, InterruptedException  {
-		// Generate default build request
-		HttpResponse response = generateBuildRequest();
-		String link = extractBuildStatusPollingLink(response);
-		String buildResultLocation = pollStatusUntilCompleted(link, 60);
-		verifyBuildResult(buildResultLocation);
+	public void test_ValidDojoBaseBuildRequest() throws URISyntaxException, ClientProtocolException, IOException, InterruptedException  {
+		startAndCompleteDojoBuild(defaultBuildProfile);
 	}
 
 	/**
@@ -86,59 +128,165 @@ public class BuildTest {
 	 * of the same build is available. The build status
 	 * link should always return "completed" for the build 
 	 * state without any polling.
-	 * 
-	 * @throws URISyntaxException 
-	 * @throws IOException 
-	 * @throws ClientProtocolException 
-	 * @throws InterruptedException 
 	 */
 	@Test 
-	public void test_ValidCachedBuildRequest () throws URISyntaxException, ClientProtocolException, IOException {
+	public void test_ValidDojoBaseCachedBuildRequest() throws URISyntaxException, ClientProtocolException, IOException {
 		// Generate default build request
-		HttpResponse response = generateBuildRequest();
+		HttpResponse response = generateBuildRequest((getClass().getClassLoader().getResourceAsStream(defaultBuildProfile)));
 		String link = extractBuildStatusPollingLink(response);
 		String buildResultLocation = verifyCompletedBuildStatus(link);
-		verifyBuildResult(buildResultLocation);
+		verifyBuildResult(buildResultLocation, new HashSet<String>() {{
+			add("dojo.js");
+		}});
 	}
 	
-	public test_ValidNewBuildRequestUsingModulesFromNonDojoPackages() {
-		
+	/**
+	 * Test build example using dojo base plus some additional
+	 * modules from the Dojo Toolkit package only. 
+	 * We are expecting returned response to have a status
+	 * reference URL, which successfully resolves after a 
+	 * period. The HTTP response should be a HTTP 202. 
+	 */
+	@Test 
+	public void test_ValidDTKModulesBuildRequest() 
+	throws URISyntaxException, ClientProtocolException, IOException, InterruptedException  {
+		startAndCompleteDojoBuild(dtkModulesBuildProfile);
 	}
 	
-	public test_ValidNewBuildRequestUsingTemporaryPackage() {
-		
+	/**
+	 * Test build example using modules from the dojo web builder's source. This will
+	 * test the ability to generate custom builds using non-DTK modules. Should just
+	 * contain a single "dojo.js" file in the compressed build zip result. 
+	 */
+	@Test
+	public void test_ValidNewBuildRequestUsingModulesFromNonDojoPackages() 
+	throws ClientProtocolException, IOException, URISyntaxException, InterruptedException {
+		startAndCompleteDojoBuild(dtkModulesBuildProfile);
 	}
 	
-	public void test_MissingDojoPackageReferenceBuild () {
-		
+	public void test_ValidNewBuildRequestUsingTemporaryPackage() {
+		// TODO WHEN TEMPORARY PACKGES API IS WORKING
 	}
 	
-	public void test_MissingDojoPackageReferenceVersionBuild () {
+	/**
+	 * Test build example with standard DTK modules split into multiple build layers. 
+	 * Build should complete successfully and return a zip archive with two non-empty 
+	 * layers files in, "dojo.js" & "custom.js". 
+	 */
+	@Test
+	public void test_ValidBuildRequestWithMultipleLayers() 
+	throws ClientProtocolException, IOException, URISyntaxException, InterruptedException {
+		Set<String> filesInCustomLayerBuild = new HashSet<String>() {{
+			add("dojo.js");
+			add("custom.js");
+		}};
 		
+		startAndCompleteDojoBuild(customLayerBuildProfile, filesInCustomLayerBuild);
 	}
 	
-	public void test_MissingNameInPackageReferenceBuild() {
+	/**
+	 * Test build example with modules from dijit package, which contain localisation
+	 * bundle reference. Builder should automatically detect and bundle appropriate 
+	 * resources files in the resulting archive. When build has completed successfully,
+	 * verify resulting zip file contains base "dojo.js" layer along with NLS resource files. 
+	 */
+	@Test
+	public void test_BuildWithDijitModulesMustContainsNLSResources() 
+	throws ClientProtocolException, IOException, URISyntaxException, InterruptedException {
+		Set<String> filesInCustomLayerBuild = new HashSet<String>() {{
+			add("dojo.js");
+			// Check for sample NLS files
+			add("nls/dojo_ROOT.js");
+			add("nls/dojo_en-gb.js");
+			add("nls/dojo_en.js");
+		}};
 		
+		startAndCompleteDojoBuild(dijitModulesBuildProfile, filesInCustomLayerBuild);
 	}
 	
-	public void test_InvalidNameInPackageReferenceBuild() {
+	// All the following build requests are invalid and should fail. 
+	
+	/**
+	 * Invalid build test, missing reference to mandatory Dojo package used for
+	 * building the base "dojo.js" layer.   
+	 * 
+	 * Should return a HTTP 400 to indicate that user has submitted an invalid
+	 * build request.
+	 */
+	@Test
+	public void test_MissingDojoPackageReferenceBuild () 
+	throws ClientProtocolException, IOException, URISyntaxException {
+		HttpResponse response = generateBuildRequest(
+			getClass().getClassLoader().getResourceAsStream(missingDojoPackageBuildProfile));
 		
+		// Service must return a 400 for invalid build requests.
+		assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusLine().getStatusCode()); 
 	}
 	
-	public void test_MissingVersionForPackageReferenceBuild() {
-		
+	/**
+	 * Invalid build test, missing package version for the mandatory Dojo package used for
+	 * building the base "dojo.js" layer.   
+	 * 
+	 * Should return a HTTP 400 to indicate that user has submitted an invalid
+	 * build request.
+	 */
+	@Test
+	public void test_MissingDojoPackageReferenceVersionBuild ()
+	throws ClientProtocolException, IOException, URISyntaxException {
+		HttpResponse response = generateBuildRequest(
+			getClass().getClassLoader().getResourceAsStream(missingDojoPackageVersionBuildProfile));
+
+		// Service must return a 400 for invalid build requests.
+		assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusLine().getStatusCode()); 
 	}
 	
-	public void test_InvalidVersionForValidPackageReferenceBuild() {
-		
+	/**
+	 * Invalid build test, package reference missing mandatory name parameter.    
+	 * 
+	 * Should return a HTTP 400 to indicate that user has submitted an invalid
+	 * build request.
+	 */
+	@Test
+	public void test_MissingNameInPackageReferenceBuild() 
+	throws ClientProtocolException, IOException, URISyntaxException {
+		HttpResponse response = generateBuildRequest(
+			getClass().getClassLoader().getResourceAsStream(missingPackageNameBuildProfile));
+
+		// Service must return a 400 for invalid build requests.
+		assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusLine().getStatusCode()); 
 	}
 	
-	public void test_MissingPackageReferenceForModuleBuild() {
-		
+	/**
+	 * Invalid build test, package reference contains an invalid version for the valid
+	 * package reference, "dojo".  
+	 * 
+	 * Should return a HTTP 400 to indicate that user has submitted an invalid
+	 * build request.
+	 */
+	@Test
+	public void test_InvalidVersionForValidPackageReferenceBuild() 
+	throws ClientProtocolException, IOException, URISyntaxException {
+		HttpResponse response = generateBuildRequest(
+			getClass().getClassLoader().getResourceAsStream(invalidVersionForValidPackageBuildProfile));
+
+		// Service must return a 400 for invalid build requests.
+		assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusLine().getStatusCode()); 
 	}
 	
-	public void test_InvalidPackageReferenceForModuleBuild() {
-		
+	/**
+	 * Invalid build test, completely missing mandatory build parameter, "packages".    
+	 * 
+	 * Should return a HTTP 400 to indicate that user has submitted an invalid
+	 * build request.
+	 */
+	@Test
+	public void test_MissingPackageReferenceForModuleBuild() 
+	throws ClientProtocolException, IOException, URISyntaxException {
+		HttpResponse response = generateBuildRequest(
+			getClass().getClassLoader().getResourceAsStream(missingPackageReferenceBuildProfile));
+
+		// Service must return a 400 for invalid build requests.
+		assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusLine().getStatusCode()); 		
 	}
 	
 	/**
@@ -155,20 +303,8 @@ public class BuildTest {
 		// Generate build request using empty profile (invalid).
 		HttpResponse response = generateBuildRequest(emptyBuildProfile);
 
-		// Service must return a 400 for invliad build requests.
+		// Service must return a 400 for invalid build requests.
 		assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusLine().getStatusCode()); 
-	}
-
-	/**
-	 * Test retrieval of the status for a build request 
-	 * that exists. We should have two valid responses, building
-	 * and complete with relevant links. 
-	 */
-	@Test
-	public void test_RetrieveValidBuildStatus() {
-		// TODO: We have already ran this test as part of the 
-		// valid build request. Is there any point in running it
-		// again? 
 	}
 
 	/**
@@ -195,18 +331,6 @@ public class BuildTest {
 		HttpResponse response = httpClient.execute(httpGet);
 		// Invalid status request should come back with a HTTP 404. 
 		assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusLine().getStatusCode());
-	}
-
-	/**
-	 * Test the retrieval of a valid build resource, returned
-	 * from a previous build request. We should have a normal
-	 * HTTP code 200 returned with the built resource.
-	 */
-	@Test 
-	public void test_AccessValidBuildResult() {
-		// TODO: We have already ran this test as part of the 
-		// valid build request. Is there any point in running it
-		// again? 
 	}
 
 	/**
@@ -357,6 +481,22 @@ public class BuildTest {
 		return jsonResponse;
 	}
 	
+
+	protected void startAndCompleteDojoBuild(String buildRequestResource) throws ClientProtocolException, IOException, URISyntaxException, InterruptedException {
+		Set<String> baseDojoBuildFiles = new HashSet<String>() {{
+			add("dojo.js");
+		}};
+		startAndCompleteDojoBuild(buildRequestResource, baseDojoBuildFiles);
+	}
+	
+	protected void startAndCompleteDojoBuild(String buildRequestResource, Set<String> expectedResultFiles) throws ClientProtocolException, IOException, URISyntaxException, InterruptedException {
+		HttpResponse response = generateBuildRequest(getClass().getClassLoader().getResourceAsStream(buildRequestResource));
+		String link = extractBuildStatusPollingLink(response);
+		String buildResultLocation = pollStatusUntilCompleted(link, 60);
+		verifyBuildResult(buildResultLocation, expectedResultFiles);
+	}
+	
+	
 	/**
 	 * Download a build result, given by method parameter, and verify that
 	 * contents of the zip file contain a single non-empty file called "dojo.js".
@@ -365,7 +505,39 @@ public class BuildTest {
 	 * @throws ClientProtocolException 
 	 * @throws IOException 
 	 */
-	protected void verifyBuildResult(String buildResultLocation) throws ClientProtocolException, IOException {
+	protected void verifyBuildResult(String buildResultLocation, Set<String> expectedBuildFiles) throws ClientProtocolException, IOException {
+		ZipInputStream zip = retrieveBuildResult(buildResultLocation);
+		
+		ZipEntry entry = zip.getNextEntry();
+		
+		// Loop through all zip entries, looking presence of the build files
+		// that must be present and checking they aren't empty.
+		while(entry != null) {
+			String entryName = entry.getName();			
+			if (expectedBuildFiles.contains(entryName)) {
+				// Make sure zip entry contains some data...
+				byte[] buffer = new byte[2048];
+				int len = zip.read(buffer, 0, buffer.length);
+				assertTrue(len != -1);
+				
+				// Seen this file, remove from set. 
+				expectedBuildFiles.remove(entryName);
+			}
+			entry = zip.getNextEntry();
+		}
+		
+		// We should have seen every entry we were expecting.
+		assertEquals(expectedBuildFiles.size(), 0);
+	}
+	
+	/**
+	 * 
+	 * @param buildResultLocation
+	 * @return
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 */
+	protected ZipInputStream retrieveBuildResult(String buildResultLocation) throws ClientProtocolException, IOException {
 		HttpClient httpClient = new DefaultHttpClient();
 		HttpGet httpGet = new HttpGet(buildResultLocation);
 		httpGet.setHeader("Accept", "application/zip");
@@ -379,36 +551,24 @@ public class BuildTest {
 		// Retrieve zipped response, unzip and confirm it contains a single zip file.
 		HttpEntity entity = response.getEntity();
 		assertNotNull(entity);
-
-		// Unzip and check contents... 
+ 
 		ZipInputStream zip = new ZipInputStream(entity.getContent());
-		ZipEntry entry = zip.getNextEntry();
-
-		// Very simple test that we have only a single dojo.js file and 
-		// it isn't empty! 
-		assertEquals("dojo.js", entry.getName());
-
-		// Make sure zip entry contains some data...
-		byte[] buffer = new byte[2048];
-		int len = zip.read(buffer, 0, buffer.length);
-		assertTrue(len != -1);
 		
-		// No more entries....
-		assertNull(zip.getNextEntry());
+		return zip;
 	}
 
 	/**
-	 * Kick-off a build request using the default build profile.
+	 * Kick-off a build request using following input stream
+	 * as build request.
 	 * 
 	 * @return Http response object associated build request
 	 */
-	protected HttpResponse generateBuildRequest() throws ClientProtocolException, IOException, URISyntaxException {
-		InputStream is = getClass().getClassLoader().getResourceAsStream(defaultBuildProfile);
+	protected HttpResponse generateBuildRequest(InputStream is) throws ClientProtocolException, IOException, URISyntaxException {
 		StringWriter writer = new StringWriter();
 		IOUtils.copy(is, writer, "utf-8");
 		return generateBuildRequest(writer.toString());
 	}
-
+	
 	/**
 	 * Kick-off a build request using the given build profile. 
 	 * 

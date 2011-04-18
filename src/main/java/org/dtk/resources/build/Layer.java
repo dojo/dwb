@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class Layer {
 	private String name;
-	private Module[] modules; 
+	private String[] dependencies; 
 	
 	public Layer(Map<String, Object> layerProps) {
 		// Extract layer name from properties map
@@ -25,13 +25,13 @@ public class Layer {
 		
 		if (layerModules != null) {
 			int moduleCount = 0; 
-			this.modules = new Module[layerModules.size()];
+			this.dependencies = new String[layerModules.size()];
 			
 			Iterator<Map<String, String>> modulesIter = layerModules.iterator();
 			
 			while (modulesIter.hasNext()) {
 				Map<String, String> layerModule = modulesIter.next();
-				this.modules[moduleCount] = new Module(layerModule.get("name"), layerModule.get("package"));				
+				this.dependencies[moduleCount] = layerModule.get("name");				
 				moduleCount++;
 			}
 		}
@@ -45,11 +45,11 @@ public class Layer {
 		this.name = name;
 	}
 	
-	public Module[] getDependencies() {
-		return this.modules;
+	public String[] getDependencies() {
+		return this.dependencies;
 	}
 	
-	public void setDependencies(Module[] modules) {
-		this.modules = modules;
+	public void setDependencies(String[] dependencies) {
+		this.dependencies = dependencies;
 	}
 }

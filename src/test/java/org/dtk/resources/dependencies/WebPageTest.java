@@ -40,7 +40,7 @@ public class WebPageTest {
 	/** Remote web page with large amount of DTK modules along with two 
 	 *  custom modules */
 	protected Map<String, Object> remotePageWithCustomModules = new HashMap<String, Object>() {{
-		put(PAGE_ADDRESS, "http://www.onlinescoutmanager.co.uk");
+		put(PAGE_ADDRESS, "https://www.onlinescoutmanager.co.uk");
 		put(PAGE_MODULES, Arrays.asList(
 			"dijit.Calendar", 
 			"dijit.layout.ContentPane",

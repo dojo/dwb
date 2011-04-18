@@ -168,27 +168,54 @@ public class BuildRequest {
 	 * 
 	 * @return Package location path
 	 */
-	public String[] getAdditionalPackageLocations() {
+	public String[][] getCustomModulesLocationsAndPrefixes() {
 		PackageRepository packageRepo = PackageRepository.getInstance();
-		String[] packageLocations = new String[packages.size()-1];
+		Map<String, String> modulePrefixLocations = new HashMap<String, String>();
 			
-		Iterator<Map<String, String>> iter = packages.iterator();
-		
-		int idx = 0;
-		
+		// Create custom module lookup, used to match module prefixes with a 
+		// package location
+		Map<String, String> packageLocationLookup = new HashMap<String, String>();		
+		Iterator<Map<String, String>> iter = packages.iterator();		
 		while(iter.hasNext()) {
 			Map<String, String> referencedPackage = iter.next();
 			
 			String name = referencedPackage.get("name"), 
 				version = referencedPackage.get("version");
 			
-			if (!"dojo".equals(name)) {
-				packageLocations[idx] = packageRepo.getPackageLocation(name, version);
-			}
-			idx++;
+			packageLocationLookup.put(name, packageRepo.getPackageLocation(name, version));			
 		}
 
-		return packageLocations;
+		// Search through all module dependencies, creating location references for
+		// all module prefixes
+		Iterator<Map<String, Object>> layerIter = layers.iterator();
+		while(layerIter.hasNext()) {
+			Map<String, Object> layer = layerIter.next();
+			List<Map<String, String>> layerModules = (List<Map<String, String>>) layer.get("modules");
+			Iterator<Map<String, String>> modulesIter = layerModules.iterator();
+			while (modulesIter.hasNext()) {
+				Map<String, String> details = modulesIter.next();
+				String moduleName = details.get("name");
+				String modulePrefix = moduleName.split("\\.")[0];
+				// If we haven't already resolved location for this prefix 
+				if (!"dojo".equals(modulePrefix) && !modulePrefixLocations.containsKey(modulePrefix)) {
+					String location = packageLocationLookup.get(details.get("package"));
+					modulePrefixLocations.put(modulePrefix, location);
+				}
+			}
+		}
+		
+		String[][] modulesAndPrefix = new String[modulePrefixLocations.size()][];
+		
+		int idx = 0;
+		
+		Iterator<String> prefixIter = modulePrefixLocations.keySet().iterator();
+		while(prefixIter.hasNext()) {
+			String prefix = prefixIter.next();
+			modulesAndPrefix[idx] = new String[] {prefix, modulePrefixLocations.get(prefix)};
+			idx++;
+		}
+		
+		return modulesAndPrefix;
 	}
 	
 	// Getter and setters...

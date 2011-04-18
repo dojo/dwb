@@ -1,0 +1,23 @@
+{
+ "platforms":"all", 
+ "cssOptimise":"none",
+ "themes":"none", 
+ "optimise":"shrinksafe",
+ "cdn":"none",
+ "layers": [{
+   "name":"dojo.js",
+   "modules":[
+     {"name": "dwb.util.Config", "package":"dwb"},
+     {"name": "dwb.ui.ModuleGrid", "package":"dwb"},
+     {"name": "dwb.ui.IntroDialog", "package":"dwb"}
+   ]
+  }
+ ],
+ "packages": [{
+  	"name": "dojo",
+  	"version": "1.6.0"
+ }, {
+    "name": "dwb", 
+    "version": "1.0.0"
+ }]
+}

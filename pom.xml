@@ -209,10 +209,17 @@
 										</delete>
 
 										<!-- Copy package meta-data for desired version of Dojo -->
-										<copy
-											todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
+										<copy todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
 											<fileset dir="src/main/config/packages/dojo/${dojo.version}" />
 										</copy>
+
+										<!-- Copy all additional package meta-data files, these have been manually generated
+										 by the user. Exclude Dojo packages, we've already copied the single Dojo instance we want. -->
+										  <copy todir="src/main/webapp/WEB-INF/config/packages/">
+											<fileset dir="src/main/config/packages/">
+												<exclude name="**/dojo/**"/>
+											</fileset>											
+										</copy> 
 		
 										<!-- Update meta-data to point to actual Dojo source location -->
 										<replaceregexp

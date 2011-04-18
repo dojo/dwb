@@ -39,13 +39,12 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	temporaryPackages: [],
 
 	baseProfile : {
-		"package": null,
-		"version": null,
 		"optimise": null,
 		"cdn": null,
 		"platforms": null, 
 		"themes": null,
-		"cssOptimise": null
+		"cssOptimise": null,
+        "packages": null
 	},
 
     // Deferred object representing current in-flight 
@@ -97,13 +96,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			this.updateSelectedLayerTitle(message.title);
 		}));
 
-
-        // Add default package name and version to the base profile
-        dojo.subscribe("dwb/package/default", dojo.hitch(this, function (data) {
-            dojo.mixin(this.baseProfile, data);
-        }));
-
-        // Add build options to the build config panel
         // TODO: Push this subscription to the actual widget
         dojo.subscribe("dwb/build/options", dojo.hitch(this, function (response) {
             this.buildOptionsContent.addBuildParameters(response);
@@ -115,7 +107,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             }));
         }));
 
-        dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_modulesAvailable"));
+        dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_packageModulesAvailable"));
 
         dojo.subscribe("dwb/error/loading_packages", dojo.hitch(this, "_moduleLoadingError"));
 
@@ -127,7 +119,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			"items": [
 			      {"name": "New Layer", "ignored": true, "labelChange":false}
 	        ]
-		},
+		};
 
 		// Set up datastore to hold data about build layers  
 		this.layers_store = new dojo.data.ItemFileWriteStore({"data":this.baseLayer}); 
@@ -150,7 +142,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		// When the user scrolls the module grid, we need to update the row indices and counter shown. 
 		this.connect(this.module_grid, "onVisibleRowsChange", dojo.hitch(this, function (firstVisibleRow, lastVisibleRow, rowCount) {
 			dojo.attr(this.moduleCounter, "innerHTML", dojo.string.substitute(this._modulesDisplayedFormat, arguments));
-		}));
+        }));
 
 		// When user modifies the selected modules in the grid, propagate changes through to module overview panel.
 		this.connect(this.module_grid, "onSelectionChanged", dojo.hitch(this, function () {
@@ -212,7 +204,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	// Allows user to click anywhere on a row to select
 	// that row.
 	_moduleGridRowClick : function (e) {
-		var selectRow = !this.module_grid.selection.isSelected(e.rowIndex);	        	
+        var selectRow = !this.module_grid.selection.isSelected(e.rowIndex);
 		this.module_grid.rowSelectCell.toggleRow(e.rowIndex, selectRow);
 	},
 
@@ -278,11 +270,15 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		// Return all modules selected, both rendered and not currently rendered. 
 		var allSelectedModules = this.module_grid.getAllSelectedItems();
 		
-		dojo.map(allSelectedModules, dojo.hitch(this, function (item) {
-			baseLayer.modules.push(this.store.getValue(item, "name"));
+		dojo.forEach(allSelectedModules, dojo.hitch(this, function (item) {
+            var module = {
+                "name": this.store.getValue(item, "name"),
+                "package": this.store.getValue(item, "package")
+            };
+			baseLayer.modules.push(module);
 		}));
 
-		return {"layers":[baseLayer], "userPackages": this.temporaryPackages};
+		return {"layers":[baseLayer]};
 	},
 
 	// User has triggered a build request. Construct build profile
@@ -296,8 +292,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 		profileLayersAvailable.then(dojo.hitch(this, function (profileLayers) {
 			var buildProfile = {
-				"layers" : [],	
-				"userPackages" : this.temporaryPackages
+				"layers" : []
 			};
 
 			// Pull out layer profiles from deferred responses. Ignore 
@@ -334,10 +329,10 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 			// Should layer be included in the build profile?
 			if (ref.store.getValue(item, "ignored") !== true) {
-				var layer = {
-						name: ref.store.getValue(item, "name"),
-						modules: []
-				};				
+                var layer = {
+                    name: ref.store.getValue(item, "name"),
+                    modules: []
+                };				
 
 				// If this layer contains modules from a user's application, 
 				// include that within build profile. 
@@ -353,7 +348,10 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 				// parent listener. 
 				modulesStore.fetch({onComplete:function (modules) {
 					layer.modules = dojo.map(modules, function (module) {
-						return modulesStore.getValue(module, "name");
+                        return {
+                            "name": modulesStore.getValue(module, "name"),
+                            "package": modulesStore.getValue(module, "package")
+                        }
 					});
 
 					d.callback(layer);
@@ -415,12 +413,12 @@ dojo.declare("dwb.Main", dwb.Main._base, {
                 // during the time we were asleep....
                 if (this._inflight) {
 				    this._inflight = dojo.xhrGet({
-			    		url: statusUrl,
-		    			handleAs: "json"
-	    			});
+                        url: statusUrl,
+                        handleAs: "json"
+                    });
 
-    				this._inflight.then(dojo.hitch(this, "buildStatusPoller", statusUrl), dojo.hitch(this, function () {
-    				    this._buildProgressFinished("failure");
+                    this._inflight.then(dojo.hitch(this, "buildStatusPoller", statusUrl), dojo.hitch(this, function () {
+                        this._buildProgressFinished("failure");
 				    }));	
                 }
 			}), 500);
@@ -453,7 +451,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             this._inflight = null;
 		    
             // Inform all listeners we have finished building.
-    		dojo.publish("dwb/build/finished");    
+            dojo.publish("dwb/build/finished");
         }
 	},
 	
@@ -464,52 +462,66 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             this._inflight.cancel();
             this._inflight = null;
             // Inform all listeners we have finished building.
-    		dojo.publish("dwb/build/finished");    
+            dojo.publish("dwb/build/finished");
         }
     },
 
 	// Packages modules have been retrieved and can be rendered 
 	// using the module grid. 
-	_modulesAvailable : function(modules) {		
+	_packageModulesAvailable : function(packageModules) {		
 		var modulesInfo = [];
+        this.baseProfile.packages = [];
 
-		// Split modules into groups based upon their top level module reference.  
-		// We show these groups in separate title panes. 
-		dojo.forEach(modules, function (module) {		
-			var name = module[0], desc = module[1];
+        // For every package, create module grid item and store 
+        // identifying references in build profile.
+        dojo.forEach(packageModules, dojo.hitch(this, function(pkge) {
+            this.baseProfile.packages.push({
+                "name": pkge.name,
+                "version": pkge.version
+            });
+            dojo.forEach(pkge.modules, dojo.hitch(this, function (module) {
+                var item = this._generateModuleGridItem(pkge.name, module);
+                modulesInfo.push(item);
+            }));
+        }));
 
-			// Extract first module component from name
-			var baseModule = name.split(".")[0];
-
-            // Trim description, lines over ~300 chars cause issues
-            // with grid height being larger than background image
-            // used for styling.
-            if (desc.length > 340) {
-                desc = desc.substring(0, 300).trim()  + "...";
-            }
-
-			modulesInfo.push({"name":name,"desc": desc, "baseModule": baseModule});			
-		});
-
-		// Create new module store.
+		// Create new data store holding module information,
+        // setting on the grid and analyse panel
 		this.store = new dojox.data.AndOrWriteStore({data:{
-			"identifier": "name",        		
-			"items": modulesInfo
+            "identifier":"name",
+            "items": modulesInfo
 		}});
 
 		this.module_grid.setStore(this.store);
-
 		this.analysePane.set("globalModulesStore", this.store);
 
 		// Propagate current filter options to new store view
-		this.updateModuleFilter();	 	       
+        this.updateModuleFilter();
 	}, 
+
+    // Process package module and produce corresponding dojo store
+    // item.
+    _generateModuleGridItem : function (packageId, module) {
+	    var name = module[0], desc = module[1];
+
+        // Extract first module component from name
+        var baseModule = name.split(".")[0];
+
+        // Trim description, lines over ~300 chars cause issues
+        // with grid height being larger than background image
+        // used for styling.
+        if (desc.length > 340) {
+            desc = desc.substring(0, 300).trim()  + "...";
+        }
+
+	    return {"name":name, "desc": desc, "baseModule": baseModule, "package": packageId};		
+    },
 
 	// Remove all possible title classes and add the current one.
 	_refreshViewPanels : function (currentTitle, currentMode) {
 		var allTitles = ["Modules", "Layers", "Auto-Analyse", "Help", "simple"];
 		dojo.removeClass(this.buildOptionsContent.domNode, allTitles);
-		dojo.addClass(this.buildOptionsContent.domNode, currentTitle)
+		dojo.addClass(this.buildOptionsContent.domNode, currentTitle);
 	},
 
 	// When top-level tab container displays a new child, modify the  
@@ -595,7 +607,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		if (moduleItems.length > 0) {
 			// TODO: Fix this! Lazy...
 			var modules = dojo.map(moduleItems, function(row) {
-				return {"name": row.name[0], "desc": row.desc[0]};
+				return {"name": row.name[0], "desc": row.desc[0], "package":row["package"][0]};
 			});
 
 			// Pseudo-layer, with new module links, has ignored attribute set.

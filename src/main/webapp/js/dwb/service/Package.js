@@ -7,7 +7,7 @@ dojo.provide("dwb.service.Package");
 dojo.declare("dwb.service.Package", null, {
 	serviceEndPoint: dwb.util.Config.get("packagesApi"),
 
-    // Load package meta-data for this endpoint 
+    // Start loading of the package meta-data for this endpoint 
     load: function () {
 		var d = dojo.xhrGet({
 			url: this.serviceEndPoint,
@@ -20,56 +20,79 @@ dojo.declare("dwb.service.Package", null, {
     // List of packages available returned, find versions 
     // information for each one package.
     _processPackages: function (response) {
-        var packages = response.packages, pkge = null;
+        var packages = response.packages;
 
-        // Run through entire package list, breaking when we find
-        // the "dojo" package.
-        while((pkge = packages.pop()) && pkge.name !== "dojo");
-
-        // Unable to find base Dojo package, something has gone 
-        // wrong in the backend service. 
-        if (typeof pkge == "undefined") {
+        // Service hasn't returned any package information, 
+        // something has gone wrong! 
+        if (!packages){
             this._loadingError();
             return;
         }
 
-        // Send off request for all package versions, we'll select the 
-        // newest version
-        var versionReq = {url: pkge.link, handleAs: "json"};
+        // Load list of modules for the latest version of each package
+        // available. Requires multiple XHR requests to load versions for 
+        // each package and then modules for package version.
+        var module_requests = dojo.map(packages, dojo.hitch(this, "_retrieveLatestPackageModules"));
+        var package_modules = new dojo.DeferredList(module_requests);
 
-        // Retrieve version information for the dojo package
-		dojo.xhrGet(versionReq).then(dojo.hitch(this, "_processPackageVersions"), this._loadingError);
+        // Once latest module data for latest package versions has been
+        // loaded, pull out deferred results and publish to any listeners
+        package_modules.then(dojo.hitch(this, function (modules) {
+            var resolved_details = dojo.map(modules, function(resolved) {
+                return resolved[1];
+            });
 
-        // Publish default package name and all build options
-        dojo.publish("dwb/package/default", [{"package": pkge.name}]);
+            this.packagesAndModulesAvailable(resolved_details);
+        }), this._loadingError);
+
+        // Publish full build options contained within package response
         dojo.publish("dwb/build/options", [response]);
     },
     
-    // Package version meta-data received, find latest version
-    // and fire off request for package details.
-    _processPackageVersions: function (versions) {
+    // For a given package, resolve the versions available
+    // and use the latest to find all available modules. 
+    _retrieveLatestPackageModules: function (pkge) {
+        var latestPackageModules = new dojo.Deferred();
+        // Send off request for all package versions, we'll select the 
+        // newest version
+        var versions_request = {url: pkge.link, handleAs: "json"};
+
+		dojo.xhrGet(versions_request).then(dojo.hitch(this, function (versions) {
+            // We want modules available for the latest package version
+            var latest = this._findLatestPackageVersion(versions);
+            dojo.xhrGet({
+                url: latest.link,
+                handleAs: "json"
+            }).then(function (data) {
+                // Compose meta-package object from name, version
+                // and module list. 
+                var packageInfo = {
+                    "name": pkge.name,
+                    "version": latest.name,
+                    "modules": data.modules
+                };
+                //... finally resolve deferred
+                latestPackageModules.callback(packageInfo);
+            }, this.loadingError);
+        }), this._loadingError);
+
+        return latestPackageModules;
+    },
+
+    // Given a list of package versions, use lexical comparison
+    // to find the most recent version. 
+    _findLatestPackageVersion: function(versions) {
          var newest = versions.sort(function(a,b) {
             return (a.name > b.name) ? 1 : (a.name < b.name) ? -1 : 0;
         }).pop();
 
-        // We should always have module version information.
-        if (!newest) {
-            this._loadingError();
-            return;
-        }
-
-        dojo.publish("dwb/package/default", [{version: newest.name}]);
-
-       var d = dojo.xhrGet({
-			url: newest.link,
-			handleAs: "json"
-		});
-
-		d.then(dojo.hitch(this, "_processPackageModules"), dojo.hitch(this, "_loadingError"));
+        return newest;
     },
 
-    _processPackageModules : function (response) {
-        dojo.publish("dwb/package/modules", [response.modules]);
+    // Custom event to signal that all package and module metadata 
+    // has been loaded from the backend service. 
+    packagesAndModulesAvailable: function (response) {
+        dojo.publish("dwb/package/modules", [response]);
     },
 
     // When there's an error accessing or processing service response, 
