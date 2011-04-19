@@ -10004,8 +10004,8 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
         this.set("gridIsEmpty", true);
         var modulesStore = new dojo.data.ItemFileWriteStore({data: {
 			identifier: "name",
-    		items: modules
-    	}});
+            items: modules
+        }});
         
         this.moduleGrid.setStore(modulesStore);
 		this.updateGridDisplay();
@@ -10021,8 +10021,6 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 		switch (this.analysisType) {
 		case "web_app":
 		case "html_file":
-			modules = response.requiredDojoModules;
-			break;
 		case "dojo_app":
 			modules = response.requiredDojoModules.concat(response.availableModules);
 			break;
@@ -10042,21 +10040,11 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 		return modules.sort();
 	},
 	
-	_parseCustomPackages : function (response) {
-		var packages = {};
-		if (this.analysisType === "web_app") {
-			packages = response.packages;
-		} else if (this.analysisType === "dojo_app") {
-			packages.packageRef = response.packageReference; 
-		}
-		return packages;
-	},
-	
 	_handleResponse : function (response) {
 		this._cancelBusyBtn();
 		
 		var discoveredModules = this._parseDiscoveredModules(response);
-		var customPackages = this._parseCustomPackages(response);
+		var customPackages = response.packages || [];
 		
 		// Process results, try to find module description from modules store. 
 		var completed = dwb.util.Util._populateModuleDetails(this.globalModulesStore, discoveredModules);
@@ -10072,6 +10060,13 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 				if (result[0]) {
 					var module = result[1];
 					module.remove = r;
+                    // TODO: Dependencies API should return 
+                    // package information for each module rather 
+                    // than asking us to work out which module is 
+                    // for which package.
+                    var packageId = module.name.match(/^dojo|^dijit/) ? "dojo" : customPackages[0].name;
+                    module["package"] = packageId;
+
 					modules.push(module);
 				}
 			});
@@ -10082,11 +10077,8 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 		// Reset package layer name for each analysis
 		this.customLayerName = null;
 		
-		// We only need the package reference, server side component
-		// which automatically extract module reference.
-		for(var key in customPackages) {
-			dojo.publish("dwb/layers/temporaryPackage", [{"packageId": customPackages[key]}]);
-		}
+        // Add all temporary package references to global profile
+        dojo.publish("dwb/package/temporary", [customPackages]);
 	},
 	
 	// Background upload of HTML file, returning modules found.
@@ -44198,8 +44190,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	// these until we have finished.
 	_searchFilteringInProgress: false,
 
-	temporaryPackages: [],
-
 	baseProfile : {
 		"optimise": null,
 		"cdn": null,
@@ -44250,9 +44240,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			}
 		}));
 
-		dojo.subscribe("dwb/layers/temporaryPackage", dojo.hitch(this, function (message) {
-			this.temporaryPackages.push(message.packageId);
-		}));
 
 		dojo.subscribe("dwb/layer/selected/titleChange", dojo.hitch(this, function (message) {
 			this.updateSelectedLayerTitle(message.title);
@@ -44269,7 +44256,18 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             }));
         }));
 
+        // Initial package and modules meta-data has been loaded
         dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_packageModulesAvailable"));
+
+        // New temporary package discovered, through auto-analysis. 
+		dojo.subscribe("dwb/package/temporary", dojo.hitch(this, function (packages) {
+            dojo.forEach(packages, dojo.hitch(this, function (pkge) {
+                this.baseProfile.packages.push({
+                    "name": pkge.name,
+                    "version": pkge.version
+                });
+            }));
+		}));
 
         dojo.subscribe("dwb/error/loading_packages", dojo.hitch(this, "_moduleLoadingError"));
 
@@ -44729,7 +44727,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 				// If item wasn't found, create a new entry, otherwise look up 
 				// index for item.
 				if (!item) {
-					item = this._createNewModule(name, module.desc[0]);
+					item = this._createNewModule(name, module.desc[0], module["package"][0]);
 				} 
 				
 				var rowIdx = this.module_grid.addItemSelection(item);
@@ -44758,8 +44756,9 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		}));
 	},
 	
-	_createNewModule: function (name, desc) {
-		var item = this.module_grid.store.newItem({name: name, desc: desc});
+	_createNewModule: function (name, desc, packageId) {
+        var details = this._generateModuleGridItem(packageId, [name, desc]);
+		var item = this.module_grid.store.newItem(details);
 		this.module_grid.lastResultSet.push(item);
 		return item;
 	},

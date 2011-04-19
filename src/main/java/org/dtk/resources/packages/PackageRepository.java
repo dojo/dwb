@@ -227,6 +227,15 @@ public class PackageRepository {
 	}
 	
 	/**
+	 * TODO: Remove this as creating new packages should be handled by the 
+	 * repository. This is a hack until dependencies API hands off package
+	 * creation to this class. 
+	 */
+	public void addTemporaryPackageReference(String packageReference) {
+		temporaryPackagesIdentifiers.add(packageReference);
+	}
+	
+	/**
 	 * Return full path location for a temporary package reference. All temporary
 	 * packages are located in the default system temp directory.
 	 * 
@@ -252,7 +261,7 @@ public class PackageRepository {
 	 * @return Does package exist?
 	 */
 	public boolean packageExists(String packageName) {
-		return baseLocationPathExists(packageName);
+		return isTemporaryPackage(packageName) || baseLocationPathExists(packageName);
 	}
 	
 	/**
@@ -262,7 +271,7 @@ public class PackageRepository {
 	 * @return Does package version exist?
 	 */
 	public boolean packageVersionExists(String packageName, String packageVersion) {
-		return baseLocationPathExists(packageName + "/" + packageVersion);
+		return isTemporaryPackage(packageName) || baseLocationPathExists(packageName + "/" + packageVersion);
 	}
 	
 	/**

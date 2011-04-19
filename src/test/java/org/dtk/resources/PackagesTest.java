@@ -284,7 +284,12 @@ public class PackagesTest {
 		assertEquals(Arrays.asList("user_app.module_a", "user_app.module_b", "user_app.module_c", "user_app.util.util"), 
 			availableModules);
 		
-		assertNotNull(details.get("packageReference"));
+		List<Map<String, String>> packages = (List<Map<String, String>>) details.get("packages");
+		
+		assertEquals(packages.size(), 1);
+		Map<String, String> tempPackage = packages.get(0);		
+		assertNotNull(tempPackage.get("name"));
+		assertNotNull(tempPackage.get("version"));
 	}
 	
 	/**

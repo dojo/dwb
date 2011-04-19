@@ -606,11 +606,6 @@ build = {
 			writeLogLine(packageRef, "Found custom module package, set up build references...");
 			
 			for(var i = 0, userAppPrefix; i < modulePrefixLocations.length, userAppPrefix = modulePrefixLocations[i]; i++) {				
-				// Find modules from top level user directory.
-			//	var userAppModules = findModules(userAppPath);
-		//		var userAppDependencies = '"' + userAppModules.join('","') + '"';
-//				var topLevelModule = userAppPackageIds[i];
-				
                 modulePrefix = userAppPrefix[0], packageLocation = userAppPrefix[1];
 
 				userAppPrefixes += ', [ "'+modulePrefix+'", "' + packageLocation + '/' + modulePrefix + '"]';

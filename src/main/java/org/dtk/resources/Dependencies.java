@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -23,6 +25,7 @@ import org.dtk.resources.dependencies.InputType;
 import org.dtk.resources.dependencies.WebPage;
 import org.dtk.resources.exceptions.ConfigurationException;
 import org.dtk.resources.exceptions.IncorrectParameterException;
+import org.dtk.resources.packages.PackageRepository;
 import org.dtk.util.ContextListener;
 import org.dtk.util.FileUtil;
 import org.dtk.util.HttpUtil;
@@ -89,7 +92,7 @@ public class Dependencies {
 	protected static final String failedWebPageParseLogMsg = "Fatal error parsing user submitted web page for dependencies, root exception: %1$s";
 	
 	/** Information log about modules and package discovered **/
-	protected static final String webPageParseLogMsg = "Web page analysis discovered %1$s modules and created %2$s temporary packages";
+	protected static final String webPageParseLogMsg = "Web page analysis discovered %1$s modules and created temporary package (%2$s) containing %3$s";
 	
 	/** Listener logging class */
 	protected static Logger logger = Logger.getLogger(Dependencies.class.getName());
@@ -273,78 +276,84 @@ public class Dependencies {
 			logger.log(Level.SEVERE, String.format(failedWebPageParseLogMsg, webPage.getParsingFailure()));
 			throw new IncorrectParameterException(parsingFailureErrorText);
 		} 
-
-		List<String> modules = webPage.getModules();
+		
+		Map<String, String> customModules = webPage.getCustomModuleContent();
+		List<String> customModuleNames = new ArrayList<String>(customModules.keySet());
+		
+		Map<String, String> packageDetails = new HashMap<String, String>();
+		List<Map<String, String>> temporaryPackages = new ArrayList<Map<String, String>>();
+		
+		String temporaryPackageId = createTemporaryPackage(customModules);
+		// Turn discovered custom modules into a new temporary package, allowing reference 
+		// when building. 		
+		packageDetails.put("name", temporaryPackageId);
+		
+		// Temporary package details, use arbitrary version for temporary packages.
+		packageDetails.put("version", "1.0.0");
+		
+		temporaryPackages.add(packageDetails);
+		
+		Iterator<String> modulesIter = webPage.getModules().iterator();
+		List<String> requiredDojoModules = new ArrayList<String>();
+		
+		// Find all DTK modules from module set.
+		while(modulesIter.hasNext()) {
+			String moduleName = modulesIter.next();
+			if (!customModuleNames.contains(moduleName)) {
+				requiredDojoModules.add(moduleName);
+			}
+		}
+		
 		// Store list of discovered modules within repsonse map.
-		moduleAnalysis.put("requiredDojoModules", modules);
-
-		// Turn discovered custom modules into temporary packages, allowing reference 
-		// when building. 
-		Map<String, String> temporaryPackages = createTemporaryPackages(webPage.getCustomModuleContent());
+		moduleAnalysis.put("requiredDojoModules", requiredDojoModules);
+		
+		// Custom module list stored in temporary package
+		moduleAnalysis.put("availableModules", customModuleNames);
+		
 		// Store temporary package references into response
 		moduleAnalysis.put("packages", temporaryPackages);
 
-		logger.log(Level.INFO, String.format(webPageParseLogMsg, modules.size(), temporaryPackages.size()));
+		logger.log(Level.INFO, String.format(webPageParseLogMsg, webPage.getModules().size(), temporaryPackageId, customModuleNames.size()));
 		
 		return moduleAnalysis;
 	}
 
 	/**
-	 * Write a set of temporary package details to the filesystem, returning 
-	 * collection of create package references for each element. 
+	 * Create a new temporary package, writing the module contents to a new
+	 * package location in the package store. Unique package reference for
+	 * the new temporary package is returned.
 	 * 
 	 * @param modules - Map of module names and module contents
 	 * @return Temporary package references and prefixes
 	 */
-	protected Map<String, String> createTemporaryPackages(Map<String, String> modules) {
-		Map<String, String> packageResourceInfo = new HashMap<String, String>();
-
-		Map<String, Map<String, String>> moduleRepository = constructModuleRepository(modules);
-
-		for(String modulePrefix : moduleRepository.keySet()) {
-			// Create temporary directory
-			String packageIdentifier = FileUtil.createTemporaryPackage(moduleRepository.get(modulePrefix));
-
-			if (packageIdentifier != null) {
-				packageResourceInfo.put(modulePrefix, packageIdentifier);	
-			}
+	protected String createTemporaryPackage(Map<String, String> modules) {
+		Map<String, String> packageFileContents = new HashMap<String, String>();
+		
+		for(String moduleName: modules.keySet()) {
+			// Convert module name to relative package file path
+			String modulePathInPackage = convertModuleNameToPath(moduleName);
+			packageFileContents.put(modulePathInPackage, modules.get(moduleName));
 		}
+		
+		// Create new package from relative file paths and module contents
+		String packageIdentifier = FileUtil.createTemporaryPackage(packageFileContents);
 
-		return packageResourceInfo;
+		// Add identifier to package repo
+		PackageRepository.getInstance().addTemporaryPackageReference(packageIdentifier);
+		
+		return packageIdentifier;
 	}
 
 	/**
-	 * Process module list into sublists stored in a map, indexed on module prefix.
-	 * Each prefix collection with contain converted local paths to module
-	 * and the full module name.  
+	 * Convert module name into a file name relative to the package
+	 * root.
 	 * 
-	 * @param modules - List of required modules
-	 * @return Map collection, containing sublists of modules indexed againts module prefix
+	 * @param moduleName - Module name
+	 * @return Relative file path for this module in a package
 	 */
-	protected Map<String, Map<String, String>> constructModuleRepository(Map<String, String> modules) {
-		// TODO: This should be retrieved as a tree data structure straight from the web page.
-		Map<String, Map<String, String>> packageRepository = new HashMap<String, Map<String, String>>();
-
-		// Convert individual modules into a prefix oriented resource tree. 
-		for (String moduleName : modules.keySet()) {
-			String[] moduleParts = moduleName.split("\\.");
-			String modulePrefix = moduleParts[0]; 
-
-			if (!packageRepository.containsKey(modulePrefix)) {
-				packageRepository.put(modulePrefix, new HashMap<String, String>());
-			}
-
-			Map<String, String> packageModules = packageRepository.get(modulePrefix);
-
-			// Convert remaining module name items back into a module path, missing 
-			// initial prefix. 
-			String modulePath = StringUtils.join(moduleParts, '/') + ".js";
-
-			// Store file path to store module at and contents
-			packageModules.put(modulePath, modules.get(moduleName));
-		}
-
-		return packageRepository;
+	protected String convertModuleNameToPath(String moduleName) {
+		String modulePath = StringUtils.join(moduleName.split("\\."), '/') + ".js";
+		return modulePath;
 	}
 
 	/**

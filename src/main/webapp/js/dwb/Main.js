@@ -36,8 +36,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	// these until we have finished.
 	_searchFilteringInProgress: false,
 
-	temporaryPackages: [],
-
 	baseProfile : {
 		"optimise": null,
 		"cdn": null,
@@ -88,9 +86,6 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			}
 		}));
 
-		dojo.subscribe("dwb/layers/temporaryPackage", dojo.hitch(this, function (message) {
-			this.temporaryPackages.push(message.packageId);
-		}));
 
 		dojo.subscribe("dwb/layer/selected/titleChange", dojo.hitch(this, function (message) {
 			this.updateSelectedLayerTitle(message.title);
@@ -107,7 +102,18 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             }));
         }));
 
+        // Initial package and modules meta-data has been loaded
         dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_packageModulesAvailable"));
+
+        // New temporary package discovered, through auto-analysis. 
+		dojo.subscribe("dwb/package/temporary", dojo.hitch(this, function (packages) {
+            dojo.forEach(packages, dojo.hitch(this, function (pkge) {
+                this.baseProfile.packages.push({
+                    "name": pkge.name,
+                    "version": pkge.version
+                });
+            }));
+		}));
 
         dojo.subscribe("dwb/error/loading_packages", dojo.hitch(this, "_moduleLoadingError"));
 
@@ -567,7 +573,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 				// If item wasn't found, create a new entry, otherwise look up 
 				// index for item.
 				if (!item) {
-					item = this._createNewModule(name, module.desc[0]);
+					item = this._createNewModule(name, module.desc[0], module["package"][0]);
 				} 
 				
 				var rowIdx = this.module_grid.addItemSelection(item);
@@ -596,8 +602,9 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		}));
 	},
 	
-	_createNewModule: function (name, desc) {
-		var item = this.module_grid.store.newItem({name: name, desc: desc});
+	_createNewModule: function (name, desc, packageId) {
+        var details = this._generateModuleGridItem(packageId, [name, desc]);
+		var item = this.module_grid.store.newItem(details);
 		this.module_grid.lastResultSet.push(item);
 		return item;
 	},

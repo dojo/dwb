@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -188,10 +189,10 @@ public class Packages {
 
 			try {
 				// Decompress temporary package, returning unique reference
-				String packageReference = packageRepo.createTemporaryPackage((InputStream) formFields.getFirst(USER_APP_FIELD));
+				String packageIdentifier = packageRepo.createTemporaryPackage((InputStream) formFields.getFirst(USER_APP_FIELD));
 				
 				// Find temporary package location from identifier
-				String packageLocation = packageRepo.getPackageLocation(packageReference, temporaryPackageVersion);
+				String packageLocation = packageRepo.getPackageLocation(packageIdentifier, temporaryPackageVersion);
 
 				Iterator<File> packageJsFilesIter = FileUtils.iterateFiles(new File(packageLocation), 
 					new String[]{"js"}, true);
@@ -199,6 +200,9 @@ public class Packages {
 				// List holding module definitions & requirements 
 				List<String> modulesProvided = new ArrayList<String>();
 				List<String> modulesRequired = new ArrayList<String>();
+				
+				// Hold new temporary package details 
+				Map<String, String> packageDetails = new HashMap<String, String>();
 
 				// Run script parser on each file, pulling out requires and provides
 				while(packageJsFilesIter.hasNext()) {
@@ -214,9 +218,12 @@ public class Packages {
 				temporaryPackageDetails.put("requiredDojoModules", modulesRequired);
 				temporaryPackageDetails.put("availableModules", modulesProvided);
 				
+				// Temporary package details, use arbitrary version for temporary packages.
+				packageDetails.put("name", packageIdentifier);
+				packageDetails.put("version", "1.0.0");
+				
 				// Store package reference in the details object
-				temporaryPackageDetails.put("packageReference", packageReference);
-				temporaryPackageDetails.put("packageVersion", temporaryPackageVersion);
+				temporaryPackageDetails.put("packages", Arrays.asList(packageDetails));
 
 				// Render provides, requires and temporary package id as JSON
 				String htmlEncodedJsonPackageDetails = JsonUtil.writeJavaToHtmlEncodedJson(temporaryPackageDetails);

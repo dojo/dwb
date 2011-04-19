@@ -275,9 +275,11 @@ public class DependenciesTest {
 		
 		// Response should also contain a single entry in the temporary packages object for 
 		// the "web_builder" modules. This is the temporary package reference. 
-		Map<String, String> tempPackages = (Map<String, String>) jsonResponse.get("packages");
-		assertEquals(tempPackages.keySet().size(), 1);
-		assertNotNull(tempPackages.get("web_builder"));
+		List<Map<String, String>> tempPackages = (List<Map<String, String>>) jsonResponse.get("packages");
+		assertEquals(tempPackages.size(), 1);
+		Map<String, String> tempPackage = tempPackages.get(0);		
+		assertNotNull(tempPackage.get("name"));
+		assertNotNull(tempPackage.get("version"));
 	}
 	
 	/**

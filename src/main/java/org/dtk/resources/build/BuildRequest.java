@@ -196,8 +196,9 @@ public class BuildRequest {
 				Map<String, String> details = modulesIter.next();
 				String moduleName = details.get("name");
 				String modulePrefix = moduleName.split("\\.")[0];
-				// If we haven't already resolved location for this prefix 
-				if (!"dojo".equals(modulePrefix) && !modulePrefixLocations.containsKey(modulePrefix)) {
+				// If we haven't already resolved location for this prefix, ignoring DTK modules
+				if (!"dojo".equals(modulePrefix) && !"dijit".equals(modulePrefix) && !"dojox".equals(modulePrefix) 
+						&& !modulePrefixLocations.containsKey(modulePrefix)) {
 					String location = packageLocationLookup.get(details.get("package"));
 					modulePrefixLocations.put(modulePrefix, location);
 				}
