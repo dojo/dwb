@@ -7041,11 +7041,15 @@ dojo.declare("dwb.ui.BuildConfigPanel", [dijit._Widget, dijit._Templated], {
 			this.set("readOnlyLayerTitle", layer.readOnly);
 		}));
 		
-		dojo.subscribe("dwb/build/finished", dojo.hitch(this, function () {
+        var finish_build = dojo.hitch(this, function () {
 			// Cancel any buttons that may have been triggered.... 
 			this.modulesBuildBtn.cancel();
 			this.layersBuildBtn.cancel();
-		}));
+        });
+
+		dojo.subscribe("dwb/build/finished", finish_build);
+		dojo.subscribe("dwb/build/cancelled", finish_build);
+		dojo.subscribe("dwb/build/failed", finish_build);
 		
 		// Subscribe to events about the module change
 		dojo.subscribe("dwb/displayMode/advanced", dojo.hitch(this, function () {
@@ -25963,6 +25967,8 @@ if(!dojo._hasResource["dwb.service.Package"]){ //_hasResource checks added by bu
 dojo._hasResource["dwb.service.Package"] = true;
 dojo.provide("dwb.service.Package");
 
+
+
 // Data controller exposing RESTful packages API. 
 // Used to load and access meta-data for the packages 
 // system. 
@@ -26063,6 +26069,114 @@ dojo.declare("dwb.service.Package", null, {
     // appropriate action.
     _loadingError: function () {
         dojo.publish("dwb/error/loading_packages");
+    }
+});
+
+}
+
+if(!dojo._hasResource["dwb.service.Build"]){ //_hasResource checks added by build. Do not use _hasResource directly in your code.
+dojo._hasResource["dwb.service.Build"] = true;
+dojo.provide("dwb.service.Build");
+
+
+
+// Data controller exposing build server accessed over 
+// a RESTful interface.
+// Used to submit new build jobs and get notification 
+// of completion. 
+
+dojo.declare("dwb.service.Build", null, {
+    service: dwb.util.Config.get("buildApi"),
+    
+    // Deferred object representing current in-flight 
+    // build result polling XHR request. 
+    _inflight: null,
+
+    // Schedule a new build request using the profile parameter
+    // containing module layers and build options. XHR requests
+    // creates a new service request and polls for response.
+    schedule: function (request) {
+        this.onBuildStarted();
+
+        // POST new build request, response will contain status link.
+        this._inflight = dojo.xhrPost({
+            url: this.service,
+            handleAs: "json",
+            headers: {"Content-Type":"application/json"},
+            postData: dojo.toJson(request)
+        });
+			
+        // Service response contains link to poll for status...
+		this._inflight.then(dojo.hitch(this, function (response) {
+            this._inflight = dojo.xhrGet({
+                url: response.buildStatusLink,
+                handleAs: "json"
+            });
+                
+           this._inflight.then(dojo.hitch(this, "_pollBuildStatus", response.buildStatusLink), this.onBuildFailed);
+        }), this.onBuildFailed);
+    }, 
+
+    // Cancel the current build request
+    cancel: function () {
+        if (this._inflight !== null) {
+            // No more in-flight build requests.
+            this._inflight.cancel();
+            this._inflight = null;
+        }
+        this.onBuildCancelled();
+    },
+
+    // Iteratively poll the build service until the build 
+    // request has completed. Publish the uploaded status logs
+    // to all listeners.
+    _pollBuildStatus: function (statusUrl, response) {
+        this.onBuildStatusUpdate(response.logs.split("\n"));
+
+		// If the build has completed, publish location of the resulting build.
+		if (response.state === "COMPLETED") {
+			this.onBuildFinished(response.result);
+        // Otherwise, keep polling for log changes.
+		} else if (response.state === "BUILDING" || response.state === "NOT_STARTED") {
+			setTimeout(dojo.hitch(this, function () {
+                // Check user hasn't tried to cancel build 
+                // during the time we were asleep....
+                if (this._inflight) {
+				    this._inflight = dojo.xhrGet({
+                        url: statusUrl,
+                        handleAs: "json"
+                    });
+
+                    this._inflight.then(dojo.hitch(this, "_pollBuildStatus", statusUrl), this.onBuildFailed);	
+                }
+			}), 500);
+		// An error occurred, indicate this.
+		} else {
+			this.onBuildFailed();
+		} 
+    },
+
+    // Event handlers to signal build state change
+    // using custom events and published events
+    onBuildStatusUpdate: function (logs) {
+        dojo.publish("dwb/build/status", [logs]);
+    }, 
+
+    onBuildFinished: function (link) {
+        dojo.publish("dwb/build/finished", [link]);
+    },
+
+    onBuildCancelled: function () {
+        dojo.publish("dwb/build/cancelled");
+    },
+
+    onBuildStarted: function () {
+        dojo.publish("dwb/build/started");
+    },
+
+    onBuildFailed: function () {
+        this._inflight = null;
+        dojo.publish("dwb/build/failed");
     }
 });
 
@@ -44098,6 +44212,7 @@ dojo.provide("dwb.Main._base");
 
 
 
+
 // Dojo Toolkit Modules
 
 
@@ -44158,7 +44273,7 @@ dojo.provide("dwb.Main");
 
 
 dojo.declare("dwb.Main", dwb.Main._base, {
-	templateString: dojo.cache("dwb.ui.templates", "Main.html", "<div>\n\t<div dojoAttachPoint=\"borderContainer\" dojoType=\"dijit.layout.BorderContainer\" design=\"sidebar\">\t\t\n\t\t<div dojoType=\"dijit.layout.ContentPane\" region=\"trailing\" class=\"rightContentPane\">\n\t\t\t<div dojoAttachPoint=\"buildOptionsContent\" class=\"buildConfigPanel Modules simpleMode SearchOptionsOpen ModuleLayersOptionsOpen\" dojoType=\"dwb.ui.BuildConfigPanel\"></div>\t    \t\n\t\t</div>\t\t\t\t\t    \t\n\t\t<div dojoAttachPoint=\"center\" dojoType=\"dijit.layout.ContentPane\" region=\"center\">\t\t        \n\t\t\t <div dojoAttachPoint=\"tabContainer\" dojoAttachEvent=\"selectChild:_tabChildSelect\" dojoType=\"dijit.layout.TabContainer\">\n\t\t\t\t<div class=\"modulesPanel\" dojoAttachPoint=\"modulesPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Modules\" selected=\"true\">\n\t\t\t\t\t<div class=\"failureMessage\">\n\t\t\t\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t\t\t\t<h2>Error!</h2>\n\t\t\t\t\t\t<p>Unable to retrieve module list from server, error occurred. Please contact the system administrator.</p>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"searchBox\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<input type=\"text\" class=\"searchBoxInput\" placeHolder=\"Enter search text here...\" dojoAttachEvent=\"onKeyUp: checkForEnter\" dojoAttachPoint=\"_searchInputField\" dojoType=\"dijit.form.TextBox\"></input>\t\t\n\t\t\t\t\t\t\t<button class=\"searchButton\" dojoType=\"dijit.form.Button\" dojoAttachEvent=\"onClick:updateModuleFilter\">Search</button>\n\t\t\t\t\t\t</div> \t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"modulesGrid\">\n\t\t\t\t\t\t<div dojoAttachPoint=\"moduleCounter\" class=\"moduleCounter\">\n\t\t\t\t\t\t0 - 0 of 0 modules\t\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<table dojoType=\"dwb.ui.ModuleGrid\" dojoAttachEvent=\"onRowClick:_moduleGridRowClick\" dojoAttachPoint=\"module_grid\" height=\"100%\" queryOptions=\"{'ignoreCase': true }\" plugins=\"{indirectSelection: {name: 'Include', width: '70px', styles: 'text-align: center;'}}\" >\n\t\t\t\t\t\t\t<thead>\n\t\t\t\t\t\t    \t<tr>\n\t\t\t\t\t\t      \t\t<th field=\"name\" width=\"30%\">Module Name</th>\n\t\t\t\t\t\t      \t\t<th field=\"desc\" width=\"70%\">Description</th>\n\t\t\t\t\t\t    \t</tr>\n\t\t\t\t\t\t\t</thead>\n\t\t\t\t\t\t</table>\n\t\t\t\t\t</div>\t\t            \n\t\t\t    </div>\n\t\t\t    <div dojoAttachPoint=\"analysePane\" dojoType=\"dwb.ui.AutoAnalysisModuleTab\" title=\"Auto-Analyse\">  \n\t\t        </div>\t\t\t\n\t\t\t    <div dojoAttachPoint=\"layersPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Layers\" class=\"advancedMode\">\n\t\t\t\t\t<div dojoAttachPoint=\"layersTabContainer\" dojoAttachEvent=\"selectChild:_layersTabChildSelect\" dojoType=\"dijit.layout.TabContainer\" tabPosition=\"top\" tabStrip=\"true\">\t\n\t\t\t        \t<div dojoAttachPoint=\"baseLayerPane\" title=\"dojo.js\" closable=\"false\" labelChange=\"false\" dojoType=\"dwb.ui.ModuleTab\" class=\"baseModuleLayerPane\">\t\t\t        \t\n\t\t\t        \t</div>\t\t\t        \t\t\t            \t\t\n\t\t\t\t\t</div>\n\t\t\t\t</div>        \n\t\t\t\t<div dojoAttachPoint=\"helpPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Help\" href=\"js/dwb/ui/fragments/HelpPanelContent.html\">\t\t\t            \n\t\t        </div>\n\t\t\t</div>\n\t\t</div>\n\t</div> \n\t<div dojoAttachPoint=\"buildProgress\" dojoAttachEvent=\"onHide:cancelBuildPolling\" dojoType=\"dijit.Dialog\" title=\"Building Dojo Package...\" class=\"buildProgressDialog\">\n\t\t<div class=\"successMessage endMessages\">\n\t\t\t<img src=\"img/accepted_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Success!</h2>\n\t\t\t\t<p >Build completed successfully, downloading...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"failureMessage endMessages\">\n\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Failure!</h2>\n\t\t\t\t<p>Error completing build, please try again...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"buildProgressMessage\">\n\t\t\t<div dojoType=\"dijit.ProgressBar\" indeterminate=\"true\"></div>\n\t\t\t<div class=\"buildProgressContainer\">\n\t\t\t\t<table>\n                    <tbody>\n\t\t    \t\t\t<tr><td></td></tr>\n\t    \t\t\t\t<tr><td></td></tr>\n    \t\t\t\t\t<tr><td></td></tr>\n\t\t\t\t\t    <tr><td></td></tr>\n\t\t\t\t\t    <tr><td></td></tr>\n                    </tbody>\n\t\t\t\t</table>  \n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n\n\n\n\n\n\n\n\n\n\n"),	
+	templateString: dojo.cache("dwb.ui.templates", "Main.html", "<div>\n\t<div dojoAttachPoint=\"borderContainer\" dojoType=\"dijit.layout.BorderContainer\" design=\"sidebar\">\t\t\n\t\t<div dojoType=\"dijit.layout.ContentPane\" region=\"trailing\" class=\"rightContentPane\">\n\t\t\t<div dojoAttachPoint=\"buildOptionsContent\" class=\"buildConfigPanel Modules simpleMode SearchOptionsOpen ModuleLayersOptionsOpen\" dojoType=\"dwb.ui.BuildConfigPanel\"></div>\t    \t\n\t\t</div>\t\t\t\t\t    \t\n\t\t<div dojoAttachPoint=\"center\" dojoType=\"dijit.layout.ContentPane\" region=\"center\">\t\t        \n\t\t\t <div dojoAttachPoint=\"tabContainer\" dojoAttachEvent=\"selectChild:_tabChildSelect\" dojoType=\"dijit.layout.TabContainer\">\n\t\t\t\t<div class=\"modulesPanel\" dojoAttachPoint=\"modulesPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Modules\" selected=\"true\">\n\t\t\t\t\t<div class=\"failureMessage\">\n\t\t\t\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t\t\t\t<h2>Error!</h2>\n\t\t\t\t\t\t<p>Unable to retrieve module list from server, error occurred. Please contact the system administrator.</p>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"searchBox\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<input type=\"text\" class=\"searchBoxInput\" placeHolder=\"Enter search text here...\" dojoAttachEvent=\"onKeyUp: checkForEnter\" dojoAttachPoint=\"_searchInputField\" dojoType=\"dijit.form.TextBox\"></input>\t\t\n\t\t\t\t\t\t\t<button class=\"searchButton\" dojoType=\"dijit.form.Button\" dojoAttachEvent=\"onClick:updateModuleFilter\">Search</button>\n\t\t\t\t\t\t</div> \t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"modulesGrid\">\n\t\t\t\t\t\t<div dojoAttachPoint=\"moduleCounter\" class=\"moduleCounter\">\n\t\t\t\t\t\t0 - 0 of 0 modules\t\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<table dojoType=\"dwb.ui.ModuleGrid\" dojoAttachEvent=\"onRowClick:_moduleGridRowClick\" dojoAttachPoint=\"module_grid\" height=\"100%\" queryOptions=\"{'ignoreCase': true }\" plugins=\"{indirectSelection: {name: 'Include', width: '70px', styles: 'text-align: center;'}}\" >\n\t\t\t\t\t\t\t<thead>\n\t\t\t\t\t\t    \t<tr>\n\t\t\t\t\t\t      \t\t<th field=\"name\" width=\"30%\">Module Name</th>\n\t\t\t\t\t\t      \t\t<th field=\"desc\" width=\"70%\">Description</th>\n\t\t\t\t\t\t    \t</tr>\n\t\t\t\t\t\t\t</thead>\n\t\t\t\t\t\t</table>\n\t\t\t\t\t</div>\t\t            \n\t\t\t    </div>\n\t\t\t    <div dojoAttachPoint=\"analysePane\" dojoType=\"dwb.ui.AutoAnalysisModuleTab\" title=\"Auto-Analyse\">  \n\t\t        </div>\t\t\t\n\t\t\t    <div dojoAttachPoint=\"layersPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Layers\" class=\"advancedMode\">\n\t\t\t\t\t<div dojoAttachPoint=\"layersTabContainer\" dojoAttachEvent=\"selectChild:_layersTabChildSelect\" dojoType=\"dijit.layout.TabContainer\" tabPosition=\"top\" tabStrip=\"true\">\t\n\t\t\t        \t<div dojoAttachPoint=\"baseLayerPane\" title=\"dojo.js\" closable=\"false\" labelChange=\"false\" dojoType=\"dwb.ui.ModuleTab\" class=\"baseModuleLayerPane\">\t\t\t        \t\n\t\t\t        \t</div>\t\t\t        \t\t\t            \t\t\n\t\t\t\t\t</div>\n\t\t\t\t</div>        \n\t\t\t\t<div dojoAttachPoint=\"helpPane\" dojoType=\"dijit.layout.ContentPane\" title=\"Help\" href=\"js/dwb/ui/fragments/HelpPanelContent.html\">\t\t\t            \n\t\t        </div>\n\t\t\t</div>\n\t\t</div>\n\t</div> \n\t<div dojoAttachPoint=\"buildProgress\" dojoAttachEvent=\"onHide:cancelCurrentBuild\" dojoType=\"dijit.Dialog\" title=\"Building Dojo Package...\" class=\"buildProgressDialog\">\n\t\t<div class=\"successMessage endMessages\">\n\t\t\t<img src=\"img/accepted_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Success!</h2>\n\t\t\t\t<p >Build completed successfully, downloading...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"failureMessage endMessages\">\n\t\t\t<img src=\"img/cross_48.png\">\t\n\t\t\t<div>\n\t\t\t\t<h2>Failure!</h2>\n\t\t\t\t<p>Error completing build, please try again...</p>\n\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"buildProgressMessage\">\n\t\t\t<div dojoType=\"dijit.ProgressBar\" indeterminate=\"true\"></div>\n\t\t\t<div class=\"buildProgressContainer\">\n\t\t\t\t<table>\n                    <tbody>\n\t\t    \t\t\t<tr><td></td></tr>\n\t    \t\t\t\t<tr><td></td></tr>\n    \t\t\t\t\t<tr><td></td></tr>\n\t\t\t\t\t    <tr><td></td></tr>\n\t\t\t\t\t    <tr><td></td></tr>\n                    </tbody>\n\t\t\t\t</table>  \n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n\n\n\n\n\n\n\n\n\n\n"),	
 	widgetsInTemplate: true,
 
 	// Global store for Dojo modules
@@ -44183,6 +44298,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	content: dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html", "<div class=\"analyse_container\">\n\t<div>Choose an existing build profile to analyse for Dojo modules.</div>\n\t<div class=\"analyse_form_container\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input name=\"value\" type=\"file\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"PROFILE\"></input>\n\t\t\t<div class=\"build\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n"),
 
     packageService: null,
+    buildService: null,
 
 	// When we are manually updating selection 
 	// rows for a new filter result set, lots of selection
@@ -44210,6 +44326,9 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         // loaded.
         this.packageService = new dwb.service.Package();
         this.packageService.load();
+
+        // Create the new build service controller
+        this.buildService = new dwb.service.Build();
 
 		dojo.subscribe("dwb/search/updateFilter", dojo.hitch(this, "updateModuleFilter"));
 		dojo.subscribe("dwb/build/request", dojo.hitch(this, "triggerBuildRequest"));
@@ -44255,6 +44374,21 @@ dojo.declare("dwb.Main", dwb.Main._base, {
                 }
             }));
         }));
+
+        dojo.subscribe("dwb/build/started", dojo.hitch(this, function () {
+            this._updateLogView([]);
+            this.buildProgress.show();
+        }));
+
+        dojo.subscribe("dwb/build/status", dojo.hitch(this, "_updateLogView"));
+
+        dojo.subscribe("dwb/build/finished", dojo.hitch(this, function (location) {
+            this._buildRequestHasFinished("success", function () {
+				window.location.assign(location);
+            });
+        }));
+
+        dojo.subscribe("dwb/build/failed", dojo.hitch(this, "_buildRequestHasFinished", "failure"));
 
         // Initial package and modules meta-data has been loaded
         dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_packageModulesAvailable"));
@@ -44386,36 +44520,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			// Gather build parameters from form and include in profile.
 			var completeProfile = dojo.mixin(dojo.clone(this.baseProfile), profile);
 
-			var url = dwb.util.Config.get("buildApi");
-
-			// Push build request over XHR. 
-			this._inflight = dojo.xhrPost({
-				url: url,
-				handleAs: "json",
-				headers: {"Content-Type":"application/json"},
-				postData: dojo.toJson(completeProfile)
-			});
-			
-			// If either of the XHR requests fails, tell user and cancel
-			// build progress dialog.
-			var errorHandling = dojo.hitch(this, function() {
-				this._buildProgressFinished("failure");
-			});
-			
-			// Once complete, cancel build button animation 
-			// and forward user to response location
-			this._inflight.then(dojo.hitch(this, function (response) {
-				this._inflight = dojo.xhrGet({
-					url: response.buildStatusLink,
-					handleAs: "json"
-				});
-
-				this._inflight.then(dojo.hitch(this, "buildStatusPoller", response.buildStatusLink), errorHandling);
-			}), errorHandling);
-
-			// Clear any previous log lines and show progress indicator
-			this._updateLogView([]);
-			this.buildProgress.show();
+            this.buildService.schedule(completeProfile);
 		}));
 	},
 
@@ -44557,73 +44662,26 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		});
 	},
 
-	// Repeating process to check status of build process
-	buildStatusPoller : function (statusUrl, response) {
-		this._updateLogView(response.logs.split("\n"));
-
-		// If the build has completed, redirect to package URL to force download.
-		if (response.state === "COMPLETED") {
-			this._buildProgressFinished("success", function () {
-				window.location.assign(response.result);
-			});
-			// Otherwise, keep polling for log changes.
-		} else if (response.state === "BUILDING" || response.state === "NOT_STARTED") {
-			setTimeout(dojo.hitch(this, function () {
-                // Check user hasn't tried to cancel build 
-                // during the time we were asleep....
-                if (this._inflight) {
-				    this._inflight = dojo.xhrGet({
-                        url: statusUrl,
-                        handleAs: "json"
-                    });
-
-                    this._inflight.then(dojo.hitch(this, "buildStatusPoller", statusUrl), dojo.hitch(this, function () {
-                        this._buildProgressFinished("failure");
-				    }));	
-                }
-			}), 500);
-		// An error occurred, indicate this.
-		} else {
-			this._buildProgressFinished("failure");
-		}
-	},
-
-	_buildProgressFinished : function(status, callback) {
-        // If user has signalled to end the build before finishing, 
-        // inflight XHR will haven been manually cleared. Don't need
-        // to take any further action.
-        if (this._inflight) {
-	    	// Show associated status message
-		    dojo.addClass(this.buildProgress.domNode, status);
+	_buildRequestHasFinished: function(status, callback) {
+        // Show associated status message
+        dojo.addClass(this.buildProgress.domNode, status);
 		
-    		// After brief period, hide the dialog and remove message
-	    	setTimeout(dojo.hitch(this, function () {
-		    	this.buildProgress.hide();
-			    dojo.removeClass(this.buildProgress.domNode, status);
+        // After brief period, hide the dialog and remove message
+	    setTimeout(dojo.hitch(this, function () {
+		    this.buildProgress.hide();
+		    dojo.removeClass(this.buildProgress.domNode, status);
 			
-			    // If the user has asked for notification, execute callback.
-    			if (callback) {
-    				callback();
-	    		}
-		    }), 500);
-		
-            // No more in-flight build requests.
-            this._inflight = null;
-		    
-            // Inform all listeners we have finished building.
-            dojo.publish("dwb/build/finished");
-        }
+		    // If the user has asked for notification, execute callback.
+    	    if (callback) {
+                callback();
+            }
+        }), 1000);
 	},
 	
     // Prematurely finish polling of the build status
     // over XHR. 
-    cancelBuildPolling : function () {
-        if (this._inflight !== null) {
-            this._inflight.cancel();
-            this._inflight = null;
-            // Inform all listeners we have finished building.
-            dojo.publish("dwb/build/finished");
-        }
+    cancelCurrentBuild : function () {
+        this.buildService.cancel();
     },
 
 	// Packages modules have been retrieved and can be rendered 
@@ -44840,7 +44898,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		// Disable all action buttons, radio buttons, select boxes. Don't want
 		// user triggered that interact with the module list.
 		dojo.query(".dijitButton, .dijitRadio, .dijitCheckBox, .dijitSelect, .dijitComboBox, .dijitDropDownButton").forEach(function (node) {
-			dijit.byNode(node).set("disabled", true)
+			dijit.byNode(node).set("disabled", true);
 		});
 
         // No easy way to disable tab list, override the onclick handler

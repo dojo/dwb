@@ -29,6 +29,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 	content: dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html"),
 
     packageService: null,
+    buildService: null,
 
 	// When we are manually updating selection 
 	// rows for a new filter result set, lots of selection
@@ -56,6 +57,9 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         // loaded.
         this.packageService = new dwb.service.Package();
         this.packageService.load();
+
+        // Create the new build service controller
+        this.buildService = new dwb.service.Build();
 
 		dojo.subscribe("dwb/search/updateFilter", dojo.hitch(this, "updateModuleFilter"));
 		dojo.subscribe("dwb/build/request", dojo.hitch(this, "triggerBuildRequest"));
@@ -101,6 +105,21 @@ dojo.declare("dwb.Main", dwb.Main._base, {
                 }
             }));
         }));
+
+        dojo.subscribe("dwb/build/started", dojo.hitch(this, function () {
+            this._updateLogView([]);
+            this.buildProgress.show();
+        }));
+
+        dojo.subscribe("dwb/build/status", dojo.hitch(this, "_updateLogView"));
+
+        dojo.subscribe("dwb/build/finished", dojo.hitch(this, function (location) {
+            this._buildRequestHasFinished("success", function () {
+				window.location.assign(location);
+            });
+        }));
+
+        dojo.subscribe("dwb/build/failed", dojo.hitch(this, "_buildRequestHasFinished", "failure"));
 
         // Initial package and modules meta-data has been loaded
         dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_packageModulesAvailable"));
@@ -232,36 +251,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 			// Gather build parameters from form and include in profile.
 			var completeProfile = dojo.mixin(dojo.clone(this.baseProfile), profile);
 
-			var url = dwb.util.Config.get("buildApi");
-
-			// Push build request over XHR. 
-			this._inflight = dojo.xhrPost({
-				url: url,
-				handleAs: "json",
-				headers: {"Content-Type":"application/json"},
-				postData: dojo.toJson(completeProfile)
-			});
-			
-			// If either of the XHR requests fails, tell user and cancel
-			// build progress dialog.
-			var errorHandling = dojo.hitch(this, function() {
-				this._buildProgressFinished("failure");
-			});
-			
-			// Once complete, cancel build button animation 
-			// and forward user to response location
-			this._inflight.then(dojo.hitch(this, function (response) {
-				this._inflight = dojo.xhrGet({
-					url: response.buildStatusLink,
-					handleAs: "json"
-				});
-
-				this._inflight.then(dojo.hitch(this, "buildStatusPoller", response.buildStatusLink), errorHandling);
-			}), errorHandling);
-
-			// Clear any previous log lines and show progress indicator
-			this._updateLogView([]);
-			this.buildProgress.show();
+            this.buildService.schedule(completeProfile);
 		}));
 	},
 
@@ -403,73 +393,26 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		});
 	},
 
-	// Repeating process to check status of build process
-	buildStatusPoller : function (statusUrl, response) {
-		this._updateLogView(response.logs.split("\n"));
-
-		// If the build has completed, redirect to package URL to force download.
-		if (response.state === "COMPLETED") {
-			this._buildProgressFinished("success", function () {
-				window.location.assign(response.result);
-			});
-			// Otherwise, keep polling for log changes.
-		} else if (response.state === "BUILDING" || response.state === "NOT_STARTED") {
-			setTimeout(dojo.hitch(this, function () {
-                // Check user hasn't tried to cancel build 
-                // during the time we were asleep....
-                if (this._inflight) {
-				    this._inflight = dojo.xhrGet({
-                        url: statusUrl,
-                        handleAs: "json"
-                    });
-
-                    this._inflight.then(dojo.hitch(this, "buildStatusPoller", statusUrl), dojo.hitch(this, function () {
-                        this._buildProgressFinished("failure");
-				    }));	
-                }
-			}), 500);
-		// An error occurred, indicate this.
-		} else {
-			this._buildProgressFinished("failure");
-		}
-	},
-
-	_buildProgressFinished : function(status, callback) {
-        // If user has signalled to end the build before finishing, 
-        // inflight XHR will haven been manually cleared. Don't need
-        // to take any further action.
-        if (this._inflight) {
-	    	// Show associated status message
-		    dojo.addClass(this.buildProgress.domNode, status);
+	_buildRequestHasFinished: function(status, callback) {
+        // Show associated status message
+        dojo.addClass(this.buildProgress.domNode, status);
 		
-    		// After brief period, hide the dialog and remove message
-	    	setTimeout(dojo.hitch(this, function () {
-		    	this.buildProgress.hide();
-			    dojo.removeClass(this.buildProgress.domNode, status);
+        // After brief period, hide the dialog and remove message
+	    setTimeout(dojo.hitch(this, function () {
+		    this.buildProgress.hide();
+		    dojo.removeClass(this.buildProgress.domNode, status);
 			
-			    // If the user has asked for notification, execute callback.
-    			if (callback) {
-    				callback();
-	    		}
-		    }), 500);
-		
-            // No more in-flight build requests.
-            this._inflight = null;
-		    
-            // Inform all listeners we have finished building.
-            dojo.publish("dwb/build/finished");
-        }
+		    // If the user has asked for notification, execute callback.
+    	    if (callback) {
+                callback();
+            }
+        }), 1000);
 	},
 	
     // Prematurely finish polling of the build status
     // over XHR. 
-    cancelBuildPolling : function () {
-        if (this._inflight !== null) {
-            this._inflight.cancel();
-            this._inflight = null;
-            // Inform all listeners we have finished building.
-            dojo.publish("dwb/build/finished");
-        }
+    cancelCurrentBuild : function () {
+        this.buildService.cancel();
     },
 
 	// Packages modules have been retrieved and can be rendered 
@@ -686,7 +629,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		// Disable all action buttons, radio buttons, select boxes. Don't want
 		// user triggered that interact with the module list.
 		dojo.query(".dijitButton, .dijitRadio, .dijitCheckBox, .dijitSelect, .dijitComboBox, .dijitDropDownButton").forEach(function (node) {
-			dijit.byNode(node).set("disabled", true)
+			dijit.byNode(node).set("disabled", true);
 		});
 
         // No easy way to disable tab list, override the onclick handler

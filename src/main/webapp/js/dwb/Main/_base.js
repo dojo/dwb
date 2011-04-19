@@ -8,6 +8,7 @@ dojo.require("dwb.ui.IntroDialog");
 dojo.require("dwb.ui.FeedbackDialog");
 dojo.require("dwb.ui.ModuleGrid");
 dojo.require("dwb.service.Package");
+dojo.require("dwb.service.Build");
 dojo.require("dwb.util.Config");
 
 // Dojo Toolkit Modules

@@ -9,10 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import org.dtk.resources.dependencies.WebPage;
 import org.junit.* ;
 import static org.junit.Assert.* ;
 

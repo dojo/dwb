@@ -26,11 +26,15 @@ dojo.declare("dwb.ui.BuildConfigPanel", [dijit._Widget, dijit._Templated], {
 			this.set("readOnlyLayerTitle", layer.readOnly);
 		}));
 		
-		dojo.subscribe("dwb/build/finished", dojo.hitch(this, function () {
+        var finish_build = dojo.hitch(this, function () {
 			// Cancel any buttons that may have been triggered.... 
 			this.modulesBuildBtn.cancel();
 			this.layersBuildBtn.cancel();
-		}));
+        });
+
+		dojo.subscribe("dwb/build/finished", finish_build);
+		dojo.subscribe("dwb/build/cancelled", finish_build);
+		dojo.subscribe("dwb/build/failed", finish_build);
 		
 		// Subscribe to events about the module change
 		dojo.subscribe("dwb/displayMode/advanced", dojo.hitch(this, function () {

@@ -1,5 +1,7 @@
 dojo.provide("dwb.service.Package");
 
+dojo.require("dwb.util.Config");
+
 // Data controller exposing RESTful packages API. 
 // Used to load and access meta-data for the packages 
 // system. 
