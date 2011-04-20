@@ -9109,7 +9109,7 @@ dojo.provide("dwb.ui.ValidationTextBox");
 
 /* Just override the template to include a character '!', rather than using an image */
 dojo.declare("dwb.ui.ValidationTextBox", dijit.form.ValidationTextBox, {
-	templateString: dojo.cache("dwb.ui", "templates/ValidationTextBox.html", "<div class=\"dijit dijitReset dijitInlineTable dijitLeft\"\n\tid=\"widget_${id}\" role=\"presentation\"\n\t><div class='dijitReset dijitValidationContainer'\n\t\t><input class=\"dijitReset dijitInputField dijitValidationIcon dijitValidationInner\" value=\"&#935;\" type=\"text\" tabIndex=\"-1\" readonly=\"readonly\" role=\"presentation\"\n\t/>!</div\n\t><div class=\"dijitReset dijitInputField dijitInputContainer\"\n\t\t><input class=\"dijitReset dijitInputInner\" dojoAttachPoint='textbox,focusNode' autocomplete=\"off\"\n\t\t\t${!nameAttrSetting} type='${type}'\n\t/></div\n></div>\n"),
+	templateString: dojo.cache("dwb.ui", "templates/ValidationTextBox.html", "<div class=\"dijit dijitReset dijitInlineTable dijitLeft\"\n\tid=\"widget_${id}\" role=\"presentation\"\n\t><div class='dijitReset dijitValidationContainer'\n\t\t><input class=\"dijitReset dijitInputField dijitValidationIcon dijitValidationInner\" value=\"&#935;\" type=\"text\" tabIndex=\"-1\" readonly=\"readonly\" role=\"presentation\"\n\t/>!</div\n\t><div class=\"dijitReset dijitInputField dijitInputContainer\"\n\t\t><input class=\"dijitReset dijitInputInner\" dojoAttachPoint='textbox,focusNode' autocomplete=\"off\"\n\t\t\t${!nameAttrSetting} type='${type}'\n\t/></div\n></div>\n")
 });
 
 }
@@ -9935,11 +9935,14 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	globalModulesStore: null,
 	
 	customLayerName: null,
+
+    _postCreate: false,
 	
 	constructor: function () {
-		this.content = this.analysisContentFragments[this.analysisType];
-
-		dojo.subscribe("dwb/analysis/sourceType", dojo.hitch(this, function (message) {
+        this.content = this.analysisContentFragments[this.analysisType];
+		
+        
+        dojo.subscribe("dwb/analysis/sourceType", dojo.hitch(this, function (message) {
 			this.set("analysisType", message.source);
 		}));
 		dojo.subscribe("dwb/layers/addAnalysisModules", dojo.hitch(this, function (message) {
@@ -9956,9 +9959,10 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 			});
 		}));
 	},
-	
+
 	// Override default postCreate to stop render of the module grid.
 	postCreate: function () {
+        this._postCreate  = true;
 		dojo.query(".dijitButton", this.domNode).forEach(dojo.hitch(this, function(btn) {
 			this.connect(dijit.byNode(btn), "onClick", dojo.hitch(this, "_onSubmit"));
 		}));
@@ -9966,7 +9970,15 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	
 	_setAnalysisTypeAttr : function (type) {
 		this.analysisType = type;
-		this.set("content", this.analysisContentFragments[this.analysisType]);
+
+        // Calling custom setter before "content" attribute is applied caused template to
+        // be downloaded and parsed twice, leading to IE issues. Before post-create
+        // just set up content string reference, afterwards we can call customer setter.
+        if (this._postCreate) {
+            this.set("content", this.analysisContentFragments[this.analysisType]);
+        } else {
+            this.content = this.analysisContentFragments[this.analysisType];
+        }
 		
 		dojo.query(".dijitButton", this.domNode).forEach(dojo.hitch(this, function(btn) {
 			this.connect(dijit.byNode(btn), "onClick", dojo.hitch(this, "_onSubmit"));
@@ -10032,7 +10044,7 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 			// Find all unique module names
 			dojo.forEach(response.layers, function (layer) {
 				dojo.forEach(layer.dependencies, function (moduleName) {
-					if (modules.indexOf(moduleName) === -1) {
+					if (dojo.indexOf(modules, moduleName) === -1) {
 						modules.push(moduleName);
 					}
 				});
@@ -25847,7 +25859,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 
 			// Check if item is present in result set,
 			// manually toggle row selection if found.
-			idx = items.indexOf(item);
+			idx = dojo.indexOf(items, item);
 			if (idx !== -1) {
 				this.rowSelectCell.toggleRow(idx, true);
 			} else {
@@ -25915,7 +25927,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 	
 	addItemSelection : function (item) {
 		// If row item is currently visible, toggle true. 
-		var idx = this.lastResultSet.indexOf(item);
+		var idx = dojo.indexOf(this.lastResultSet, item);
 		if (idx !== -1) {
 			this.rowSelectCell.toggleRow(idx, true);	
 		// Otherwise, store reference
@@ -25934,7 +25946,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 		if (idx !== -1) {
 			this.rowSelectCell.toggleRow(idx, false);	
 		} else {
-			this.previousSelection.splice(this.previousSelection.indexOf(item), 1);	
+			this.previousSelection.splice(dojo.indexOf(this.previousSelection, item), 1);	
 		}
 		
 		// Force selection change event 
@@ -25943,7 +25955,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 	
 	// Given a module item, scroll to this row if available
 	scrollToItem : function (item) {
-		var idx = this.lastResultSet.indexOf(item);
+		var idx = dojo.indexOf(this.lastResultSet, item);
 		if (idx !== -1) {
 			this.scrollToRow(idx);	
 			this.onSelectionChanged();
@@ -44729,7 +44741,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         // with grid height being larger than background image
         // used for styling.
         if (desc.length > 340) {
-            desc = desc.substring(0, 300).trim()  + "...";
+            desc = dojo.trim(desc.substring(0, 300))  + "...";
         }
 
 	    return {"name":name, "desc": desc, "baseModule": baseModule, "package": packageId};		

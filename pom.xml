@@ -55,6 +55,11 @@
 			<version>1.1.2-incubating</version>
 		</dependency>
 		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
 			<version>4.0.3</version>
@@ -132,6 +137,7 @@
 								<phase>initialize</phase>
 								<configuration>
 									<tasks>
+										<taskdef resource="net/sf/antcontrib/antcontrib.properties" classpathref="maven.plugin.classpath"/>
 										<replace file="${project.basedir}/src/main/webapp/index.html"
 											token="inDebug=true" value="inDebug=false" />
 											
@@ -152,11 +158,15 @@
 												<exclude name="**/dojo/**"/>
 											</fileset>											
 										</copy> 
-		
+								
+										<!--  Convert backslashes to forward slashes in windows paths -->
+										<propertyregex property="dojo.source.escaped" input="${dojo.source}" regexp="\\"
+											replace="/" />
+	 	
 										<!-- Update meta-data to point to actual Dojo source location -->
 										<replaceregexp
 											file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
-											match='location\":.*,' replace='location\": \"${dojo.source}\",' />				
+											match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />					
 									</tasks>
 								</configuration>
 								<goals>
@@ -169,20 +179,28 @@
 								<groupId>ant</groupId>
 								<artifactId>ant-nodeps</artifactId>
 								<version>1.6.5</version>
-                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<groupId>ant</groupId>
 								<artifactId>ant-apache-regexp</artifactId>
 								<version>1.6.5</version>
-                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<artifactId>jakarta-regexp</artifactId>
 								<groupId>jakarta-regexp</groupId>
-								<version>1.4</version>
-                                <scope>provided</scope>
+								<version>1.4</version>                                
 							</dependency>
+							<dependency>
+							    <groupId>ant-contrib</groupId>
+							    <artifactId>ant-contrib</artifactId>
+							    <version>1.0b3</version>
+							    <exclusions>
+							      	<exclusion>
+							        	<groupId>ant</groupId>
+							        	<artifactId>ant</artifactId>
+							      	</exclusion>
+						    	</exclusions>
+						  	</dependency>
 						</dependencies>
 					</plugin>
 				</plugins>
@@ -200,6 +218,7 @@
 								<phase>initialize</phase>
 								<configuration>
 									<tasks>
+										<taskdef resource="net/sf/antcontrib/antcontrib.properties" classpathref="maven.plugin.classpath"/>
 										<replace file="${project.basedir}/src/main/webapp/index.html"
 											token="inDebug=false" value="inDebug=true" />
 											
@@ -221,10 +240,14 @@
 											</fileset>											
 										</copy> 
 		
+										<!--  Convert backslashes to forward slashes in windows paths -->
+										<propertyregex property="dojo.source.escaped" input="${dojo.source}" regexp="\\"
+											replace="/" />
+	 	
 										<!-- Update meta-data to point to actual Dojo source location -->
 										<replaceregexp
 											file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
-											match='location\":.*,' replace='location\": \"${dojo.source}\",' />				
+											match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />				
 									</tasks>
 								</configuration>
 								<goals>
@@ -237,20 +260,28 @@
 								<groupId>ant</groupId>
 								<artifactId>ant-nodeps</artifactId>
 								<version>1.6.5</version>
-                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<groupId>ant</groupId>
 								<artifactId>ant-apache-regexp</artifactId>
 								<version>1.6.5</version>
-                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<artifactId>jakarta-regexp</artifactId>
 								<groupId>jakarta-regexp</groupId>
 								<version>1.4</version>
-                                <scope>provided</scope>
 							</dependency>
+							<dependency>
+							    <groupId>ant-contrib</groupId>
+							    <artifactId>ant-contrib</artifactId>
+							    <version>1.0b3</version>
+							    <exclusions>
+							      	<exclusion>
+							        	<groupId>ant</groupId>
+							        	<artifactId>ant</artifactId>
+							      	</exclusion>
+						    	</exclusions>
+						  	</dependency>
 						</dependencies>
 					</plugin>
 				</plugins>
@@ -326,19 +357,16 @@
 								<groupId>ant</groupId>
 								<artifactId>ant-nodeps</artifactId>
 								<version>1.6.5</version>
-                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<groupId>ant</groupId>
 								<artifactId>ant-apache-regexp</artifactId>
 								<version>1.6.5</version>
-                                <scope>provided</scope>
 							</dependency>
 							<dependency>
 								<artifactId>jakarta-regexp</artifactId>
 								<groupId>jakarta-regexp</groupId>
 								<version>1.4</version>
-                                <scope>provided</scope>
 							</dependency>
 						</dependencies>
 					</plugin>
@@ -371,6 +399,7 @@
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
 				<configuration>
 					<source>1.6</source>
 					<target>1.6</target>
@@ -381,6 +410,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.8.1</version>
 				<configuration>
 					<skipTests>true</skipTests>
 				</configuration>
@@ -417,6 +447,7 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>tomcat-maven-plugin</artifactId>
+				<version>1.1</version>
 				<configuration>
 					<server>dwb</server>
 					<path>/</path>
