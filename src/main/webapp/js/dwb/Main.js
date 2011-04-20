@@ -460,7 +460,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         // with grid height being larger than background image
         // used for styling.
         if (desc.length > 340) {
-            desc = desc.substring(0, 300).trim()  + "...";
+            desc = dojo.trim(desc.substring(0, 300))  + "...";
         }
 
 	    return {"name":name, "desc": desc, "baseModule": baseModule, "package": packageId};		

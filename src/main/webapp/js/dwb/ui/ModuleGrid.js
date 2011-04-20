@@ -42,7 +42,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 
 			// Check if item is present in result set,
 			// manually toggle row selection if found.
-			idx = items.indexOf(item);
+			idx = dojo.indexOf(items, item);
 			if (idx !== -1) {
 				this.rowSelectCell.toggleRow(idx, true);
 			} else {
@@ -110,7 +110,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 	
 	addItemSelection : function (item) {
 		// If row item is currently visible, toggle true. 
-		var idx = this.lastResultSet.indexOf(item);
+		var idx = dojo.indexOf(this.lastResultSet, item);
 		if (idx !== -1) {
 			this.rowSelectCell.toggleRow(idx, true);	
 		// Otherwise, store reference
@@ -129,7 +129,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 		if (idx !== -1) {
 			this.rowSelectCell.toggleRow(idx, false);	
 		} else {
-			this.previousSelection.splice(this.previousSelection.indexOf(item), 1);	
+			this.previousSelection.splice(dojo.indexOf(this.previousSelection, item), 1);	
 		}
 		
 		// Force selection change event 
@@ -138,7 +138,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 	
 	// Given a module item, scroll to this row if available
 	scrollToItem : function (item) {
-		var idx = this.lastResultSet.indexOf(item);
+		var idx = dojo.indexOf(this.lastResultSet, item);
 		if (idx !== -1) {
 			this.scrollToRow(idx);	
 			this.onSelectionChanged();

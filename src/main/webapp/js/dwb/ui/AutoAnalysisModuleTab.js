@@ -29,11 +29,14 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	globalModulesStore: null,
 	
 	customLayerName: null,
+
+    _postCreate: false,
 	
 	constructor: function () {
-		this.content = this.analysisContentFragments[this.analysisType];
-
-		dojo.subscribe("dwb/analysis/sourceType", dojo.hitch(this, function (message) {
+        this.content = this.analysisContentFragments[this.analysisType];
+		
+        
+        dojo.subscribe("dwb/analysis/sourceType", dojo.hitch(this, function (message) {
 			this.set("analysisType", message.source);
 		}));
 		dojo.subscribe("dwb/layers/addAnalysisModules", dojo.hitch(this, function (message) {
@@ -50,9 +53,10 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 			});
 		}));
 	},
-	
+
 	// Override default postCreate to stop render of the module grid.
 	postCreate: function () {
+        this._postCreate  = true;
 		dojo.query(".dijitButton", this.domNode).forEach(dojo.hitch(this, function(btn) {
 			this.connect(dijit.byNode(btn), "onClick", dojo.hitch(this, "_onSubmit"));
 		}));
@@ -60,7 +64,15 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 	
 	_setAnalysisTypeAttr : function (type) {
 		this.analysisType = type;
-		this.set("content", this.analysisContentFragments[this.analysisType]);
+
+        // Calling custom setter before "content" attribute is applied caused template to
+        // be downloaded and parsed twice, leading to IE issues. Before post-create
+        // just set up content string reference, afterwards we can call customer setter.
+        if (this._postCreate) {
+            this.set("content", this.analysisContentFragments[this.analysisType]);
+        } else {
+            this.content = this.analysisContentFragments[this.analysisType];
+        }
 		
 		dojo.query(".dijitButton", this.domNode).forEach(dojo.hitch(this, function(btn) {
 			this.connect(dijit.byNode(btn), "onClick", dojo.hitch(this, "_onSubmit"));
@@ -126,7 +138,7 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 			// Find all unique module names
 			dojo.forEach(response.layers, function (layer) {
 				dojo.forEach(layer.dependencies, function (moduleName) {
-					if (modules.indexOf(moduleName) === -1) {
+					if (dojo.indexOf(modules, moduleName) === -1) {
 						modules.push(moduleName);
 					}
 				});
