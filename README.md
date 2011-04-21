@@ -103,7 +103,7 @@ Development notes
 ### Layout 
 
 The project uses Maven's 
-[http://maven.apache.org/guides/introduction/introduction-to-the-standard-directory-layout.html](standard directory layout) 
+[standard directory layout](http://maven.apache.org/guides/introduction/introduction-to-the-standard-directory-layout.html) 
 to organise source files. Front-end application code lives in _src/main/webapp_ and the 
 backend API code lives in _src/main/java_. 
 
@@ -163,7 +163,7 @@ Feedback
 --------
 
 File bug reports at [http://bugs.dojotoolkit.org](http://bugs.dojotoolkit.org) 
-or contact [James Thomas](http://github.com/jthomas) [(thomasj @ twitter)](twitter.com/thomasj) for anything else.
+or contact [James Thomas](http://github.com/jthomas) [(thomasj @ twitter)](http://twitter.com/thomasj) for anything else.
 
 TODO
 --
