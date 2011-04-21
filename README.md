@@ -46,20 +46,56 @@ Configuration
 
 Configurable application parameters are set using Java system properties. Users 
 can modify these values using the -D command line argument. _The only mandatory 
-property is the dojo source location_. 
+property is the dojo source location_. Both the _dojo.source_ and _cachepath_ parameters
+support the use of environment variables, using the %env\_name% format.
 
 ### Mandatory Parameters 
 
 * _dojo.source_ - Directory location for the source release of the Dojo Toolkit
-  version you want to build.
+  version you want to build. Source folder must contain the correct version of dojo expected
+  by the project, see _dojo.version_ parameter below.
 
 ### Optional Parameters 
 
 * _dojo.version_ - Change the version of the Dojo Toolkit being exposed by the
-project. Currently supported versions are: 1.6.0 (default), 1.5.0. 
+project. Currently supported versions are: 1.6.0 (default), 1.5.0. Default version
+is set in the _pom.xml_ file. 
 
-* _dwbcachepath_ - Specify the custom build cache directory. By default, this
-is a different temporary directory each time the application is started. 
+* _cachepath_ - Specify the custom build cache directory. By default, this
+is a different temporary directory each time the application is started. This 
+value can also be set using a context parameter in the application's _web.xml_.
+
+
+Supporting custom modules
+----
+
+The Dojo Web Builder supports serving up custom modules you've created alongside
+modules from the Dojo Toolkit. These modules will be exposed alongside the normal
+Dojo Toolkit modules in the web application, allowing users to create custom
+builds using your own modules. To configure the tool to serve up your local module 
+files, follow the steps below...
+
+### Generate package descriptor for custom modules
+    $ cd src/main/resources/package_scripts/
+    $ rhino generateNewPackageMetaData.js ~/code/js/custom_modules_root/
+
+### Create package & version directory in package repository
+    $ mkdir ../../config/packages/custom_modules
+    $ mkdir ../../config/packages/custom_modules/1.0.0
+
+### Copy custom package descriptor to package repository 
+    $ cp package.json ../../config/packages/custom_modules/1.0.0
+
+### Run Dojo Web Builder as normal
+
+The _src/main/config/packages/_ directory contains the package meta-data files. Packages to be served
+are identified by the presence of a child directory. Each package directory must contain at least one 
+version directory. Version directories contain the package modules descriptor files. Multiple versions 
+of the same package are allowed, the web application automatically uses the most recent version.
+
+To support a different version of Dojo, use the steps above to generate the package descriptor and place
+in a new version directory under the _src/main/config/packages/dojo_ path. Then use the _dojo.version_ 
+parameter to modify the default version of Dojo served.
 
 Development notes
 ---
@@ -76,12 +112,12 @@ backend API code lives in _src/main/java_.
 Maven profiles are used to assist with development, details below. To change the 
 current profile, use the -PprofileName parameter when running the application. 
 
-* _standard (default)_ Quick start using optimised client-side code layer, debug mode turned off.
+* _standard (default)_ - Quick start using optimised client-side code layer, debug mode turned off.
 
-* _release_ Same as _standard_ but triggers a full-rebuild of the client-side code, copying generated
+* _release_ - Same as _standard_ but triggers a full-rebuild of the client-side code, copying generated
 resources to JS directories before starting application.
 
-* _dev_ Debug mode turned on, uses source JavaScript modules uncompressed and unoptimised.
+* _dev_ - Debug mode turned on, uses source JavaScript modules uncompressed and unoptimised.
 
 Use the -Pdebug mode during front-end development or module changes won't show up! 
 
