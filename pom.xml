@@ -157,16 +157,21 @@
 											<fileset dir="src/main/config/packages/">
 												<exclude name="**/dojo/**"/>
 											</fileset>											
-										</copy> 
+										</copy> 								
 								
-										<!--  Convert backslashes to forward slashes in windows paths -->
+										<!-- Can't override property set on the command line, copy to temp prop
+											to override if regex matches. -->
+										<property name="dojo.source.escaped" value="${dojo.source}"></property>
+										
+										<!--  Convert backslashes to forward slashes in windows paths, if match fails
+											it won't set a value -->											
 										<propertyregex property="dojo.source.escaped" input="${dojo.source}" regexp="\\"
-											replace="/" />
-	 	
+											replace="/" override="true" />
+	 									
 										<!-- Update meta-data to point to actual Dojo source location -->
 										<replaceregexp
 											file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
-											match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />					
+											match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />			
 									</tasks>
 								</configuration>
 								<goals>
@@ -239,15 +244,20 @@
 												<exclude name="**/dojo/**"/>
 											</fileset>											
 										</copy> 
-		
-										<!--  Convert backslashes to forward slashes in windows paths -->
+										
+										<!-- Can't override property set on the command line, copy to temp prop
+											to override if regex matches. -->
+										<property name="dojo.source.escaped" value="${dojo.source}"></property>
+										
+										<!--  Convert backslashes to forward slashes in windows paths, if match fails
+											it won't set a value -->											
 										<propertyregex property="dojo.source.escaped" input="${dojo.source}" regexp="\\"
-											replace="/" />
-	 	
+											replace="/" override="true" />
+	 									
 										<!-- Update meta-data to point to actual Dojo source location -->
 										<replaceregexp
 											file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
-											match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />				
+											match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />					
 									</tasks>
 								</configuration>
 								<goals>
