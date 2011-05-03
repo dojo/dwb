@@ -429,6 +429,12 @@ buildUtil._load = function (/*String*/ fileName){
 	//Read the file, automatic AMD-to-Normal conversion
 	var fileContents = fileUtil.readFile(fileName);
 
+    // CLDR contents don't have () wrapping, causes evaluation to fail. 
+    // Hacky work-around, check for () and add if not available.
+    if (fileContents && fileContents[1] !== '(') {
+        fileContents = "(" + fileContents + ")";
+    }
+
 	//Eval the contents.
 	var Context = Packages.org.mozilla.javascript.Context;
 	var context = Context.enter();
