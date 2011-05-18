@@ -2,12 +2,16 @@ package org.dtk.resources.build;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.dtk.resources.Build;
@@ -131,19 +135,80 @@ public class BuildRequestProcessor implements Runnable {
 	
 	public void createBuildArchive() throws IOException {
 		String buildArchivePath = buildRequest.getBuildResultPath();
-		
-		List<File> layerFiles = buildRequest.getGeneratedLayerFiles();
-		Iterator<File> layerFilesIter = layerFiles.iterator();
-		
+				
 		Map<String, String> archiveContents = new HashMap<String, String>();
+		Iterator<File> artifactFilesIter = extractBuildArtifactFiles().iterator();
 		
-		while(layerFilesIter.hasNext()) {
-			File layerFile = layerFilesIter.next();			
-			String layerContent = FileUtil.readFromFile(layerFile.getAbsolutePath(), null);
-			archiveContents.put(layerFile.getName(), layerContent);			
+		while(artifactFilesIter.hasNext()) {
+			File artifactFile = artifactFilesIter.next();			
+			String layerContent = FileUtil.readFromFile(artifactFile.getAbsolutePath(), null);
+			// Path must be relative to base directory.....
+			archiveContents.put(artifactArchivePath(artifactFile), layerContent);			
 		}
 		
 		FileUtil.writeToZipFile(buildArchivePath, archiveContents);
+	}
+	
+	/**
+	 * Convert artifact file path to relative archive path.
+	 * 
+	 * @param artifactFile - Artifact file 
+	 * @return Relative path in archive for this artifact
+	 */
+	public String artifactArchivePath(File artifactFile) {
+		String artifactArchivePath = artifactFile.getName();
+		
+		// Non JS files are theme files, index those from start of
+		// themes directory. 
+		if (!artifactArchivePath.endsWith(".js")) {
+			String absPath = artifactFile.getAbsolutePath();
+			artifactArchivePath = absPath.substring(absPath.lastIndexOf("themes"));
+		}
+		
+		return artifactArchivePath; 
+	}
+	
+	/**
+	 * Return the list of all built artifacts we want to compile into the
+	 * build archive. This will contain all the layer files and, if 
+	 * selected, theme files needed. 
+	 * 
+	 * @return List of files to archive
+	 */
+	protected Collection<File> extractBuildArtifactFiles() {		
+		Collection<File> artifactFiles = buildRequest.getBuildArtifactFiles(), 
+			themeFiles = new ArrayList<File>();
+		
+		// If we find a CSS artifact to be included in the build result, user
+		// has requested a theme and we need to pull in all related theme artifacts.
+		Iterator<File> iter = artifactFiles.iterator();
+		
+		while(iter.hasNext()) {
+			String artifactPath = (iter.next()).getAbsolutePath();
+			if (artifactPath.endsWith("css")) {
+				themeFiles = findAllThemeArtifacts(artifactPath);
+				break;
+			}
+		}
+
+		artifactFiles.addAll(themeFiles);		
+		return artifactFiles;
+	}
+	
+	/**
+	 * Find all theme artifacts related to the current theme. Currently
+	 * this is a set of image files. 
+	 * 
+	 * @param path - Theme CSS file 
+	 * @return File paths that are associated with this theme
+	 */
+	protected Collection<File> findAllThemeArtifacts(String path) {		
+		// Search for all theme image artifacts under the parent theme
+		// directory
+		File themeParentFile = (new File(path)).getParentFile();		
+		String[] themeArtifactExtensions = new String[]{ "png", "gif" };
+		
+		return FileUtils.listFiles(themeParentFile, themeArtifactExtensions, true);
 	}
 	
 	/**
