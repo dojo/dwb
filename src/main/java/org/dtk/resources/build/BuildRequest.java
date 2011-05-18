@@ -47,9 +47,6 @@ public class BuildRequest {
 	
 	/** Unique identifier for these build parameters, used to cache computed result. */
 	String buildReference;
-
-	/** File path format for cached build results, base_dir/build_id/dojo.zip */
-	//protected static final String cachedBuildFileFormat = "%1$s/dojo.zip";
 	
 	protected static final String archivedBuildFile = "dojo.zip";
 	
@@ -179,27 +176,6 @@ public class BuildRequest {
 	}
 	
 	/**
-	 * Convert build layer details from user request, use native object
-	 * rather than generic map as this is easy to process in JavaScript 
-	 * context.
-	 * 
-	 * @param layerDetails - Build details from user request
-	 * @return Array of layer objects, corresponding to build layers 
-	 */
-	public Layer[] getBuildLayersArray()
-	throws IncorrectParameterException {
-		int numOfLayers = this.layers.size();
-		Layer[] buildLayers = new Layer[numOfLayers];
-
-		// Loop through requests, converting each JSON object parameter.
-		for(int idx = 0; idx < numOfLayers; idx++) {
-			buildLayers[idx] = new Layer(layers.get(idx));
-		}
-
-		return buildLayers;
-	}
-	
-	/**
 	 * Given a build reference, find the associated file path for result of
 	 * the build. Constructed from full build result cache directory and
 	 * unique build reference.
@@ -314,30 +290,6 @@ public class BuildRequest {
 		}
 		
 		return null;
-	}
-
-	public String getCdn() {
-		return cdn;
-	}
-
-	public String getOptimise() {
-		return optimise;
-	}
-
-	public String getCssOptimise() {
-		return cssOptimise;
-	}
-	
-	public String getPlatforms() {
-		return platforms;
-	}
-	
-	public String getThemes() {
-		return themes;
-	}
-	
-	public List<Map<String, Object>> getLayers() {
-		return layers;
 	}
 	
 	/** 

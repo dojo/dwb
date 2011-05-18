@@ -35,8 +35,11 @@ public class ContextListener implements ServletContextListener {
 	protected static final String cachePathParam = "cachepath";
 
 	/** Relative path to custom Dojo build script */
-	protected static final String buildScriptsDirParam = "/js/build/";
+	protected static final String buildModulePathParam = "/js/build/bdbuild/";
 
+	/** Relative path to custom Dojo build script */
+	protected static final String loaderModulePathParam = "/js/build/amd_loader/dojo.js";
+	
 	/** Relative path to custom build parameters configuration */
 	protected static final String buildParametersConfig = "/WEB-INF/config/build_options.json";
 
@@ -82,7 +85,8 @@ public class ContextListener implements ServletContextListener {
 		
 		String cachePath = getCacheDirectoryPath();
 		String packagePath = currentContext.getRealPath(packageRepoPath);
-		String buildScriptsDir = currentContext.getRealPath(buildScriptsDirParam);
+		String builderModulePath = currentContext.getRealPath(buildModulePathParam);
+		String loaderModulePath = currentContext.getRealPath(loaderModulePathParam);
 
 		PackageRepository packageRepo = PackageRepository.getInstance();
 		packageRepo.setPackageBaseLocation(packagePath);
@@ -90,7 +94,8 @@ public class ContextListener implements ServletContextListener {
 		
 		BuildStatusManager buildStatusManager = BuildStatusManager.getInstance();
 		buildStatusManager.setBuildResultCachePath(cachePath);
-		buildStatusManager.setBuildScriptsDir(buildScriptsDir);
+		buildStatusManager.setBuildModulePath(builderModulePath);
+		buildStatusManager.setLoaderModulePath(loaderModulePath);
 		
 		// Add file handlers to certain class loggers
 		initialiseLoggingHandlers();

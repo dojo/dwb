@@ -42,17 +42,39 @@ public class ProfileBuilder {
 	/** AMD module loader script path, e.g. dojo */
 	protected String moduleLoaderPath;
 
+	/** AMD build package location */
+	protected String buildPackagePath;
+	
+	/** Unique reference for this build, used for logging */
+	protected String buildReference;
+	
 	/** All script arguments should be key=value format */
 	protected static final String scriptArgFormat = "%1$s=%2$s";
 	
+	/** Local AMD package descriptors format, picked up by AMD module loader */
+	protected static final String djConfigPrefixFormat 
+		= "djConfig = {buildReference: '%1$s', packages:[{name:'build', lib:'.', location:'%2$s'}]};";	
+	
 	protected Exception buildError;
 	
-	public ProfileBuilder(String profileFile, String resultDir, String moduleLoaderPath) {
+	/**
+	 * Generate new ProfileBuilder.
+	 * 
+	 * @param profileFile - Location to profile file for this build
+	 * @param resultDir - Where to store the resulting build artifacts
+	 * @param moduleLoaderPath - Location to AMD loader package
+	 * @param baseUrl - Base Dojo URL being built with 
+	 * @param buildPackagePath - AMD Builder package location
+	 */
+	public ProfileBuilder(String profileFile, String resultDir, String moduleLoaderPath, 
+		String baseUrl, String buildPackagePath, String buildReference) {
 		this.moduleLoaderPath = moduleLoaderPath;
+		this.buildPackagePath = buildPackagePath;
+		this.buildReference = buildReference;
 		
 		scriptArguments.put("profile", profileFile);
 		scriptArguments.put("releaseDir", resultDir);
-		scriptArguments.put("baseUrl", (new File(this.moduleLoaderPath)).getParent());
+		scriptArguments.put("baseUrl", baseUrl);
 	}
 	
 	/**
@@ -81,8 +103,7 @@ public class ProfileBuilder {
 		// Rhino may throw a number of exceptions due to a variety of the build errors, use generic catch to 
 		// get details and store for access. 
 		try {
-			String moduleLoaderScript = FileUtil.readFromFile(this.moduleLoaderPath, null);
-			
+			String moduleLoaderScript = readModuleLoaderSource();			
 			Script moduleLoader = cx.compileString(moduleLoaderScript, "moduleLoader", 1, null);
 			
 			// Pretend these arguments came from the command line by stuffing them into the top context,
@@ -97,6 +118,20 @@ public class ProfileBuilder {
 		}		
 		
 		return buildCompleted; 
+	}
+	
+	/**
+	 * Read AMD loader script source, with local package
+	 * descriptor information included.
+	 * 
+	 * @return Module loader script source 
+	 * @throws IOException - Unable to find module loader 
+	 */
+	protected String readModuleLoaderSource() throws IOException {
+		String djConfigScriptPrefix = String.format(djConfigPrefixFormat, this.buildReference, this.buildPackagePath);
+		String moduleLoaderScript = FileUtil.readFromFile(this.moduleLoaderPath, null);
+		
+		return djConfigScriptPrefix + moduleLoaderScript;
 	}
 	
 	/**
@@ -129,7 +164,7 @@ public class ProfileBuilder {
 		List<String> scriptArgsList = new ArrayList<String>();
 		
 		while(scriptArgsIter.hasNext()) {
-			java.util.Map.Entry<String, String> scriptArg = scriptArgsIter.next();
+			Map.Entry<String, String> scriptArg = scriptArgsIter.next();
 			scriptArgsList.add(String.format(scriptArgFormat, scriptArg.getKey(), scriptArg.getValue()));
 		}
 		

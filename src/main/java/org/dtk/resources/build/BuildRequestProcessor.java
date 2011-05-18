@@ -1,28 +1,19 @@
 package org.dtk.resources.build;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.dtk.resources.Build;
-import org.dtk.resources.Dependencies;
 import org.dtk.resources.build.manager.BuildState;
 import org.dtk.resources.build.manager.BuildStatusManager;
-import org.dtk.resources.packages.PackageRepository;
 import org.dtk.util.FileUtil;
-import org.mozilla.javascript.ContextFactory;
 
 /**
  * Asynchronous build thread used to convert build details into 
@@ -93,17 +84,19 @@ public class BuildRequestProcessor implements Runnable {
 	protected BuildState generateRequestedBuild() {
 		
 		BuildState finishedState = BuildState.FAILED;
-		
-		//String parentPath = ; 
-		
-		// Should ask build status manager for AMD module loader 
-		String moduleLoader = "/Users/james/Code/DTK/dojotoolkit/dojo/dojo.js";
 				
 		try {
 			// Write profile file to disk for use by the build system 
 			String profileFile = createPermanentBuildProfile();
 			
-			ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), moduleLoader);
+			String amdLoaderPath = buildStatusManager.getLoaderModulePath(),
+				buildPackageLocation = buildStatusManager.getBuildModulePath();
+			
+			File dojoLocation = new File(buildRequest.getDojoLocation(), "dojo");
+			
+			ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), 
+				amdLoaderPath, dojoLocation.getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
+			
 			if (profileBuilder.executeBuild()) {
 				// Add files to zip archive 
 				createBuildArchive();
