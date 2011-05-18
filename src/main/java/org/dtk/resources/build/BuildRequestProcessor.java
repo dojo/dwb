@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
@@ -23,7 +24,8 @@ import org.dtk.util.FileUtil;
  * Asynchronous build thread used to convert build details into 
  * compiled JS layers. Build result cache is checked for pre-existing
  * build, based upon parameters requested, and compilation started if 
- * resource is missing.
+ * resource is missing. When the build has finished, required artifacts
+ * are added to the compressed archive. 
  *  
  * @author James Thomas
  */
@@ -65,7 +67,7 @@ public class BuildRequestProcessor implements Runnable {
 		// parameters. If so, we can just use this cached version rather than rebuilding. 
 		File resultFile = new File(buildResultPath);
 		if (!resultFile.exists()) {
-			finishState = generateRequestedBuild();
+			finishState = executeBuildProcess();
 		} else {
 			// Cached version exists, no need to build just update status.
 			finishState = BuildState.COMPLETED;
@@ -81,59 +83,90 @@ public class BuildRequestProcessor implements Runnable {
 	}
 
 	/**
+	 * Set off the build process for the current request. Build system will be run 
+	 * against the generated profile and resulting artifacts compiled into build
+	 * archive, ready for access by the user. 
 	 * 
-	 * 
-	 * @return State of the build after completion 
+	 * @return Status of the build after completion 
 	 */
-	protected BuildState generateRequestedBuild() {
-		
-		BuildState finishedState = BuildState.FAILED;
-				
-		try {
-			// Write profile file to disk for use by the build system 
-			String profileFile = createPermanentBuildProfile();
+	protected BuildState executeBuildProcess() {		
+		BuildState finishedState = BuildState.FAILED;				
+		try {			
+			ProfileBuilder profileBuilder = setupProfileBuilder();
 			
-			String amdLoaderPath = buildStatusManager.getLoaderModulePath(),
-				buildPackageLocation = buildStatusManager.getBuildModulePath();
-			
-			File dojoLocation = new File(buildRequest.getDojoLocation(), "dojo");
-			
-			ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), 
-				amdLoaderPath, dojoLocation.getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
-			
-			if (profileBuilder.executeBuild()) {
-				// Add files to zip archive 
+			// Execute the build scripts for this request and, if successful, create the archive file
+			// with relevant build artifacts
+			if (profileBuilder.executeBuild()) { 
 				createBuildArchive();
-				finishedState = BuildState.COMPLETED;	
-			} else {
 				
-			}
-			
-		} catch (JsonParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JsonMappingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+				// Build completed successfully, set state accordingly.
+				finishedState = BuildState.COMPLETED;
+				logger.log(Level.INFO, String.format(finishedBuildLogMsg, buildRequest.getBuildReference(), buildRequest.getBuildResultPath()));
+			} else {
+				Exception buildError = profileBuilder.getBuildError();
+				logger.log(Level.SEVERE, String.format(fatalBuildErrorLogMsg, buildError.getMessage()));
+				buildStatusManager.addNewBuildLog(buildRequest.getBuildReference(), buildError.getMessage());
+			}			
+		} catch (Exception e) {
+			logger.log(Level.SEVERE, String.format(fatalBuildErrorLogMsg, e.getMessage()));				
 		}
 		
 		return finishedState;
 	}
 	
-	public String createPermanentBuildProfile() throws JsonParseException, JsonMappingException, IOException {
+	/**
+	 * Instantiate new instance of profile builder for this request. Ensure profile file 
+	 * exists for this request and properties are passed in. 
+	 * 
+	 * @return Profile builder ready to build this request.
+	 * @throws JsonParseException - Unable to generate profile file
+	 * @throws JsonMappingException - Unable to generate profile file
+	 * @throws IOException - Unable to persist profile file text
+	 */
+	protected ProfileBuilder setupProfileBuilder() throws JsonParseException, JsonMappingException, IOException {
+		// Create file path to profile text  
+		String profileFile = getPermanentBuildProfile(),
+			amdLoaderPath = buildStatusManager.getLoaderModulePath(),
+			buildPackageLocation = buildStatusManager.getBuildModulePath();
+		
+		File dojoLocation = new File(buildRequest.getDojoLocation(), "dojo");
+		
+		ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), 
+			amdLoaderPath, dojoLocation.getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
+		
+		return profileBuilder;
+	}
+	
+	/**
+	 * Generate the build profile for this build request and persist the 
+	 * text to a file in the build directory for this unique build. 
+	 * 
+	 * @return Path to persistent build profile 
+	 * @throws JsonParseException - Unable to generate JSON profile
+	 * @throws JsonMappingException - Unable to convert Java POJOs to JSON 
+	 * @throws IOException - Unable to write build profile to disk
+	 */
+	protected String getPermanentBuildProfile() throws JsonParseException, JsonMappingException, IOException {
 		String profileFilename = "build.profile.js";
 		String buildResultDir = buildRequest.getBuildResultDir();
 		File profileFile = new File(buildResultDir, profileFilename);
 		
-	    FileUtil.writeToFile(profileFile.getAbsolutePath(), buildRequest.getProfileText(), null, false);
+		if (!profileFile.exists()) {
+			FileUtil.writeToFile(profileFile.getAbsolutePath(), buildRequest.getProfileText(), null, false);
+		}
 	    
 	    return profileFile.getAbsolutePath();
 	}
 	
-	public void createBuildArchive() throws IOException {
+	/**
+	 * Create a new build archive from the artifacts generated 
+	 * during the build process. The resulting archive will be
+	 * written to disk in the cache directory. 
+	 * 
+	 * @throws IOException - Unable to read build artifacts or write 
+	 * final archive file. 
+	 */
+	protected void createBuildArchive() throws IOException {
 		String buildArchivePath = buildRequest.getBuildResultPath();
 				
 		Map<String, String> archiveContents = new HashMap<String, String>();
@@ -155,11 +188,12 @@ public class BuildRequestProcessor implements Runnable {
 	 * @param artifactFile - Artifact file 
 	 * @return Relative path in archive for this artifact
 	 */
-	public String artifactArchivePath(File artifactFile) {
+	protected String artifactArchivePath(File artifactFile) {
+		// Default archive name is just last path entry
 		String artifactArchivePath = artifactFile.getName();
 		
-		// Non JS files are theme files, index those from start of
-		// themes directory. 
+		// Non JS files are theme files, index those from the start of
+		// the themes directory. 
 		if (!artifactArchivePath.endsWith(".js")) {
 			String absPath = artifactFile.getAbsolutePath();
 			artifactArchivePath = absPath.substring(absPath.lastIndexOf("themes"));
@@ -196,59 +230,19 @@ public class BuildRequestProcessor implements Runnable {
 	}
 	
 	/**
-	 * Find all theme artifacts related to the current theme. Currently
-	 * this is a set of image files. 
+	 * Find all theme artifacts related to the a desired theme.
+	 * Currently this consists all a series of image files referenced
+	 * by the compacted theme's CSS file.  
 	 * 
 	 * @param path - Theme CSS file 
 	 * @return File paths that are associated with this theme
 	 */
 	protected Collection<File> findAllThemeArtifacts(String path) {		
-		// Search for all theme image artifacts under the parent theme
+		// Search for all image artifacts under the parent theme
 		// directory
 		File themeParentFile = (new File(path)).getParentFile();		
 		String[] themeArtifactExtensions = new String[]{ "png", "gif" };
 		
 		return FileUtils.listFiles(themeParentFile, themeArtifactExtensions, true);
 	}
-	
-	/**
-	 * Start build process for current build request, writing 
-	 * results to path parameter.  
-	 * 
-	 * @param resultPath - Build result path to write to.
-	 * @return State of build process completion
-	 
-	protected BuildState requestCompilation(String resultPath) {
-		String scriptPath = buildStatusManager.getBuildScriptPath(),
-			buildScriptsDir = buildStatusManager.getBuildScriptsDir();
-		
-		// Create new Rhino-based JS compilation script
-		BuilderContextAction contextAction = new BuilderContextAction(scriptPath, buildScriptsDir, buildRequest);
-		
-		BuildState finishState = BuildState.FAILED;
-		String reference = buildRequest.getBuildReference();
-		try { 
-			// Execute the compilation script with build request
-	        ContextFactory.getGlobal().call(contextAction);
-	        Exception exception = contextAction.getException();
-	
-	        // Check script executed without any errors
-	        if (exception != null) {
-	        	buildStatusManager.addNewBuildLog(reference, exception.getMessage());
-	        	logger.log(Level.SEVERE, String.format(fatalBuildErrorLogMsg, exception.getMessage()));
-	        } else {
-	        	// Retrieve the result of JS build function and write to file path given.
-	            Map<String, String> builtLayers = contextAction.getResult();
-	            FileUtil.writeToZipFile(resultPath, builtLayers);
-	            finishState = BuildState.COMPLETED;
-	            logger.log(Level.INFO, String.format(finishedBuildLogMsg, reference, resultPath));
-	        }
-	    // Log any script failures
-		} catch (Exception e) {
-			buildStatusManager.addNewBuildLog(reference, e.getMessage());
-			logger.log(Level.SEVERE, String.format(fatalBuildErrorLogMsg, e.getMessage()));
-        }
-		
-		return finishState;
-	}*/
 }

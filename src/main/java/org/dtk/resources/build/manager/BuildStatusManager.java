@@ -75,9 +75,6 @@ public final class BuildStatusManager {
 		// just a digest of the parameters
 		String reference = buildRequest.getBuildReference();
 		
-		// Holds next build state for the current request
-		
-		
 		// Does a build need scheduling for the current request?
 		boolean scheduleBuild = false;
 		

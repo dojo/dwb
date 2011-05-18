@@ -122,7 +122,7 @@ public class ProfileBuilder {
 	
 	/**
 	 * Read AMD loader script source, with local package
-	 * descriptor information included.
+	 * descriptor information prefixed at the top.
 	 * 
 	 * @return Module loader script source 
 	 * @throws IOException - Unable to find module loader 
