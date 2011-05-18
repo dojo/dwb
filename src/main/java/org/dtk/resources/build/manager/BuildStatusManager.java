@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 
-import org.dtk.resources.build.BuildProcess;
+import org.dtk.resources.build.BuildRequestProcessor;
 import org.dtk.resources.build.BuildRequest;
 import org.dtk.resources.exceptions.MissingResourceException;
 
@@ -141,7 +141,7 @@ public final class BuildStatusManager {
 		// Code will go here to kick off new build thread, running
 		// in the background. When thread completes, it'll change
 		// the state to FINISHED or FAILED.
-		BuildProcess t = new BuildProcess(buildRequest);
+		BuildRequestProcessor t = new BuildRequestProcessor(buildRequest);
 		new Thread(t).start();
 	}
 	

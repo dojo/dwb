@@ -1,14 +1,26 @@
 package org.dtk.resources.build;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.dtk.resources.Build;
 import org.dtk.resources.Dependencies;
 import org.dtk.resources.build.manager.BuildState;
 import org.dtk.resources.build.manager.BuildStatusManager;
+import org.dtk.resources.packages.PackageRepository;
 import org.dtk.util.FileUtil;
 import org.mozilla.javascript.ContextFactory;
 
@@ -21,7 +33,7 @@ import org.mozilla.javascript.ContextFactory;
  * @author James Thomas
  */
 
-public class BuildProcess implements Runnable {
+public class BuildRequestProcessor implements Runnable {
 	/** Build request details to process during compilation */
 	BuildRequest buildRequest;
 	
@@ -38,7 +50,7 @@ public class BuildProcess implements Runnable {
 	/** Log message when build has successfully completed **/
 	protected static final String finishedBuildLogMsg = "Successfully processed build request (%1$s), caching result at %2$s";
 	
-    public BuildProcess(BuildRequest buildRequest) {
+    public BuildRequestProcessor(BuildRequest buildRequest) {
     	this.buildRequest = buildRequest;
     	this.buildStatusManager = BuildStatusManager.getInstance();
     }
@@ -58,7 +70,7 @@ public class BuildProcess implements Runnable {
 		// parameters. If so, we can just use this cached version rather than rebuilding. 
 		File resultFile = new File(buildResultPath);
 		if (!resultFile.exists()) {
-			finishState = requestCompilation(buildResultPath);
+			finishState = generateRequestedBuild();
 		} else {
 			// Cached version exists, no need to build just update status.
 			finishState = BuildState.COMPLETED;
@@ -72,6 +84,74 @@ public class BuildProcess implements Runnable {
 		// Update state......
 		buildStatusManager.changeBuildState(buildRequest.getBuildReference(), finishState);
 	}
+
+	/**
+	 * 
+	 * 
+	 * @return State of the build after completion 
+	 */
+	protected BuildState generateRequestedBuild() {
+		
+		BuildState finishedState = BuildState.FAILED;
+		
+		//String parentPath = ; 
+		
+		// Should ask build status manager for AMD module loader 
+		String moduleLoader = "/Users/james/Code/DTK/dojotoolkit/dojo/dojo.js";
+				
+		try {
+			// Write profile file to disk for use by the build system 
+			String profileFile = createPermanentBuildProfile();
+			
+			ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), moduleLoader);
+			if (profileBuilder.executeBuild()) {
+				// Add files to zip archive 
+				createBuildArchive();
+				finishedState = BuildState.COMPLETED;	
+			} else {
+				
+			}
+			
+		} catch (JsonParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return finishedState;
+	}
+	
+	public String createPermanentBuildProfile() throws JsonParseException, JsonMappingException, IOException {
+		String profileFilename = "build.profile.js";
+		String buildResultDir = buildRequest.getBuildResultDir();
+		File profileFile = new File(buildResultDir, profileFilename);
+		
+	    FileUtil.writeToFile(profileFile.getAbsolutePath(), buildRequest.getProfileText(), null, false);
+	    
+	    return profileFile.getAbsolutePath();
+	}
+	
+	public void createBuildArchive() throws IOException {
+		String buildArchivePath = buildRequest.getBuildResultPath();
+		
+		List<File> layerFiles = buildRequest.getGeneratedLayerFiles();
+		Iterator<File> layerFilesIter = layerFiles.iterator();
+		
+		Map<String, String> archiveContents = new HashMap<String, String>();
+		
+		while(layerFilesIter.hasNext()) {
+			File layerFile = layerFilesIter.next();			
+			String layerContent = FileUtil.readFromFile(layerFile.getAbsolutePath(), null);
+			archiveContents.put(layerFile.getName(), layerContent);			
+		}
+		
+		FileUtil.writeToZipFile(buildArchivePath, archiveContents);
+	}
 	
 	/**
 	 * Start build process for current build request, writing 
@@ -79,7 +159,7 @@ public class BuildProcess implements Runnable {
 	 * 
 	 * @param resultPath - Build result path to write to.
 	 * @return State of build process completion
-	 */
+	 
 	protected BuildState requestCompilation(String resultPath) {
 		String scriptPath = buildStatusManager.getBuildScriptPath(),
 			buildScriptsDir = buildStatusManager.getBuildScriptsDir();
@@ -112,5 +192,5 @@ public class BuildProcess implements Runnable {
         }
 		
 		return finishState;
-	}
+	}*/
 }

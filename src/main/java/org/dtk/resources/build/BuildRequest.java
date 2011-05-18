@@ -6,10 +6,13 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
@@ -46,11 +49,16 @@ public class BuildRequest {
 	String buildReference;
 
 	/** File path format for cached build results, base_dir/build_id/dojo.zip */
-	protected static final String cachedBuildFileFormat = "%1$s/dojo.zip";
+	//protected static final String cachedBuildFileFormat = "%1$s/dojo.zip";
+	
+	protected static final String archivedBuildFile = "dojo.zip";
 	
 	/** Formatter string for toString() output **/
 	protected static final String format = "org.dtk.resources.build.BuildRequest: packages=%1$s " +
 		"cdn=%2$s, optimise=%3$s, cssOptimise=%4$s, platforms=%5$s, themes=%6$s, layers=%7$s";
+	
+	/** Dojo build profile format */
+	protected static final String profileFormat = "dependencies = %1$s;";
 	
 	/**
 	 * Create a new build request from constructor parameters.
@@ -80,6 +88,56 @@ public class BuildRequest {
 		// parameters, used hash digest of parameters.
 		this.buildReference = generateBuildDigest();
 	}
+	
+	/**
+	 * Generate dojo build profile for this build request. Will contain
+	 * all the relevant parameters to pass to the build system. 
+	 * 
+	 * @return Dojo build profile for this request
+	 * @throws IOException - Unable to render build profile
+	 * @throws JsonMappingException - Unable to map from Java objects to JSON
+	 * @throws JsonParseException - Illegal JSON parsing error
+	 */
+	public String getProfileText() throws JsonParseException, JsonMappingException, IOException {
+		Map<String, Object> buildProfile = new HashMap<String, Object>();
+		
+		buildProfile.put("layers", getProfileLayers());
+		buildProfile.put("layerOptimize", optimise);
+		buildProfile.put("prefixes", getModulePrefixes());
+		buildProfile.put("cssOptimize", cssOptimise);
+		
+		// How do we do platform?????
+		// How do we do CDN????
+		
+		String profileText = String.format(profileFormat, JsonUtil.writeJavaToJson(buildProfile));
+		
+		return profileText;
+	}
+	
+	protected List<Map<String, Object>> getProfileLayers() {
+		List<Map<String, Object>> profileLayers = new ArrayList<Map<String, Object>>();
+		
+		Iterator<Map<String, Object>> layerIter = layers.iterator();
+		
+		while(layerIter.hasNext()) {
+			final Map<String, Object> layer = layerIter.next();			
+			final List<String> dependencies = new ArrayList<String>();
+			
+			Iterator<Map<String, String>> modulesIter = ((List<Map<String, String>>) layer.get("modules")).iterator();
+			
+			while(modulesIter.hasNext()) {
+				dependencies.add(modulesIter.next().get("name"));
+			}
+						
+			profileLayers.add(new HashMap<String, Object>() {{
+				put("dependencies", dependencies);
+				put("name", layer.get("name"));
+			}});
+		};
+		
+		return profileLayers;
+	}
+	
 	
 	/**
 	 * Generate the unique digest for this build request. Used to identify the same build job
@@ -150,28 +208,50 @@ public class BuildRequest {
 	 * @return String - Absolute file path for reference build id 
 	 */
 	public String getBuildResultPath() {
-		BuildStatusManager buildStatusManager = BuildStatusManager.getInstance();
-		String buildCacheRepository = buildStatusManager.getBuildResultCachePath();
-		
-		// Generate the unique path for this build cache result
-		String buildCachePath = String.format(cachedBuildFileFormat, buildReference);
-		
-		// Generate the full file cache path from cache directory and build result file
-		File buildResultFile = new File(buildCacheRepository, buildCachePath);
+		// Generate the full file cache path from cache directory, build id and build result file
+		File buildResultFile = new File(getBuildResultDir(), archivedBuildFile);
 		
 		return buildResultFile.getAbsolutePath();
 	}
 	
 	/**
-	 * Retrieve full file path for the current package and version 
-	 * referenced in this build request
+	 * Return the directory path which will contain the build aritfacts for this 
+	 * unique build request. Constructed from the build cache directory alongside 
+	 * the custom build identifier.
 	 * 
-	 * @return Package location path
+	 * @return Directory containing build artifacts, archive, profile and files.
 	 */
-	public String[][] getCustomModulesLocationsAndPrefixes() {
+	public String getBuildResultDir() {
+		BuildStatusManager buildStatusManager = BuildStatusManager.getInstance();
+		String buildCacheRepository = buildStatusManager.getBuildResultCachePath();
+		
+		// Add unique build identifier to the cache path location
+		File buildResultDir = new File(buildCacheRepository, buildReference);
+		
+		return buildResultDir.getAbsolutePath();
+	}
+	
+	public List<File> getGeneratedLayerFiles() {
+		ArrayList<File> layerLocations = new ArrayList<File>();
+		String layerArtifactLocations = "dojo/dojo";
+		String buildResultDir = getBuildResultDir();
+		File baseLayerLocation = new File(buildResultDir, layerArtifactLocations);
+		
+		Iterator<Map<String, Object>> layerIter = layers.iterator();
+		
+		while(layerIter.hasNext()) {
+			String layerName = (String) layerIter.next().get("name");			
+			layerLocations.add(new File(baseLayerLocation, layerName));
+		}
+		
+		return layerLocations;
+	}
+	
+	public List<List<String>> getModulePrefixes() {
 		PackageRepository packageRepo = PackageRepository.getInstance();
-		Map<String, String> modulePrefixLocations = new HashMap<String, String>();
-			
+		List<List<String>> modulePrefixLocations = new ArrayList<List<String>>();
+		Set<String> modulePrefixes = new HashSet<String>();
+		
 		// Create custom module lookup, used to match module prefixes with a 
 		// package location
 		Map<String, String> packageLocationLookup = new HashMap<String, String>();		
@@ -197,28 +277,18 @@ public class BuildRequest {
 				String moduleName = details.get("name");
 				String modulePrefix = moduleName.split("\\.")[0];
 				// If we haven't already resolved location for this prefix, ignoring DTK modules
-				if (!"dojo".equals(modulePrefix) && !"dijit".equals(modulePrefix) && !"dojox".equals(modulePrefix) 
-						&& !modulePrefixLocations.containsKey(modulePrefix)) {
+				if (!modulePrefixes.contains(modulePrefix)) {
 					String location = packageLocationLookup.get(details.get("package"));
-					modulePrefixLocations.put(modulePrefix, location);
+					modulePrefixLocations.add(Arrays.asList(modulePrefix, (new File(location, modulePrefix)).getAbsolutePath()));
+					modulePrefixes.add(modulePrefix);
 				}
 			}
 		}
 		
-		String[][] modulesAndPrefix = new String[modulePrefixLocations.size()][];
-		
-		int idx = 0;
-		
-		Iterator<String> prefixIter = modulePrefixLocations.keySet().iterator();
-		while(prefixIter.hasNext()) {
-			String prefix = prefixIter.next();
-			modulesAndPrefix[idx] = new String[] {prefix, modulePrefixLocations.get(prefix)};
-			idx++;
-		}
-		
-		return modulesAndPrefix;
+		return modulePrefixLocations;
 	}
 	
+
 	// Getter and setters...
 	public String getBuildReference() {
 		return buildReference;
