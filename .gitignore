@@ -1,3 +1,4 @@
 .DS_Store
 src/main/webapp/WEB-INF/classes/
 target/
+.svn
