@@ -12,7 +12,7 @@
 
 	<properties>
 		<tomcat.version>6.0.20</tomcat.version>
-		<dojo.version>1.6.0</dojo.version>
+		<dojo.version>1.7.0</dojo.version>
 	</properties>
 
 	<dependencies>
@@ -89,30 +89,7 @@
 			<artifactId>junit</artifactId>
 			<version>4.8.2</version>
 			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.google.javascript</groupId>
-			<artifactId>closure-compiler</artifactId>
-			<version>r706</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.ant</groupId>
-                    <artifactId>ant</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>args4j</groupId>
-                    <artifactId>args4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.json</groupId>
-                    <artifactId>json</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.code.findbugs</groupId>
-                    <artifactId>jsr305</artifactId>
-                </exclusion>
-            </exclusions>
-		</dependency>
+		</dependency>		
 		<dependency>
 			<groupId>shrinksafe</groupId>
 			<artifactId>shrinksafe</artifactId>

@@ -2,7 +2,6 @@
   "optimise":[
     {"label":"Standard JS minification", "value":"shrinksafe"},
     {"label":"Standard JS minification, keep newlines", "value":"shrinksafe.keepLines"}, 
-    {"label":"Aggressive JS minification", "value":"closure"},
     {"label":"Just remove comments", "value":"comments"},
     {"label":"Don't minimise JavaScript", "value":"none"}
   ],
