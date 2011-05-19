@@ -172,7 +172,7 @@ public class ContextListener implements ServletContextListener {
     	
     	// If user hasn't given a path, use default 
     	if (isParameterMissing(dirPath)) {
-    		dirPath = defaultPackageRepoPath;
+    		dirPath = currentContext.getRealPath(defaultPackageRepoPath);
     	} 
     	
     	if (!isValidDirectory(dirPath)) {
@@ -215,7 +215,7 @@ public class ContextListener implements ServletContextListener {
      * @return Path is a valid directory 
      */
     protected boolean isValidDirectory(String dirPath) {
-		File dirPathFile = new File(dirPath);
+		File dirPathFile = new File(dirPath);		
 		return (dirPathFile.exists() && dirPathFile.isDirectory());
     }
     

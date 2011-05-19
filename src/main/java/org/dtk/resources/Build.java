@@ -59,6 +59,12 @@ public class Build {
 
 	protected static final String tempBuildSuffix = ".temp";
 
+	/** Base Dojo layer, must be present in any build request */
+	protected static final Map<String, Object> defaultDojoLayer = new HashMap<String, Object> () {{
+		put("name", "dojo.js");
+		put("modules", new ArrayList<String>());
+	}};
+	
 	/** Response messages **/
 	/** Error text when build request misses mandatory parameter */
 	protected static final String missingParameterErrorText 
@@ -87,7 +93,7 @@ public class Build {
 	/** Error text when user has requested a build result that isn't available */
 	protected static final String missingBuildResourceErrorText 
 	= "Unable to access build result, build process hasn't completed.";
-
+	
 	/** Log messages **/
 	/** We have successfully parsed a user's new build request */
 	protected static final String newBuildRequestLogMsg 
@@ -96,7 +102,7 @@ public class Build {
 	/** Fatal error caught trying to process user's build request. Log all details. **/
 	protected static final String fatalBuildRequestLogMsg 
 	= "Fatal error occurred processing the following build request, %1$s. " +
-		"The following exceptions was caught: %2$s";
+		"The following exceptions was caught: %2$s";	
 	
 	/** Logging class instance */
 	protected static final Logger logger = Logger.getLogger(Build.class.getName());
@@ -252,6 +258,7 @@ public class Build {
 		for(Map<String, String> packageRef: packages) {
 			packageIds.add(packageRef.get("name"));
 		}
+		
 		// Extract additional build layers, checking any module dependencies reference valid 
 		// packages. 
 		List<Map<String, Object>> layers = extractBuildLayers(buildDetails, packageIds);		
@@ -362,34 +369,72 @@ public class Build {
 	 */
 	protected List<Map<String, Object>> extractBuildLayers(Map<String, Object> buildRequest, 
 		Set<String> validPackages) {
-		List<Map<String, Object>> layers;
+		// Build should always contains default dojo layer 
+		boolean containsBaseDojoLayer = false;
 		
-		// If optional layers parameter is missing, just return an empty list. 
-		// Otherwise, extract object and confirm every referenced dependency 
+		List<Map<String, Object>> layers = new ArrayList<Map<String, Object>>();
+				
+		// For every user layer, confirm every referenced dependency 
 		// refers to a valid package.
 		if (buildRequest.containsKey("layers")) {
 			layers = (List<Map<String, Object>>) buildRequest.get("layers");
 			Iterator<Map<String, Object>> layerIter = layers.iterator();
+			
 			while(layerIter.hasNext()) {
-				// For each module layer...
+				// For each module layer....
 				Map<String, Object> layer = layerIter.next();
 				List<Map<String, String>> dependencies = (List<Map<String, String>>) layer.get("modules");
-				Iterator<Map<String, String>> depIter = dependencies.iterator();
-				// ... pull out each dependency
-				while (depIter.hasNext()) {
-					Map<String, String> dependency = depIter.next();
-					String packageId = dependency.get("package");
-					// ... and check it has a valid package reference
-					if (packageId == null || !validPackages.contains(packageId)) {
-						String.format(invalidModulePackageErrorText, dependency.get("name"));
-					}
-				}
+				//.. verify each one is valid.
+				verifyModuleDependencies(dependencies, validPackages);
+				
+				// Check each layer to see if we come across dojo base
+				containsBaseDojoLayer |= isBaseDojoLayer(layer);
 			}
-		} else {
-			layers = new ArrayList<Map<String, Object>>();
+		}
+		
+		// If user hasn't explicitly asked for base dojo layer, 
+		// ensure it's present. This layer will always be generated
+		// by the build system. 
+		if (!containsBaseDojoLayer) {						
+			layers.add(defaultDojoLayer);
 		}
 		
 		return layers;
+	}
+	
+	/**
+	 * Confirm each dependency module has a recognised package.
+	 * Iterate through the list checking all dependencies against
+	 * package set.  
+	 * 
+	 * @param dependencies - Module dependencies 
+	 * @param validPackages - All valid packages
+	 */
+	protected void verifyModuleDependencies(List<Map<String, String>> dependencies, Set<String> validPackages) {
+		Iterator<Map<String, String>> depIter = dependencies.iterator();
+		// ... pull out each dependency
+		while (depIter.hasNext()) {
+			Map<String, String> dependency = depIter.next();
+			String packageId = dependency.get("package");
+			// ... and check it has a valid package reference
+			if (packageId == null || !validPackages.contains(packageId)) {
+				throw new IncorrectParameterException(String.format(invalidModulePackageErrorText, dependency.get("name")));
+			}
+		}
+	}
+	
+	/**
+	 * Check with custom layer matches dojo base layer. 
+	 * Compare layer identifiers. 
+	 * 
+	 * @param buildLayer - User layer
+	 * @return Custom layer represent's dojo base
+	 */
+	protected Boolean isBaseDojoLayer(Map<String, Object> buildLayer) {
+		String defaultLayerName =  (String) defaultDojoLayer.get("name"),
+			buildLayerName = (String) buildLayer.get("name");
+		
+		return defaultLayerName.equals(buildLayerName);
 	}
 	
 	/**

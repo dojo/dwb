@@ -56,10 +56,18 @@ public class BuildTest {
 
 	final protected String statusResourcePath = "/api/build/status/";
 
+	/** How long should we poll endpoint before build is complete? */
+	final protected Integer MAX_POLLING_TIME_IN_SECONDS = new Integer(180);
+	
 	/**
 	 * Default build profile for base dojo.js with no added modules.
 	 */
 	final protected String defaultBuildProfile = "default_build_request.json";
+	
+	/**
+	 * Same as above, but include claro theme artifacts.
+	 */
+	final protected String defaultBuildProfileWithTheme = "default_build_request_with_theme.json";
 	
 	/**
 	 * Default build profile for base dojo.js with no added modules.
@@ -202,6 +210,27 @@ public class BuildTest {
 		}};
 		
 		startAndCompleteDojoBuild(dijitModulesBuildProfile, filesInCustomLayerBuild);
+	}
+	
+	/**
+	 * Test build request to generate standard dojo base, single dojo.js layer, along
+	 * with the inclusion of the claro theme. When a user requests a theme, the theme's 
+	 * artifacts, main css file and related images, should be present in the result
+	 * archive. 
+	 */
+	@Test
+	public void test_BuildWithThemeShouldContainsThemeArtifacts() 
+	throws ClientProtocolException, IOException, URISyntaxException, InterruptedException {
+		Set<String> filesInCustomLayerBuild = new HashSet<String>() {{
+			add("dojo.js");
+			// Main theme file should be included, plus some images.
+			add("themes/claro/claro.css");
+			add("themes/claro/form/images/button.png");
+			add("themes/claro/images/dnd.png");
+			add("themes/claro/layout/images/accordion.png");
+		}};
+		
+		startAndCompleteDojoBuild(defaultBuildProfileWithTheme, filesInCustomLayerBuild);
 	}
 	
 	// All the following build requests are invalid and should fail. 
@@ -386,7 +415,22 @@ public class BuildTest {
 
 		return link;
 	}
-
+	
+	/**
+	 * Poll the given URL waiting for the build status to complete. 
+	 * When this happens, return result URL. Enforce a total polling
+	 * limit of six iterations, with a ten seconds sleep executions. 
+	 * 
+	 * @param statusURL - URL to poll for build completion status
+	 * @return String - URL to access build result
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws InterruptedException 
+	 */
+	protected String pollStatusUntilCompleted(String statusURL) throws ClientProtocolException, IOException, InterruptedException {
+		return pollStatusUntilCompleted(statusURL, MAX_POLLING_TIME_IN_SECONDS);
+	}
+	
 	/**
 	 * Poll the given URL waiting for the build status to complete. 
 	 * When this happens, return result URL. Enforce a total polling
@@ -492,7 +536,7 @@ public class BuildTest {
 	protected void startAndCompleteDojoBuild(String buildRequestResource, Set<String> expectedResultFiles) throws ClientProtocolException, IOException, URISyntaxException, InterruptedException {
 		HttpResponse response = generateBuildRequest(getClass().getClassLoader().getResourceAsStream(buildRequestResource));
 		String link = extractBuildStatusPollingLink(response);
-		String buildResultLocation = pollStatusUntilCompleted(link, 60);
+		String buildResultLocation = pollStatusUntilCompleted(link);
 		verifyBuildResult(buildResultLocation, expectedResultFiles);
 	}
 	
@@ -527,7 +571,7 @@ public class BuildTest {
 		}
 		
 		// We should have seen every entry we were expecting.
-		assertEquals(expectedBuildFiles.size(), 0);
+		assertEquals(0, expectedBuildFiles.size());
 	}
 	
 	/**
