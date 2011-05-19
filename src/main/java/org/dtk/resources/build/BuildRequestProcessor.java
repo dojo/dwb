@@ -169,14 +169,16 @@ public class BuildRequestProcessor implements Runnable {
 	protected void createBuildArchive() throws IOException {
 		String buildArchivePath = buildRequest.getBuildResultPath();
 				
-		Map<String, String> archiveContents = new HashMap<String, String>();
+		Map<String, byte[]> archiveContents = new HashMap<String, byte[]>();
 		Iterator<File> artifactFilesIter = extractBuildArtifactFiles().iterator();
 		
 		while(artifactFilesIter.hasNext()) {
 			File artifactFile = artifactFilesIter.next();			
-			String layerContent = FileUtil.readFromFile(artifactFile.getAbsolutePath(), null);
+			//String layerContent = FileUtil.readFromFile(artifactFile.getAbsolutePath(), null);
+			
+			byte[] contents = FileUtils.readFileToByteArray(artifactFile);
 			// Path must be relative to base directory.....
-			archiveContents.put(artifactArchivePath(artifactFile), layerContent);			
+			archiveContents.put(artifactArchivePath(artifactFile), contents);			
 		}
 		
 		FileUtil.writeToZipFile(buildArchivePath, archiveContents);

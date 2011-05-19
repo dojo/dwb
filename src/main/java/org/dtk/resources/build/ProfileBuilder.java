@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.io.FileUtils;
 import org.dtk.util.FileUtil;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
@@ -129,7 +130,7 @@ public class ProfileBuilder {
 	 */
 	protected String readModuleLoaderSource() throws IOException {
 		String djConfigScriptPrefix = String.format(djConfigPrefixFormat, this.buildReference, this.buildPackagePath);
-		String moduleLoaderScript = FileUtil.readFromFile(this.moduleLoaderPath, null);
+		String moduleLoaderScript = FileUtils.readFileToString(new File(this.moduleLoaderPath));
 		
 		return djConfigScriptPrefix + moduleLoaderScript;
 	}
