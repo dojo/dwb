@@ -43,10 +43,18 @@ public class WebPage {
 
 	protected static final Pattern dtkModulePrefixPattern = Pattern.compile(dtkModulePrefixPatternStr);
 
-	protected static final String dojoScriptPatternStr = "^dojo(.)*\\.js$";
+	// Don't have EOL match because we've seen people use the ?version=number trick to force 
+	// cache refreshes on long-lived resources. 
+	protected static final String dojoScriptPatternStr = "^dojo(.)*\\.js";
 
 	protected static final Pattern dojoScriptPattern = Pattern.compile(dojoScriptPatternStr);
 
+	/** Regular expression used to match module path attributes in user's djConfig variable */
+	protected static final String regexPattern = "modulePaths:\\s*(\\{.*\\})";		
+	
+	protected static final Pattern modulePathsPattern = Pattern.compile(regexPattern);
+	
+	
 	public WebPage(URL location) throws IOException {
 		this.document = Jsoup.connect(location.toString()).get();	
 	}
@@ -227,27 +235,24 @@ public class WebPage {
 	}
 
 	protected void parseDjConfigModulePaths(String djConfigAttr) {
-		String[] attrs = djConfigAttr.split(",");
+		Matcher modulePathsMatcher = modulePathsPattern.matcher(djConfigAttr);
+		
+		if (modulePathsMatcher.find()) {			
+			// Use Rhino to evaluate choice instead of parsing manually with
+			// brittle regular expressions. Assign object to variable and return 
+			// result from script.
+			String modulePathsScript = "var mp = ";
+			modulePathsScript += modulePathsMatcher.group(1); 
+			modulePathsScript += "; mp";
 
-		for(String attr : attrs) {
-			if (attr.trim().startsWith("modulePaths:")) {
-				// Use Rhino to evaluate choice instead of parsing manually with
-				// brittle regular expressions. Assign object to variable and return 
-				// result from script.
-				String modulePathsScript = "var mp = ";
-				modulePathsScript += attr.substring(attr.indexOf('{'), attr.lastIndexOf('}') + 1); 
-				modulePathsScript += "; mp";
+			org.mozilla.javascript.Context cx = ContextFactory.getGlobal().enterContext();
+			Scriptable scope = cx.initStandardObjects();			       
+			NativeObject result = (NativeObject) cx.evaluateString(scope, modulePathsScript, "modulePaths.js", 1, null);
 
-				org.mozilla.javascript.Context cx = ContextFactory.getGlobal().enterContext();
-				Scriptable scope = cx.initStandardObjects();			       
-				NativeObject result = (NativeObject) cx.evaluateString(scope, modulePathsScript, "modulePaths.js", 1, null);
-
-				Object[] ids = result.getAllIds();
-				for(Object moduleId: ids) {
-					String modulePath = (String) result.get((String) moduleId, null);
-					this.modulePaths.put((String) moduleId, modulePath);
-				}
-				break;
+			Object[] ids = result.getAllIds();
+			for(Object moduleId: ids) {
+				String modulePath = (String) result.get((String) moduleId, null);
+				this.modulePaths.put((String) moduleId, modulePath);
 			}
 		}
 	}
