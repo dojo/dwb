@@ -216,7 +216,6 @@ public class ContextListener implements ServletContextListener {
      */
     protected boolean isValidDirectory(String dirPath) {
 		File dirPathFile = new File(dirPath);		
-
 		return (dirPathFile.exists() && dirPathFile.isDirectory());
     }
     
