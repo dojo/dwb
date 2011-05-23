@@ -1,5 +1,6 @@
 package org.dtk.resources.build;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -7,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.FileUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.dtk.resources.packages.PackageRepository;
@@ -40,7 +42,7 @@ public class Test {
 		cx.getWrapFactory().setJavaPrimitiveWrap(false);
 		
 		try {
-			String scriptContents = FileUtil.readFromFile("/Users/james/IBM/Code/dwb/src/main/webapp/js/build/amd_loader/dojo.js", null);
+			String scriptContents = FileUtils.readFileToString(new File("/Users/james/IBM/Code/dwb/src/main/webapp/js/build/amd_loader/dojo.js"));
 		
 			scriptContents = "djConfig = {buildReference: '1111', packages:[{name:'build', lib:'.', location:'/Users/james/IBM/Code/dwb/src/main/webapp/js/build/bdbuild'}]};" + scriptContents;
 			
