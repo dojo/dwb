@@ -23,9 +23,6 @@ import org.mozilla.javascript.tools.shell.Global;
  * JavaScript build system. Build properties are controlled using a profile file, a reference
  * to which is passed in at runtime. 
  * 
- * Generate custom Dojo builds using new JavaScript build tools, backdraftBuilder, 
- * and 
- * 
  * @author James Thomas
  */
 
@@ -59,7 +56,12 @@ public class ProfileBuilder {
 	protected Exception buildError;
 	
 	/**
-	 * Generate new ProfileBuilder.
+	 * Generate new ProfileBuilder using the arguments passed to control
+	 * the build process. All file paths are santised, swapping back slashes 
+	 * encountered in Windows paths for forward slashes. 
+	 * 
+	 * Leaving backslashes causes numerous issues with the the build scripts on 
+	 * the Windows platform.   
 	 * 
 	 * @param profileFile - Location to profile file for this build
 	 * @param resultDir - Where to store the resulting build artifacts
@@ -69,13 +71,13 @@ public class ProfileBuilder {
 	 */
 	public ProfileBuilder(String profileFile, String resultDir, String moduleLoaderPath, 
 		String baseUrl, String buildPackagePath, String buildReference) {
-		this.moduleLoaderPath = moduleLoaderPath;
-		this.buildPackagePath = buildPackagePath;
+		this.moduleLoaderPath = santisePath(moduleLoaderPath);
+		this.buildPackagePath = santisePath(buildPackagePath);
 		this.buildReference = buildReference;
 		
-		scriptArguments.put("profile", profileFile);
-		scriptArguments.put("releaseDir", resultDir);
-		scriptArguments.put("baseUrl", baseUrl);
+		scriptArguments.put("profile", santisePath(profileFile));
+		scriptArguments.put("releaseDir", santisePath(resultDir));
+		scriptArguments.put("baseUrl", santisePath(baseUrl));
 	}
 	
 	/**
@@ -146,15 +148,6 @@ public class ProfileBuilder {
 	}
 	
 	/**
-	 * Return paraent directory for module loader
-	 * 
-	 * @return String - Parent module loading path
-	 */
-	protected String getModuleLoaderBaseDir() {
-		return (new File(moduleLoaderPath)).getParent();
-	}
-	
-	/**
 	 * Convert map of key value pairs to ordered array containing 
 	 * arguments formated correctly, key=value key1=value1 key2=value2 etc. 
 	 * 
@@ -170,5 +163,17 @@ public class ProfileBuilder {
 		}
 		
 		return scriptArgsList.toArray(new String[0]);
+	}
+	
+	/**
+	 * Ensure all file paths have no backslashes, replacing 
+	 * any found with forwardslash equivalents. This is to 
+	 * remove problems encountered on the Windows platform. 
+	 * 
+	 * @param path - Path to a file we're referencing 
+	 * @return Santised path 
+	 */
+	protected String santisePath(String path) {
+		return path.replace('\\', '/');
 	}
 }
