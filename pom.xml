@@ -12,7 +12,7 @@
 
 	<properties>
 		<tomcat.version>6.0.20</tomcat.version>
-		<dojo.version>1.6.0</dojo.version>
+		<dojo.version>1.7.0</dojo.version>
 	</properties>
 
 	<dependencies>
