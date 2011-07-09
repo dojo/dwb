@@ -26,42 +26,11 @@
 	    <div class="container">
 	        <span id="logo"><a title="Homepage" href="http://www.dojotoolkit.org/"><img alt="Dojo Toolkit" src="./img/logo.png"></a></span>
 	        <ul id="navigation">
-	                <li class="download"><a href="http://www.dojotoolkit.org/download">Get Dojo</a></li>
-					<li class="features"><a href="http://www.dojotoolkit.org/features">Features</a></li>
-					<li class="docs"><a href="http://www.dojotoolkit.org/documentation">Documentation</a></li>
-	                <li class="community"><a href="http://www.dojotoolkit.org/community">Community</a></li>
-	                <li class="blog"><a href="http://www.dojotoolkit.org/blog">Blog</a></li>
+	                <li class="dojo_version">Dojo Version: <a id="version_link" href="#"></a></li>
+	                <li class="display_mode">Display Mode: <a id="display_mode_link" href="#">Simple</a></li>
 	        </ul>
-	        <form id="search" action="http://www.google.com/search" method="GET">
-	            <span>
-					<input type="text" value="Search" id="query" name="q">
-	            </span>
-				<input type="hidden" value="dojotoolkit.org" name="sitesearch">
-	            <button type="submit">Search</button>
-	
-				<div style="display: none;" id="resultbox">
-			        <div class="googleheader"></div>
-			        <div id="googlesearch"></div>
-					<div id="searchClose"><a>Close</a></div>
-			    </div>
-	        </form>
 	    </div>
 	</div>
- 	<div class="displayModeContainer">
- 		<div id="displayModeBtn" dojoType="dijit.form.DropDownButton">
-	    	<span>
-	      	  Simple Mode
-	    	</span>
-	    	<div dojoType="dijit.Menu">
-		        <div id="simpleModeItem" dojoType="dijit.CheckedMenuItem" checked="true" onClick="dojo.publish('dwb/displayMode/simple');">
-		            Simple
-		        </div>
-		        <div id="advancedModeItem" dojoType="dijit.CheckedMenuItem" onClick="dojo.publish('dwb/displayMode/advanced');">
-		            Advanced
-		        </div>
-	    	</div>
-    	</div>
- 	</div>
 	<div id="dwb_main" class="centre_panel" dojoType="dwb.Main">				
 	</div>	
     <div id="feedback" class="hidden"> 
@@ -72,7 +41,7 @@
 <script>
 	// Flag to show whether we are in debug or production mode. Replaced automatically
 	// during deployment.
-	var inDebug=false;
+	var inDebug=true;
 	
 	// During development mode, load cross domain uncompressed Dojo. Otherwise, include release versions of the 
 	// code.

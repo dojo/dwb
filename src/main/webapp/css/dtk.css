@@ -13,7 +13,7 @@
     margin-right: auto;
     position: relative;
     text-align: left;
-    width: 960px;
+    width: 974px;
 }
 
 #header #logo {
@@ -42,25 +42,26 @@
     margin: 50px 0 0;
     padding: 0 0 0 11.55em;
     position: absolute;
-    right: 190px;
+    right: -10px;
 }
 
 #header ul li {
     display: inline;
     list-style: none outside none;
+    float: left;
+    color: #FFFFFF;
+    font-size: 15px;
+    margin-right: 25px;
 }
 
 #header ul li a {
-    color: #FFFFFF;
-    display: block;
-    float: left;
-    font-size: 15px;
-    font-weight: 400;
-    letter-spacing: -0.0035em;
-    line-height: 1.5em;
-    margin: 0 0 0 0.5825em;
-    padding: 0 0.76em;
     text-decoration: none;
+    padding: 0px 11px;
+    font-weight: bold;
+}
+
+#header ul li a.narrow {
+    padding: 0;
 }
 
 #header ul li a:link, #header ul li a:visited, #header ul li a:hover, #header ul li a:active {

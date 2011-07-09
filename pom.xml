@@ -141,15 +141,44 @@
 										<replace file="${project.basedir}/src/main/webapp/index.html"
 											token="inDebug=true" value="inDebug=false" />
 											
-										<!-- Remove previous Dojo version -->
+										<!-- Remove previous Dojo versions -->
 										<delete includeemptydirs="true">
 											<fileset dir="src/main/webapp/WEB-INF/config/packages/" />
 										</delete>
 
-										<!-- Copy package meta-data for desired version of Dojo -->
-										<copy todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
-											<fileset dir="src/main/config/packages/dojo/${dojo.version}" />
-										</copy>
+                                        <!-- If user want to just expose a single version of Dojo, 
+                                             set up that package descriptor for them. -->
+                                        <if>
+                                            <isset property="dojo.source"></isset>
+                                            <then>
+										        <!-- Copy package meta-data for desired version of Dojo -->
+        										<copy todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
+		    		    							<fileset dir="src/main/config/packages/dojo/${dojo.version}" />
+			        							</copy>
+	
+										        <!-- Can't override property set on the command line, copy to temp prop
+        											to override if regex matches. -->
+		        								<property name="dojo.source.escaped" value="${dojo.source}"></property>
+										
+						        				<!--  Convert backslashes to forward slashes in windows paths, if match fails
+				        							it won't set a value -->											
+								        		<propertyregex property="dojo.source.escaped" input="${dojo.source}" regexp="\\"
+										        	replace="/" override="true" />
+	 									
+        										<!-- Update meta-data to point to actual Dojo source location -->
+	        									<replaceregexp
+		        									file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
+			        								match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />	
+                                                 </then>
+                                            <else>
+                                                <!-- Copy all Dojo package descriptors, reliant on user to have filled
+                                                     in the locations -->
+        										<copy todir="src/main/webapp/WEB-INF/config/packages/dojo/">
+		    		    							<fileset dir="src/main/config/packages/dojo/" />
+			        							</copy>
+                                            </else>
+                                        </if>
+
 
 										<!-- Copy all additional package meta-data files, these have been manually generated
 										 by the user. Exclude Dojo packages, we've already copied the single Dojo instance we want. -->
@@ -157,21 +186,7 @@
 											<fileset dir="src/main/config/packages/">
 												<exclude name="**/dojo/**"/>
 											</fileset>											
-										</copy> 								
-								
-										<!-- Can't override property set on the command line, copy to temp prop
-											to override if regex matches. -->
-										<property name="dojo.source.escaped" value="${dojo.source}"></property>
-										
-										<!--  Convert backslashes to forward slashes in windows paths, if match fails
-											it won't set a value -->											
-										<propertyregex property="dojo.source.escaped" input="${dojo.source}" regexp="\\"
-											replace="/" override="true" />
-	 									
-										<!-- Update meta-data to point to actual Dojo source location -->
-										<replaceregexp
-											file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
-											match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />			
+										</copy> 																	
 									</tasks>
 								</configuration>
 								<goals>
@@ -227,15 +242,44 @@
 										<replace file="${project.basedir}/src/main/webapp/index.html"
 											token="inDebug=false" value="inDebug=true" />
 											
-										<!-- Remove previous Dojo version -->
+                                        <!-- Remove previous Dojo versions -->
 										<delete includeemptydirs="true">
 											<fileset dir="src/main/webapp/WEB-INF/config/packages/" />
 										</delete>
 
-										<!-- Copy package meta-data for desired version of Dojo -->
-										<copy todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
-											<fileset dir="src/main/config/packages/dojo/${dojo.version}" />
-										</copy>
+                                        <!-- If user want to just expose a single version of Dojo, 
+                                             set up that package descriptor for them. -->
+                                        <if>
+                                            <isset property="dojo.source"></isset>
+                                            <then>
+										        <!-- Copy package meta-data for desired version of Dojo -->
+        										<copy todir="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}">
+		    		    							<fileset dir="src/main/config/packages/dojo/${dojo.version}" />
+			        							</copy>
+	
+										        <!-- Can't override property set on the command line, copy to temp prop
+        											to override if regex matches. -->
+		        								<property name="dojo.source.escaped" value="${dojo.source}"></property>
+										
+						        				<!--  Convert backslashes to forward slashes in windows paths, if match fails
+				        							it won't set a value -->											
+								        		<propertyregex property="dojo.source.escaped" input="${dojo.source}" regexp="\\"
+										        	replace="/" override="true" />
+	 									
+        										<!-- Update meta-data to point to actual Dojo source location -->
+	        									<replaceregexp
+		        									file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
+			        								match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />	
+                                                 </then>
+                                            <else>
+                                                <!-- Copy all Dojo package descriptors, reliant on user to have filled
+                                                     in the locations -->
+        										<copy todir="src/main/webapp/WEB-INF/config/packages/dojo/">
+		    		    							<fileset dir="src/main/config/packages/dojo/" />
+			        							</copy>
+                                            </else>
+                                        </if>
+
 
 										<!-- Copy all additional package meta-data files, these have been manually generated
 										 by the user. Exclude Dojo packages, we've already copied the single Dojo instance we want. -->
@@ -243,21 +287,7 @@
 											<fileset dir="src/main/config/packages/">
 												<exclude name="**/dojo/**"/>
 											</fileset>											
-										</copy> 
-										
-										<!-- Can't override property set on the command line, copy to temp prop
-											to override if regex matches. -->
-										<property name="dojo.source.escaped" value="${dojo.source}"></property>
-										
-										<!--  Convert backslashes to forward slashes in windows paths, if match fails
-											it won't set a value -->											
-										<propertyregex property="dojo.source.escaped" input="${dojo.source}" regexp="\\"
-											replace="/" override="true" />
-	 									
-										<!-- Update meta-data to point to actual Dojo source location -->
-										<replaceregexp
-											file="src/main/webapp/WEB-INF/config/packages/dojo/${dojo.version}/package.json"
-											match='location\":.*,' replace='location\": \"${dojo.source.escaped}\",' />					
+										</copy> 		
 									</tasks>
 								</configuration>
 								<goals>
