@@ -131,6 +131,12 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         // Initial package and modules meta-data has been loaded
         dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_packageModulesAvailable"));
 
+
+        // Reset all user selections when they change the package version used.... 
+        // Short term fix because it's not trivial to manually check what modules are being
+        // used and not available in the new version. Feature request..... 
+        dojo.subscribe("dwb/package/change_to_version", dojo.hitch(this, "_resetUserSelection")); 
+
         // New temporary package discovered, through auto-analysis. 
 		dojo.subscribe("dwb/package/temporary", dojo.hitch(this, function (packages) {
             dojo.forEach(packages, dojo.hitch(this, function (pkge) {
@@ -452,17 +458,18 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             this.versionDialog.set("content", dialogContent);
 
             // Set highest Dojo version as selected and show version in header
-            dojo.query(".dijitRadio:first", this.versionDialog.domNode).forEach(function (node) {
+            dojo.query(".dijitRadio", this.versionDialog.domNode).at(0).forEach(function (node) {
                 dijit.byNode(node).set("checked", "true");
                 dojo.attr(dojo.byId("version_link"), "innerHTML", dijit.byNode(node).get("value")); 
             });
 
             // Add event handlers to signal change in Dojo version when user selects...
-            dojo.query("input", this.versionDialog.domNode).connect("onclick", function (e) {
+            dojo.query("input", this.versionDialog.domNode).connect("onclick", dojo.hitch(this, function (e) {
+                dojo.attr(dojo.byId("version_link"), "innerHTML", e.target.value); 
                 dojo.publish("dwb/package/change_to_version", [ 
                     { "name": "dojo", "version": e.target.value }
                 ]);
-            });
+            }));
         }
     },
 
@@ -689,6 +696,26 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             return false;
         };
 	},
+
+    // Reset all user interactions with the UI, returning 
+    // to the post-loaded state. This includes modules selected,
+    // search fields, layers created and more....
+    _resetUserSelection: function () {
+        // Clear search string, all modules will be shown
+        this._searchInputField.set("value", "");
+        this.updateModuleFilter();
+        // Manually unselect any chosen modules
+        this.module_grid.indirectSelector.toggleAllSelection(false);
+
+
+        // Remove any custom module layers....
+        dojo.forEach(this.layersTabContainer.getChildren(), dojo.hitch(this, function (tab) {
+            if (tab.closable) {
+                tab.onClose();
+                this.layersTabContainer.removeChild(tab);
+            }
+        }));
+    },
 
     addHoverMenu: function (dialog, link_name) {
         var link = dojo.byId(link_name);
