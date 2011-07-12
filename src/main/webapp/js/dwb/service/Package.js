@@ -9,6 +9,38 @@ dojo.require("dwb.util.Config");
 dojo.declare("dwb.service.Package", null, {
 	serviceEndPoint: dwb.util.Config.get("packagesApi"),
 
+    packageVersionsAvailable: {},
+
+    currentPackageModules: [],
+
+    constructor: function () {
+        dojo.subscribe("dwb/package/change_to_version", dojo.hitch(this, function (pkge) {
+            var version = dojo.filter(this.packageVersionsAvailable[pkge.name], function (version) {
+                return (version.name === pkge.version);
+            })[0];
+
+            dojo.xhrGet({
+                url: version.link,
+                handleAs: "json"
+            }).then(dojo.hitch(this, function (data) {
+                // Compose meta-package object from name, version
+                // and module list. 
+                var packageInfo = {
+                    "name": pkge.name,
+                    "version": version.name,
+                    "modules": data.modules
+                };
+
+                // Replace package modules with new version
+                this.currentPackageModules = dojo.map(this.currentPackageModules, function (pkge_modules) {
+                    return (pkge_modules.name === packageInfo.name ? packageInfo : pkge_modules); 
+                });
+
+                this.packagesAndModulesAvailable(this.currentPackageModules);
+            }), this.loadingError);
+        }));
+    }, 
+
     // Start loading of the package meta-data for this endpoint 
     load: function () {
 		var d = dojo.xhrGet({
@@ -60,12 +92,19 @@ dojo.declare("dwb.service.Package", null, {
         var versions_request = {url: pkge.link, handleAs: "json"};
 
 		dojo.xhrGet(versions_request).then(dojo.hitch(this, function (versions) {
+            this.packageVersionsAvailable[pkge.name] = versions;
+
+            // Notify listeners of available package versions 
+            dojo.publish("dwb/package/versions", [{
+                name: pkge.name, versions: versions
+            }]);
+
             // We want modules available for the latest package version
             var latest = this._findLatestPackageVersion(versions);
             dojo.xhrGet({
                 url: latest.link,
                 handleAs: "json"
-            }).then(function (data) {
+            }).then(dojo.hitch(this, function (data) {
                 // Compose meta-package object from name, version
                 // and module list. 
                 var packageInfo = {
@@ -73,9 +112,11 @@ dojo.declare("dwb.service.Package", null, {
                     "version": latest.name,
                     "modules": data.modules
                 };
+                // ... store lookup of current package and
+                this.currentPackageModules.push(packageInfo);
                 //... finally resolve deferred
                 latestPackageModules.callback(packageInfo);
-            }, this.loadingError);
+            }), this.loadingError);
         }), this._loadingError);
 
         return latestPackageModules;
@@ -84,7 +125,7 @@ dojo.declare("dwb.service.Package", null, {
     // Given a list of package versions, use lexical comparison
     // to find the most recent version. 
     _findLatestPackageVersion: function(versions) {
-         var newest = versions.sort(function(a,b) {
+         var newest = dojo.clone(versions).sort(function(a,b) {
             return (a.name > b.name) ? 1 : (a.name < b.name) ? -1 : 0;
         }).pop();
 

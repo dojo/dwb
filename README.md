@@ -65,7 +65,6 @@ is set in the _pom.xml_ file.
 is a different temporary directory each time the application is started. This 
 value can also be set using a context parameter in the application's _web.xml_.
 
-
 Supporting custom modules
 ----
 
@@ -96,6 +95,29 @@ of the same package are allowed, the web application automatically uses the most
 To support a different version of Dojo, use the steps above to generate the package descriptor and place
 in a new version directory under the _src/main/config/packages/dojo_ path. Then use the _dojo.version_ 
 parameter to modify the default version of Dojo served.
+
+Deploying Multiple Versions of Dojo 
+----
+
+The Dojo Web Builder also supports building for multiple versions of The Dojo
+Toolkit concurrently, allowing the user to choose the version they need
+dynamically. To achieve this, ensure you have downloaded local copies of all the
+versions of the toolkit you want to expose and then configure the application using 
+the steps below.... 
+
+Currently, package descriptor files are included for Dojo 1.6.0, 1.5.0 and
+1.4.3. If you need to expose an older version, please generate the package
+descriptor, as per the instructions above. 
+
+### (Optional) Generate package descriptors for older versions of Dojo 
+    See description above and package in src/main/config/packages/dojo/X.Y.Z/
+
+### Fill in location parameter for all version packages
+    $ vim src/main/config/packages/dojo/${dojo.version}/package.json
+    $ <replace location field value with directory path>
+
+### Run Dojo Web Builder WITHOUT normal dojo.source parameter 
+    $ mvn jetty:run
 
 Development notes
 ---
@@ -168,11 +190,7 @@ or contact [James Thomas](http://github.com/jthomas) [(thomasj @ twitter)](http:
 TODO
 --
 
-* Allow the application to support multiple versions of the Dojo Toolkit simultaneously. Backend already
-supports this in theory, UI needs to allow selection of Dojo Toolkit version to display. 
-
 * Support AMD module format natively within build and analysis tools. At the moment we use a build time 
 transformation. 
 
 * Extract out Dojo dependent functionality, transforming the tool into a generic AMD module builder. 
-

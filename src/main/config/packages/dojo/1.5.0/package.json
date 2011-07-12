@@ -1,7 +1,7 @@
 {
     "name": "Dojo Toolkit",
     "description": "Dojo Toolkit, release 1.5.0",
-    "location": "",
+    "location": "/Users/james/Code/DTK/dojo-release-1.5.0-src",
     "modules": [
         [
             "dijit.Calendar",

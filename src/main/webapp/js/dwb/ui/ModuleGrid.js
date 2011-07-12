@@ -116,7 +116,7 @@ dojo.declare("dwb.ui.ModuleGrid", dojox.grid.EnhancedGrid, {
 		// Otherwise, store reference
 		} else {
 			this.previousSelection.push(item);	
-		};
+		}
 		
 		// Index of the module if shown
 		return idx;
