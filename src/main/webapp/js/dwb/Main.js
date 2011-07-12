@@ -24,12 +24,17 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 	_modulesDisplayedFormat: "Showing ${0} - ${1} of ${2} modules",
 
+    _dojoVersionFormat: '<label>Dojo Toolkit ${0}<input value="${0}" dojoType="dijit.form.RadioButton"></label>',
+
 	displayMode: "simple",
 
 	content: dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html"),
 
     packageService: null,
     buildService: null,
+
+    // Handle for display mode dropdown
+    displayModeDialog: null,
 
 	// When we are manually updating selection 
 	// rows for a new filter result set, lots of selection
@@ -67,17 +72,16 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		dojo.subscribe("dwb/displayMode/advanced", dojo.hitch(this, function () {
 			this.displayMode = "advanced";
 			// Toggle two items around
-			dijit.byId("simpleModeItem").set("checked", false);
-			dijit.byId("displayModeBtn").set("label", "Advanced Mode");
+            dojo.attr(dojo.byId("display_mode_link"), "innerHTML", "Advanced");
+            dojo.addClass(dojo.byId("display_mode_link"), "narrow");
 			this.tabContainer.addChild(this.layersPane, 1);
 			this._refreshViewPanels(this.tabContainer.selectedChildWidget.get("title"), this.displayMode);
 		}));
 
 		dojo.subscribe("dwb/displayMode/simple", dojo.hitch(this, function () {
 			this.displayMode = "simple";
-			// Toggle two items around
-			dijit.byId("advancedModeItem").set("checked", false);
-			dijit.byId("displayModeBtn").set("label", "Simple Mode");
+            dojo.attr(dojo.byId("display_mode_link"), "innerHTML", "Simple");
+            dojo.removeClass(dojo.byId("display_mode_link"), "narrow");
 			this.tabContainer.removeChild(this.layersPane);
 			this._refreshViewPanels(this.tabContainer.selectedChildWidget.get("title"), this.displayMode);
 		}));	
@@ -121,8 +125,17 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
         dojo.subscribe("dwb/build/failed", dojo.hitch(this, "_buildRequestHasFinished", "failure"));
 
+        // Listen for package version notifications to retrieve available Dojo versions. 
+        dojo.subscribe("dwb/package/versions", dojo.hitch(this, "_packageVersionsAvailable"));
+
         // Initial package and modules meta-data has been loaded
         dojo.subscribe("dwb/package/modules", dojo.hitch(this, "_packageModulesAvailable"));
+
+
+        // Reset all user selections when they change the package version used.... 
+        // Short term fix because it's not trivial to manually check what modules are being
+        // used and not available in the new version. Feature request..... 
+        dojo.subscribe("dwb/package/change_to_version", dojo.hitch(this, "_resetUserSelection")); 
 
         // New temporary package discovered, through auto-analysis. 
 		dojo.subscribe("dwb/package/temporary", dojo.hitch(this, function (packages) {
@@ -148,14 +161,24 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 		// Set up datastore to hold data about build layers  
 		this.layers_store = new dojo.data.ItemFileWriteStore({"data":this.baseLayer}); 
+
+        // MUST HAPPEN DYNAMICALLY...
+        // Add tooltip to elements
+        this.versionDialog = new dijit.TooltipDialog({
+            "class": "option_dropdown"
+        });
+
+       // Create tooltip dialog to allow changing of the display mode
+        this.displayModeDialog = new dijit.TooltipDialog({
+            content: dojo.cache("dwb.ui.fragments", "DisplayModeTooltipContent.html")
+        });
 	},
 
 	startup: function () {		
 		this.inherited(arguments);
 
-		// Push default mode message to other components
-		dojo.publish("dwb/displayMode/simple");
-		
+        dojo.publish("dwb/displayMode/simple");
+
 		// When the grid filtering is finished, we can now update the module overview. This is
 		// blocking during filtering as rows as toggled individually and it would cause too many
 		// reflows.
@@ -183,7 +206,11 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 		
 		// Scroll to selected module when user click in module overview panel
 		this.connect(this.buildOptionsContent, "onModuleSelected", dojo.hitch(this.module_grid, this.module_grid.scrollToItem));
-		
+
+        // Add tooltip dialogs to the menu links
+        this.addHoverMenu(this.displayModeDialog, "display_mode_link");
+        this.addHoverMenu(this.versionDialog, "version_link");
+
 		// Fix initial layer item to layer pane and reference layers store 
 		// on base layer.	
 		this.baseLayerPane.set("layersStore", this.layers_store);
@@ -415,6 +442,37 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         this.buildService.cancel();
     },
 
+    // Listener for all package version notifications. We want to 
+    // access available versions of Dojo to set up the Tooltip dialog for
+    // switching between them. 
+    _packageVersionsAvailable: function (pkge) { 
+        if (pkge.name === "dojo") {
+            // Sort Dojo package versions so that they are in ascending order
+            var comparator = function (a,b) {
+                return (a.name > b.name) ? -1 : (a.name < b.name) ? 1 : 0;
+            };
+            // Construct input & label for each version and set on tooltip dialog
+            var dialogContent = dojo.map(pkge.versions.sort(comparator), dojo.hitch(this, function (version) {
+                return dojo.string.substitute(this._dojoVersionFormat, [version.name]);  
+            })).join("");
+            this.versionDialog.set("content", dialogContent);
+
+            // Set highest Dojo version as selected and show version in header
+            dojo.query(".dijitRadio", this.versionDialog.domNode).at(0).forEach(function (node) {
+                dijit.byNode(node).set("checked", "true");
+                dojo.attr(dojo.byId("version_link"), "innerHTML", dijit.byNode(node).get("value")); 
+            });
+
+            // Add event handlers to signal change in Dojo version when user selects...
+            dojo.query("input", this.versionDialog.domNode).connect("onclick", dojo.hitch(this, function (e) {
+                dojo.attr(dojo.byId("version_link"), "innerHTML", e.target.value); 
+                dojo.publish("dwb/package/change_to_version", [ 
+                    { "name": "dojo", "version": e.target.value }
+                ]);
+            }));
+        }
+    },
+
 	// Packages modules have been retrieved and can be rendered 
 	// using the module grid. 
 	_packageModulesAvailable : function(packageModules) {		
@@ -639,6 +697,42 @@ dojo.declare("dwb.Main", dwb.Main._base, {
         };
 	},
 
+    // Reset all user interactions with the UI, returning 
+    // to the post-loaded state. This includes modules selected,
+    // search fields, layers created and more....
+    _resetUserSelection: function () {
+        // Clear search string, all modules will be shown
+        this._searchInputField.set("value", "");
+        this.updateModuleFilter();
+        // Manually unselect any chosen modules
+        this.module_grid.indirectSelector.toggleAllSelection(false);
+
+
+        // Remove any custom module layers....
+        dojo.forEach(this.layersTabContainer.getChildren(), dojo.hitch(this, function (tab) {
+            if (tab.closable) {
+                tab.onClose();
+                this.layersTabContainer.removeChild(tab);
+            }
+        }));
+    },
+
+    addHoverMenu: function (dialog, link_name) {
+        var link = dojo.byId(link_name);
+        this.connect(link, "onmouseover", dojo.hitch(this, function (e) {
+            dojo.stopEvent(e);
+            dijit.popup.open({
+                popup: dialog,
+                around: link,
+                orient: {BR: "TR"}
+            });
+        }));
+
+        dojo.connect(dialog, 'onMouseLeave', function() {
+            dijit.popup.close(dialog);
+        });
+    },
+    
 	checkForEnter: function(keyEvent) {
 		if(keyEvent.keyCode == 13) {
 			this.updateModuleFilter();

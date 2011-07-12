@@ -23,7 +23,7 @@ body.claro {
 	height: 750px; 
 	width: 1024px;
 	position: relative;
-	top: -10px;
+	top: 0px;
 }
 
 /* Remove top padding on the border container children */
@@ -479,20 +479,6 @@ body.claro {
 	color: white;
 }
 
-/* Container for the display mode button, between header and main module grid. */
-.displayModeContainer {
-	height: 43px;
-	margin: 0 auto;
-	text-align: right;
-	width: 1024px;
-}
-
-/* Vertical align button with config panels below */
-.displayModeContainer > .dijitDropDownButton {
-	padding-right: 11px;
-	padding-top: 10px;
-}
-
 /* 
  * Build Progress Dialog styles. Showing build status and success/failure results 
  */
@@ -575,8 +561,9 @@ body.claro {
 #feedback {
     margin: 0 auto;
     position: relative;
-    top: -10px;
+    top: -8px;
     text-align:center;
+    z-index: 10;
 }
 
 #feedback > a {
@@ -645,6 +632,24 @@ body.claro {
     margin: 0 auto; 
     width: 28px;
 }
+
+
+
+/* Tooltip dialogs used to change Dojo version and display mode */
+
+
+.option_dropdown label {
+    font-family: "Helvetica","Arial",sans-serif;
+    font-size: 1.15em;
+    padding: 4px 3px;
+}
+
+.option_dropdown .dijitRadio {
+    margin-left: 10px;
+    margin-bottom: 4px;
+    float: right;
+}
+
 
 /* Used to cover screen while application is loading. */
 #preloader {

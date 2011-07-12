@@ -30,6 +30,7 @@ dojo.require("dijit.Dialog");
 dojo.require("dijit.Menu");
 dojo.require("dijit.CheckedMenuItem");
 dojo.require("dijit.form.DropDownButton");
+dojo.require("dijit.TooltipDialog");
 dojo.require("dojox.data.AndOrWriteStore");
 dojo.require("dojox.form.BusyButton");
 dojo.require("dojox.grid.EnhancedGrid");
