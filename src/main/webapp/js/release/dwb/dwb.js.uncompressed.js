@@ -13373,7 +13373,7 @@ dojo.declare("dwb.ui.IntroDialog", dwb.ui.PositionableDialog, {
     constructor: function () {
     	dojo.subscribe('dwb/dialog/shownAtLoad', function (message) {
 			if (!message.value) {
-				dojo.cookie("dontShowDialogAtLoad", "true");
+				dojo.cookie("dontShowDialogAtLoad", "true", {expires: 1000});
 			} else {
 				dojo.cookie("dontShowDialogAtLoad", null, {expires: -1});
 			}
