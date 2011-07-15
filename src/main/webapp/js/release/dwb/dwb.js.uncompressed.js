@@ -45063,10 +45063,14 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             // If user has moved mouse directly across the header, 
             // previous drop-down menu won't have been set to close on exit yet.
             dijit.popup.close(this.lastPopup);
+            var pos = dojo.position(link);
+            // Open dialog slightly off-centre towards
+            // the bottom right corner
             dijit.popup.open({
                 popup: dialog,
-                around: link,
-                orient: {BR: "TR"}
+                x: pos.x + (0.85*pos.w),
+                y: pos.y + pos.h,
+                orient: "R"
             });
             this.lastPopup = dialog;
         })));
