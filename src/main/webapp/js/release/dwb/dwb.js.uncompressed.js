@@ -44353,6 +44353,9 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 	content: dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html", "<div class=\"analyse_container\">\n\t<div>Choose an existing build profile to analyse for Dojo modules.</div>\n\t<div class=\"analyse_form_container\">\n\t\t<form action=\"./api/dependencies\" method=\"post\" enctype=\"multipart/form-data\">\n\t\t\t<input name=\"value\" type=\"file\"></input>\n\t\t\t<input name=\"type\" type=\"hidden\" value=\"PROFILE\"></input>\n\t\t\t<div class=\"build\">\n\t\t\t\t<button dojoType=\"dojox.form.BusyButton\" busyLabel=\"Analysing...\" label=\"Analyse\" timeout=\"100000\">\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t</form>\n\t</div>\n</div>\n"),
 
+    // Referenced to currently open menu pop-up
+    lastPopup: null,
+
     packageService: null,
     buildService: null,
 
@@ -44711,7 +44714,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
                             "name": modulesStore.getValue(module, "name"),
                             "package": modulesStore.getValue(module, "package")
                         }
-					});
+                    });
 
 					d.callback(layer);
 				}});				
@@ -45055,14 +45058,22 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
     addHoverMenu: function (dialog, link_name) {
         var link = dojo.byId(link_name);
-        this.connect(link, "onmouseover", dojo.hitch(this, function (e) {
+        this.connect(link, "onmouseover", dojo.hitch(this, dojo.hitch(function (e) {
             dojo.stopEvent(e);
+            // If user has moved mouse directly across the header, 
+            // previous drop-down menu won't have been set to close on exit yet.
+            dijit.popup.close(this.lastPopup);
+            var pos = dojo.position(link);
+            // Open dialog slightly off-centre towards
+            // the bottom right corner
             dijit.popup.open({
                 popup: dialog,
-                around: link,
-                orient: {BR: "TR"}
+                x: pos.x + (0.85*pos.w),
+                y: pos.y + pos.h,
+                orient: "R"
             });
-        }));
+            this.lastPopup = dialog;
+        })));
 
         dojo.connect(dialog, 'onMouseLeave', function() {
             dijit.popup.close(dialog);

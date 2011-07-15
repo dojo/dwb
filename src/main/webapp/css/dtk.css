@@ -14,6 +14,7 @@
     position: relative;
     text-align: left;
     width: 974px;
+    z-index: 10;
 }
 
 #header #logo {
@@ -68,7 +69,7 @@
     color: #FFFFFF;
 }
 
-#header ul li a:hover {
+#header ul li a {
     border-bottom: 3px solid #0099CC;
 }
 
