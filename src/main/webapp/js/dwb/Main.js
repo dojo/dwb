@@ -289,19 +289,32 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 				name: "dojo.js",
 				modules: []
 		};
+        var profile = {"layers": [baseLayer]};
 
 		// Return all modules selected, both rendered and not currently rendered. 
 		var allSelectedModules = this.module_grid.getAllSelectedItems();
 		
+        var hasDijitModule = false;
+
 		dojo.forEach(allSelectedModules, dojo.hitch(this, function (item) {
             var module = {
                 "name": this.store.getValue(item, "name"),
                 "package": this.store.getValue(item, "package")
             };
+
+            // If user has included a dijit module, always include 
+            // the Claro theme in the build results. 
+            // FIXME: This is a nasty hack and should use the actual build
+            // options rather than assuming Claro is available. 
+            if(!hasDijitModule && module.name.match(/^dijit/)) {
+                profile.themes = "claro";
+                hasDijitModule = true;
+            }
+
 			baseLayer.modules.push(module);
 		}));
 
-		return {"layers":[baseLayer]};
+		return profile;
 	},
 
 	// User has triggered a build request. Construct build profile
