@@ -30,6 +30,9 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
 	content: dojo.cache("dwb.ui.fragments", "ExistingProfileModuleTab.html"),
 
+    // Referenced to currently open menu pop-up
+    lastPopup: null,
+
     packageService: null,
     buildService: null,
 
@@ -388,7 +391,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
                             "name": modulesStore.getValue(module, "name"),
                             "package": modulesStore.getValue(module, "package")
                         }
-					});
+                    });
 
 					d.callback(layer);
 				}});				
@@ -732,14 +735,18 @@ dojo.declare("dwb.Main", dwb.Main._base, {
 
     addHoverMenu: function (dialog, link_name) {
         var link = dojo.byId(link_name);
-        this.connect(link, "onmouseover", dojo.hitch(this, function (e) {
+        this.connect(link, "onmouseover", dojo.hitch(this, dojo.hitch(function (e) {
             dojo.stopEvent(e);
+            // If user has moved mouse directly across the header, 
+            // previous drop-down menu won't have been set to close on exit yet.
+            dijit.popup.close(this.lastPopup);
             dijit.popup.open({
                 popup: dialog,
                 around: link,
                 orient: {BR: "TR"}
             });
-        }));
+            this.lastPopup = dialog;
+        })));
 
         dojo.connect(dialog, 'onMouseLeave', function() {
             dijit.popup.close(dialog);
