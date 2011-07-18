@@ -1,4 +1,4 @@
-define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "./json", "./lang"], function(dojo, has, require, listen){
+define(["./kernel", "./sniff", "require", "../on", "../io-query", "../dom-form", "./Deferred", "./json", "./lang"], function(dojo, has, require, on, ioq, domForm){
 	//	module:
 	//		dojo/_base.xhr
 	// summary:
@@ -6,7 +6,7 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 
 	has.add("native-xhr", function() {
 		// if true, the environment has a native XHR implementation
-		return !!XMLHttpRequest;
+		return typeof XMLHttpRequest !== 'undefined';
 	});
 
 	if(has("dojo-xhr-factory")){
@@ -23,7 +23,7 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 		};
 	}else{
 		// PROGIDs are in order of decreasing likelihood; this will change in time.
-		for(var XMLHTTP_PROGIDS = ['Msxml2.XMLHTTP', 'Microsoft.XMLHTTP', 'Msxml2.XMLHTTP.4.0'], progid, i = 0; i<3;){
+		for(var XMLHTTP_PROGIDS = ['Msxml2.XMLHTTP', 'Microsoft.XMLHTTP', 'Msxml2.XMLHTTP.4.0'], progid, i = 0; i < 3;){
 			try{
 				progid = XMLHTTP_PROGIDS[i++];
 				if (new ActiveXObject(progid)) {
@@ -37,215 +37,19 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 			}
 		}
 		dojo._xhrObj= function() {
-			try{
-				return new ActiveXObject(progid);
-			}catch(e){
-				throw new Error("XMLHTTP not available: "+e);
-			}
+			return new ActiveXObject(progid);
 		};
 	}
 
 	var _d = dojo, cfg = _d.config;
 
-	function setValue(/*Object*/obj, /*String*/name, /*String*/value){
-		//summary:
-		//		For the named property in object, set the value. If a value
-		//		already exists and it is a string, convert the value to be an
-		//		array of values.
-
-		//Skip it if there is no value
-		if(value === null){
-			return;
-		}
-
-		var val = obj[name];
-		if(typeof val == "string"){ // inline'd type check
-			obj[name] = [val, value];
-		}else if(_d.isArray(val)){
-			val.push(value);
-		}else{
-			obj[name] = value;
-		}
-	}
-
-	dojo.fieldToObject = function(/*DOMNode||String*/ inputNode){
-		// summary:
-		//		Serialize a form field to a JavaScript object.
-		//
-		// description:
-		//		Returns the value encoded in a form field as
-		//		as a string or an array of strings. Disabled form elements
-		//		and unchecked radio and checkboxes are skipped.	Multi-select
-		//		elements are returned as an array of string values.
-		var ret = null;
-		var item = _d.byId(inputNode);
-		if(item){
-			var _in = item.name;
-			var type = (item.type||"").toLowerCase();
-			if(_in && type && !item.disabled){
-				if(type == "radio" || type == "checkbox"){
-					if(item.checked){ ret = item.value; }
-				}else if(item.multiple){
-					ret = [];
-					var options = item.getElementsByTagName("option");
-					for(var i = 0; i < options.length; i++){
-						var opt = options[i];
-						if(opt.selected){
-							ret.push(opt.value);
-						}
-					}
-				}else{
-					ret = item.value;
-				}
-			}
-		}
-		return ret; // Object
-	};
-
-	dojo.formToObject = function(/*DOMNode||String*/ formNode){
-		// summary:
-		//		Serialize a form node to a JavaScript object.
-		// description:
-		//		Returns the values encoded in an HTML form as
-		//		string properties in an object which it then returns. Disabled form
-		//		elements, buttons, and other non-value form elements are skipped.
-		//		Multi-select elements are returned as an array of string values.
-		//
-		// example:
-		//		This form:
-		//		|	<form id="test_form">
-		//		|		<input type="text" name="blah" value="blah">
-		//		|		<input type="text" name="no_value" value="blah" disabled>
-		//		|		<input type="button" name="no_value2" value="blah">
-		//		|		<select type="select" multiple name="multi" size="5">
-		//		|			<option value="blah">blah</option>
-		//		|			<option value="thud" selected>thud</option>
-		//		|			<option value="thonk" selected>thonk</option>
-		//		|		</select>
-		//		|	</form>
-		//
-		//		yields this object structure as the result of a call to
-		//		formToObject():
-		//
-		//		|	{
-		//		|		blah: "blah",
-		//		|		multi: [
-		//		|			"thud",
-		//		|			"thonk"
-		//		|		]
-		//		|	};
-
-		var ret = {};
-		var exclude = "file|submit|image|reset|button|";
-		_d.forEach(dojo.byId(formNode).elements, function(item){
-			var _in = item.name;
-			var type = (item.type||"").toLowerCase();
-			if(_in && type && exclude.indexOf(type) == -1 && !item.disabled){
-				setValue(ret, _in, _d.fieldToObject(item));
-				if(type == "image"){
-					ret[_in+".x"] = ret[_in+".y"] = ret[_in].x = ret[_in].y = 0;
-				}
-			}
-		});
-		return ret; // Object
-	};
-
-	dojo.objectToQuery = function(/*Object*/ map){
-		//	summary:
-		//		takes a name/value mapping object and returns a string representing
-		//		a URL-encoded version of that object.
-		//	example:
-		//		this object:
-		//
-		//		|	{
-		//		|		blah: "blah",
-		//		|		multi: [
-		//		|			"thud",
-		//		|			"thonk"
-		//		|		]
-		//		|	};
-		//
-		//	yields the following query string:
-		//
-		//	|	"blah=blah&multi=thud&multi=thonk"
-
-		// FIXME: need to implement encodeAscii!!
-		var enc = encodeURIComponent;
-		var pairs = [];
-		var backstop = {};
-		for(var name in map){
-			var value = map[name];
-			if(value != backstop[name]){
-				var assign = enc(name) + "=";
-				if(_d.isArray(value)){
-					for(var i=0; i < value.length; i++){
-						pairs.push(assign + enc(value[i]));
-					}
-				}else{
-					pairs.push(assign + enc(value));
-				}
-			}
-		}
-		return pairs.join("&"); // String
-	};
-
-	dojo.formToQuery = function(/*DOMNode||String*/ formNode){
-		// summary:
-		//		Returns a URL-encoded string representing the form passed as either a
-		//		node or string ID identifying the form to serialize
-		return _d.objectToQuery(_d.formToObject(formNode)); // String
-	};
-
-	dojo.formToJson = function(/*DOMNode||String*/ formNode, /*Boolean?*/prettyPrint){
-		// summary:
-		//		Create a serialized JSON string from a form node or string
-		//		ID identifying the form to serialize
-		return _d.toJson(_d.formToObject(formNode), prettyPrint); // String
-	};
-
-	dojo.queryToObject = function(/*String*/ str){
-		// summary:
-		//		Create an object representing a de-serialized query section of a
-		//		URL. Query keys with multiple values are returned in an array.
-		//
-		// example:
-		//		This string:
-		//
-		//	|		"foo=bar&foo=baz&thinger=%20spaces%20=blah&zonk=blarg&"
-		//
-		//		results in this object structure:
-		//
-		//	|		{
-		//	|			foo: [ "bar", "baz" ],
-		//	|			thinger: " spaces =blah",
-		//	|			zonk: "blarg"
-		//	|		}
-		//
-		//		Note that spaces and other urlencoded entities are correctly
-		//		handled.
-
-		// FIXME: should we grab the URL string if we're not passed one?
-		var ret = {};
-		var qp = str.split("&");
-		var dec = decodeURIComponent;
-		_d.forEach(qp, function(item){
-			if(item.length){
-				var parts = item.split("=");
-				var name = dec(parts.shift());
-				var val = dec(parts.join("="));
-				if(typeof ret[name] == "string"){ // inline'd type check
-					ret[name] = [ret[name]];
-				}
-
-				if(_d.isArray(ret[name])){
-					ret[name].push(val);
-				}else{
-					ret[name] = val;
-				}
-			}
-		});
-		return ret; // Object
-	};
+	// mix in io-query and dom-form
+	_d.objectToQuery = ioq.objectToQuery;
+	_d.queryToObject = ioq.queryToObject;
+	_d.fieldToObject = domForm.fieldToObject;
+	_d.formToObject = domForm.toObject;
+	_d.formToQuery = domForm.toQuery;
+	_d.formToJson = domForm.toJson;
 
 	// need to block async callbacks from snatching this thread as the result
 	// of an async callback might call another sync XHR, this hangs khtml forever
@@ -729,7 +533,6 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 		if(!_inFlight.length){
 			clearInterval(_inFlightIntvl);
 			_inFlightIntvl = null;
-			return;
 		}
 	};
 
@@ -748,7 +551,7 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 	//Automatically call cancel all io calls on unload
 	//in IE for trac issue #2357.
 	if(has("ie")){
-		listen(window, "unload", _d._ioCancelAll);
+		on(window, "unload", _d._ioCancelAll);
 	}
 
 	_d._ioNotifyStart = function(/*Deferred*/dfd){
@@ -817,6 +620,7 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 			var err = new Error("Unable to load " + dfd.ioArgs.url + " status:" + xhr.status);
 			err.status = xhr.status;
 			err.responseText = xhr.responseText;
+			err.xhr = xhr;
 			dfd.errback(err);
 		}
 	};
@@ -848,6 +652,10 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 			//		false is default. Indicates whether a request should be
 			//		allowed to fail (and therefore no console error message in
 			//		the event of a failure)
+			//	contentType: String|Boolean
+			//		"application/x-www-form-urlencoded" is default. Set to false to
+			//		prevent a Content-Type header from being sent, or to a string
+			//		to send a different Content-Type.
 			this.handleAs = handleAs;
 			this.sync = sync;
 			this.headers = headers;
@@ -910,7 +718,9 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 			}
 		}
 		// FIXME: is this appropriate for all content types?
-		xhr.setRequestHeader("Content-Type", args.contentType || _defaultContentType);
+		if(args.contentType !== false){
+			xhr.setRequestHeader("Content-Type", args.contentType || _defaultContentType);
+		}
 		if(!args.headers || !("X-Requested-With" in args.headers)){
 			xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
 		}
@@ -973,5 +783,26 @@ define(["./kernel", "../has", "require", "../listen", "./sniff", "./Deferred", "
 	}
 	*/
 
-return dojo.xhr;
+	// Add aliases for static functions to dojo.xhr since dojo.xhr is what's returned from this module
+	dojo.mixin(dojo.xhr, {
+		_xhrObj: dojo._xhrObj,
+		fieldToObject: dojo.fieldToObject,
+		formToObject: dojo.formToObject,
+		objectToQuery: dojo.objectToQuery,
+		formToQuery: dojo.formToQuery,
+		formToJson: dojo.formToJson,
+		queryToObject: dojo.queryToObject,
+		contentHandlers: handlers,
+		_ioSetArgs: dojo._ioSetArgs,
+		_ioCancelAll: dojo._ioCancelAll,
+		_ioNotifyStart: dojo._ioNotifyStart,
+		_ioWatch: dojo._ioWatch,
+		_ioAddQueryToUrl: dojo._ioAddQueryToUrl,
+		get: dojo.xhrGet,
+		post: dojo.xhrPost,
+		put: dojo.xhrPut,
+		del: dojo.xhrDelete	// because "delete" is a reserved word
+	});
+
+	return dojo.xhr;
 });

@@ -124,6 +124,10 @@ public class BuildRequest {
 				
 		buildProfile.put("prefixes", modulePrefixes);
 		
+		// Add build reference to the profile, this allows logging to flow back to Java land 
+		// from JavaScript execution.
+		buildProfile.put("buildReference", buildReference);
+		
 		// How do we do platform?????
 		// How do we do CDN???? Not sure this is relevant for AMD modules? 
 		

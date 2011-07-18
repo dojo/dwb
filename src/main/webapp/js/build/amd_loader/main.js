@@ -2,8 +2,7 @@ define([
 	"./_base/kernel",
 	"./has",
 	"require",
-	"./_base/load",
-	"./has!dojo-sync-loader?./_base/loader",
+	"./_base/sniff",
 	"./_base/lang",
 	"./_base/array",
 	"./_base/declare",
@@ -12,7 +11,8 @@ define([
 	"./_base/json",
 	"./_base/Color",
 	"./has!dojo-firebug?./_firebug/firebug",
-	"./has!host-browser?./_base/browser"], function(dojo, has, require){
+	"./has!host-browser?./_base/browser",
+	"./has!dojo-sync-loader?./_base/loader"], function(dojo, has, require){
 	// module:
 	//		dojo/main
 	// summary:
@@ -46,24 +46,14 @@ define([
 		if(deps){
 			// dojo.config.require may be dot notation
 			deps= dojo.map(dojo.isArray(deps) ? deps : [deps], function(item){ return item.replace(/\./g, "/"); });
-			if(has("config-isAsync")){
+			if(dojo.isAsync){
 				require(deps);
 			}else{
 				// this is a bit janky; in 1.6- dojo is defined before these requires are applied; but in 1.7+
 				// dojo isn't defined until returning from this module; this is only a problem in sync mode
 				// since we're in sync mode, we know we've got our loader with its priority ready queue
-				require.ready(1, function(){require(deps);});
+				dojo.ready(1, function(){require(deps);});
 			}
-		}
-	}
-
-	// dojoConfig.addOnLoad is deprecated; use require.ready
-	// warning: the require.ready API will be deprecated once we have a DOMContentLoaded loader plugin
-	has.add("dojo-config-addOnLoad", 1);
-	if(has("dojo-config-addOnLoad")){
-		var addOnLoad= dojo.config.addOnLoad;
-		if(addOnLoad){
-			require.ready(dojo.isArray(addOnLoad) ? dojo.hitch.apply(dojo, addOnLoad) : addOnLoad);
 		}
 	}
 

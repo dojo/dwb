@@ -1,4 +1,4 @@
-define(["./_base/kernel", "./listen", "./touch", "./has"], function(dojo, listen, touch, has){
+define(["./_base/kernel", "./on", "./touch", "./has"], function(dojo, on, touch, has){
 // module:
 //		dojo/gesture
 //
@@ -17,19 +17,19 @@ define(["./_base/kernel", "./listen", "./touch", "./has"], function(dojo, listen
 //
 // handle(eventType):
 //		Bind a static listen handler for the given gesture event, 
-//		the handle will be internally used by listen(), e.g.
+//		the handle will be internally used by on(), e.g.
 //		|	var dojo.gesture.tap = handle('tap');
-//		|	//so that listen can use it
-//		|	listen(node, dojo.gesture.tap, func(e){});
+//		|	//so that we can use it with on
+//		|	on(node, dojo.gesture.tap, func(e){});
 //		|	//or used directly as
 //		|	dojo.gesture.tap(node, func(e){});
 //
 // isGestureEvent(event):
 //		Whether the given event is a supported gesture event
 //
-// fire(element, eventType, rawEvent, info):
+// fire(target, eventType, event):
 //		Used by gesture implementations to fire a recognized gesture event, fire() invokes appropriate callbacks
-//		with a wrapped gesture event(that contains gesture information, the raw event etc.)
+//		with a wrapped gesture event with detail gesture information.
 //
 // example:
 //		1. A gesture can be used in the following ways:
@@ -38,19 +38,21 @@ define(["./_base/kernel", "./listen", "./touch", "./has"], function(dojo, listen
 //		|	dojo.connect(node, dojo.gesture.tap.hold, function(e){});
 //		|	dojo.connect(node, dojo.gesture.tap.doubletap, function(e){});		
 //
-//		B. Used with dojo.listen
-//		|	define(["dojo/listen", "dojo/gesture/tap"], function(listen, tap){
-//		|		listen(node, tap, function(e){});
-//		|		listen(node, tap.hold, function(e){});
-//		|		listen(node, tap.doubletap, function(e){});
+//		B. Used with dojo.on
+//		|	define(["dojo/on", "dojo/gesture/tap"], function(on, tap){
+//		|		on(node, tap, function(e){});
+//		|		on(node, tap.hold, function(e){});
+//		|		on(node, tap.doubletap, function(e){});
 //
 //		C. Used with dojo.gesture.tap.* directly
 //		|	dojo.gesture.tap(node, function(e){});
 //		|	dojo.gesture.tap.hold(node, function(e){});
 //		|	dojo.gesture.tap.doubletap(node, function(e){});
 //
-//		Though there is always a default singleton gesture instance after required e.g. require("dojo.gesture.tap")
-//		It's possible to create a new one with different parameters to overwrite it
+//		Though there is always a default singleton gesture instance after being required, e.g 
+//		|	require(["dojo/gesture/tap"], function(){...});
+//		It's possible to unRegister it and create a new one with different parameter setting:
+//		|	dojo.gesture.unRegister(dojo.gesture.tap);
 //		|	var myTap = new dojo.gesture.tap.Tap({holdThreshold: 300});
 //		|	dojo.gesture.register(myTap);
 //		|	dojo.connect(node, myTap, function(e){});
@@ -58,6 +60,13 @@ define(["./_base/kernel", "./listen", "./touch", "./has"], function(dojo, listen
 //		|	dojo.connect(node, myTap.doubletap, function(e){});
 //		
 //		Please refer to dojo/gesture/* for more gesture usages
+
+function isEmpty(o){
+	for(var x in o){
+		return false;
+	}
+	return true;
+}
 
 //singleton gesture manager
 dojo.gesture = {
@@ -70,6 +79,7 @@ dojo.gesture = {
 		//		Register a new singleton gesture instance
 		// description:
 		//		The gesture event list will be added for listening.
+		if(!gesture){ return; }
 		if(!has("touch") && gesture.touchOnly){
 			console.warn("Gestures:[", gesture.defaultEvent, "] is only supported on touch devices!");
 			return;
@@ -92,22 +102,37 @@ dojo.gesture = {
 		//		Un-register the given singleton gesture instance
 		// description:
 		//		The gesture event list will also be removed
+		if(!gesture){ return; }
+		var self = this;
+		function _remove(node, evt){
+			if(self.events[evt]){
+				delete self.events[evt];
+			}
+			self._remove(node, evt, null, true);
+		}
+		dojo.forEach(this._gestureElements, function(element){
+			_remove(element.target, gesture.defaultEvent);
+			dojo.forEach(gesture.subEvents, function(type){
+				_remove(element.target, gesture.defaultEvent + '.' + type);
+			}, this);
+		}, this);
+		this._gestureElements = dojo.filter(this._gestureElements, function(element){
+			return !isEmpty(element.gestures);//remove empty ones
+		});
 		var i = dojo.indexOf(this.gestures, gesture);
 		if(i >= 0){
 			this.gestures.splice(i, 1);
 		}
-		var evt = gesture.defaultEvent;
-		delete this.events[evt];
-		dojo.forEach(gesture.subEvents, function(type){
-			delete this.events[evt + '.' + type];
-		}, this);
+		if(gesture.destroy){
+			gesture.destroy();
+		}
 	},
 	handle: function(/*String*/eventType){
 		// summary:
 		//		Bind a static listen handler for the given gesture event,
-		//		the handle will be used internally by listen()
+		//		the handle will be used internally by on()
 		var self = this;
-		return function(node, listener){//called by listen(), see dojo.listen
+		return function(node, listener){//called by on(), see dojo.on
 			//normalize, arguments might be (null, node, listener)
 			var a = arguments;
 			if(a.length > 2){
@@ -116,17 +141,14 @@ dojo.gesture = {
 			}
 			var isNode = node && (node.nodeType || node.attachEvent || node.addEventListener);
 			if(!isNode || !self.isGestureEvent(eventType)){
-				return listen(node, eventType, listener);
+				return on(node, eventType, listener);
 			}else{
 				var signal = {
-					resume: function(){
-						self._add(node, eventType, listener);
-					},
-					cancel: function(){
+					remove: function(){
 						self._remove(node, eventType, listener);
 					}			
 				};
-				signal.resume();
+				self._add(node, eventType, listener);
 				return signal;
 			}
 		};
@@ -143,16 +165,21 @@ dojo.gesture = {
 			element = {
 				target: node,
 				gestures: {},
+				data: {},
 				listening: false
 			};
 			this._gestureElements.push(element);
+		}
+		var gesture = this.events[type];
+		if(gesture && !element.data[gesture.defaultEvent]){
+			element.data[gesture.defaultEvent] = {};
 		}
 		if(!element.gestures[type]){
 			element.gestures[type] = {
 				callbacks: [listener],
 				stopped: false //to cancel event bubbling
 			};
-		}else{//TBD - remove the previous one for the same type?
+		}else{
 			element.gestures[type].callbacks.push(listener);
 		}
 		if(!element.listening){
@@ -160,12 +187,11 @@ dojo.gesture = {
 			var _move = dojo.hitch(this, "_move", element);
 			var _release = dojo.hitch(this, "_release", element);
 			
-			//TBD - disconnect element.press | move | release?
 			var touchOnly = this.events[type].touchOnly;
 			if(touchOnly){
-				element.press = listen(node, 'touchstart', _press);
-				element.move = listen(node, 'touchmove', _move);
-				element.release = listen(node, 'touchend', _release);
+				element.press = on(node, 'touchstart', _press);
+				element.move = on(node, 'touchmove', _move);
+				element.release = on(node, 'touchend', _release);
 			}else{
 				element.press = touch.press(node, _press);
 				element.move = touch.move(node, _move);
@@ -173,21 +199,44 @@ dojo.gesture = {
 			}
 			if(has("touch")){
 				var _cancel = dojo.hitch(this, "_cancel", element);
-				element.cancel = listen(node, 'touchcancel', _cancel);
+				element.cancel = on(node, 'touchcancel', _cancel);
 			}
 			element.listening = true;
 		}
 	},
-	_remove: function(node, type, listener){
+	_remove: function(node, type, listener, keepElement){
 		var element = this.getGestureElement(node);
-		var i = dojo.indexOf(element.gestures[type].callbacks, listener);
-		element.gestures[type].callbacks.splice(i, 1);
-//		TBD - when element.count == 0
-//		dojo.forEach(['press', 'move', 'release', 'cancel'], function(type){
-//			if(element[type] && element[type].cancel){
-//				element[type].cancel();//disconnect native listeners
-//			}
-//		});
+		if(!element){ return; }
+		var callbacks = (element.gestures[type] || {}).callbacks;
+		if(!callbacks){ return; }
+		var i;
+		if(listener){
+			i = dojo.indexOf(callbacks, listener);
+			if(i >= 0){
+				callbacks.splice(i, 1);
+			}
+		}
+		if(callbacks.length === 0 || !listener){
+			//clear if not listened anymore
+			delete element.gestures[type];
+		}
+		if(isEmpty(element.gestures)){
+			// no more gestures are being listened for the element
+			// so disconnect native listeners
+			dojo.forEach(['press', 'move', 'release', 'cancel'], function(type){
+				if(element[type] && element[type].remove){
+					element[type].remove();
+				}
+			});
+			if(keepElement){
+				return;
+			}
+			//also release the element if needed
+			i = dojo.indexOf(this._gestureElements, element);
+			if(i >= 0){
+				this._gestureElements.splice(i, 1);
+			}
+		}
 	},
 	getGestureElement: function(node){
 		var i;
@@ -221,44 +270,43 @@ dojo.gesture = {
 			var gesture = this.events[x];
 			if(gesture[type] && dojo.indexOf(visited, gesture) < 0){
 				//add a lock attr indicating the event is being processed by the most inner node,
-				//so that we can do gesture bubbling manually				
-				if(!has("touch")){
-					e.locking = true;
-				}else{
-					if(Object.getPrototypeOf){
-						//not use e.constructor.prototype to lock in object scope rather TouchEvent.prototype
-						Object.getPrototypeOf(e).locking = true;
-					}
-				}
-				gesture[type](element, e);
+				//so that we can do gesture bubbling manually
+				e.locking = true;
+				gesture[type](element.data[gesture.defaultEvent], e);
 				visited.push(gesture);
 			}
 		}
 	},
-	fire: function(element, eventType, rawEvent, info){
+	fire: function(target, eventType, event){
 		// summary:
 		//		Used by gesture implementations to fire a recognized gesture event, invoking appropriate callbacks
-		//		with a wrapped gesture event(that contains gesture information and raw event etc.)
-		// element: Object
-		//		Gesture element that wraps various gesture information for the target node
-		//		e.g gesture events being listening, related callbacks
-		// eventType: String
-		//		Gesture event type e.g. 'tap.hold', 'swipe.left'
-		// rawEvent: Event
-		//		Raw event that triggers the gesture, might be touchxxx or mousexxx
-		// info: Object
-		//		Gesture specific information
+		//		with a wrapped gesture event
+		// target: DomNode
+		//		Target node to fire the gesture
+		// event: Object
+		//		Simulated event containing gesture info e.g {type: 'tap.hold'|'swipe.left'), ...}
 
-		//create a gesture event wrapper
-		var event = this._createEvent(rawEvent, info);
-		event.type = eventType;
+		//gesture looks like {callbacks:[...], stopped:true|false}
+		var gesture =((this.getGestureElement(target) || {}).gestures || {})[eventType];
+		if(!gesture){ return; }
+
+		if(!event){
+			event = {};
+		}
+		if(!event.type){
+			event.type = eventType;	
+		}
+		if(!event.target){
+			event.target = target;
+		}
+		event.preventDefault = function(){};
 		event.stopPropagation = function(){
-			element.gestures[eventType].stopped = true;
+			gesture.stopped = true;
 		};
-		this._fire(element, eventType, event);
+		this._fire(target, eventType, event);
 	},
-	_fire: function(element, eventType, e){
-		var gesture = element.gestures[eventType];//{callbacks:[...], stopped:true|false}
+	_fire: function(target, eventType, e){
+		var gesture =((this.getGestureElement(target) || {}).gestures || {})[eventType];
 		if(!gesture){ return;}
 		
 		dojo.forEach(gesture.callbacks, function(func){
@@ -267,27 +315,21 @@ dojo.gesture = {
 		
 		//gesture bubbling - also fire for parents unless stopped explicitly
 		if(!gesture.stopped){
-			var parentNode = element.target.parentNode,
-			parentGestureElement = dojo.gesture.getGestureElement(parentNode);
-			if(parentNode && parentGestureElement){
+			var parentNode = target.parentNode;
+			if(parentNode){
 				e.target = parentNode;
-				this._fire(parentGestureElement, eventType, e);
+				this._fire(parentNode, eventType, e);
 			}
 		}
 	},
-	_createEvent: function(e, info){
-		var newEvt = {
-			target: e.target,
-			srcEvent: e,
-			preventDefault: function(){
-				e.preventDefault();
-			}
-		};
-		var i;
-		for(i in info){
-			newEvt[i] = info[i];
+	reset: function(){
+		var g;
+		while(g = this.gestures.pop()){
+			this.unRegister(g);
 		}
-		return newEvt;
+	},
+	destroy: function(){
+		this.reset();
 	}
 };
 

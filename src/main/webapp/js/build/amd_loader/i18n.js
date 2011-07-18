@@ -1,4 +1,4 @@
-define(["./main", "require", "./has"], function(dojo, require, has) {
+define(["./_base/kernel", "require", "./has", "./_base/array", "./_base/lang", "./has!dojo-v1x-i18n-Api?./_base/xhr"], function(dojo, require, has, array, lang) {
 	// module:
 	//		dojo/i18n
 	// summary:
@@ -63,25 +63,10 @@ define(["./main", "require", "./has"], function(dojo, require, has) {
 			bundleName = bundleName.replace(/\./g, "/");
 			return (/root/i.test(locale)) ?
 				(moduleName + "/nls/" + bundleName) :
-				(moduleName + "/nls/"	 + locale + "/" + bundleName);
+				(moduleName + "/nls/" + locale + "/" + bundleName);
 		},
 
-		load= function(id, require, load){
-			// note: id may be relative
-			var
-				match= nlsRe.exec(id),
-				bundlePath= ((require.toAbsMid && require.toAbsMid(match[1])) || match[1]) + "/",
-				bundleName= match[5] || match[4],
-				bundlePathAndName= bundlePath + bundleName,
-				locale= (match[5] && match[4]) || dojo.locale,
-				target= bundlePathAndName + "/" + locale;
-
-			// if we've already resolved this request, just return it
-			if (cache[target]) {
-				load(cache[target]);
-				return;
-			}
-
+		doLoad = function(require, bundlePathAndName, bundlePath, bundleName, locale, load){
 			// get the root bundle which instructs which other bundles are required to contruct the localized bundle
 			require([bundlePathAndName], function(root){
 				var
@@ -92,9 +77,42 @@ define(["./main", "require", "./has"], function(dojo, require, has) {
 						cache[availableLocales[i]]= current= dojo.mixin(dojo.clone(current), arguments[i]);
 					}
 					// target may not have been resolve (e.g., maybe only "fr" exists when "fr-ca" was requested)
+					var target= bundlePathAndName + "/" + locale;
 					cache[target]= current;
-					load(dojo.delegate(current));
+					load && load(dojo.delegate(current));
 				});
+			});
+		},
+
+		load= function(id, require, load){
+			// note: id may be relative
+			var
+				match= nlsRe.exec(id),
+				bundlePath= ((require.toAbsMid && require.toAbsMid(match[1])) || match[1]) + "/",
+				bundleName= match[5] || match[4],
+				bundlePathAndName= bundlePath + bundleName,
+				localeSpecified = (match[5] && match[4]),
+				targetLocale=  localeSpecified || dojo.locale,
+				target= bundlePathAndName + "/" + targetLocale;
+
+			if(localeSpecified){
+				if(cache[target]){
+					// a request for a specific local that has already been loaded; just return it
+					load(cache[target]);
+				}else{
+					// a request for a specific local that has not been loaded; load and return just that locale
+					doLoad(require, bundlePathAndName, bundlePath, bundleName, targetLocale, load);
+				}
+				return;
+			}// else a non-locale-specific request; therefore always load dojo.locale + dojo.config.extraLocale
+
+			// notice the subtle algorithm that loads targeLocal last, which is the only doLoad application that passes a value for the load callback
+			// this makes the sync loader follow a clean code path that loads extras first and then proceeds with tracing the current deps graph
+			var extra = dojo.config.extraLocale || [];
+			extra = lang.isArray(extra) ? extra : [extra];
+			extra.push(targetLocale);
+			array.forEach(extra, function(locale){
+				doLoad(require, bundlePathAndName, bundlePath, bundleName, locale, locale==targetLocale && load);
 			});
 		};
 
@@ -105,45 +123,49 @@ define(["./main", "require", "./has"], function(dojo, require, has) {
 	);
 
 	if(has("dojo-v1x-i18n-Api")){
-		var syncRequire= function(deps, callback){
-			var results= [];
-			dojo.forEach(deps, function(mid){
-				var url= require.nameToUrl(mid) + ".js";
-				if(cache[url]){
-					results.push(cache[url]);
-				}else{
-					try {
-						var bundle= require(mid);
-						if(bundle){
-							results.push(bundle);
-							return;
-						}
-					}catch(e){}
-					dojo.xhrGet({
-						url:url,
-						sync:true,
-						load:function(text){
-							var
-								__result,
-								__fixup= function(bundle){
-									// nls/<locale>/<bundle-name> indicates not the root.
-									return bundle ? (/nls\/[^\/]+\/[^\/]+$/.test(url) ? bundle : {root:bundle, _v1x:1}) : __result;
-								};
+		var
+			evalBundle=
+				// keep the minifiers off our define!
+				// if bundle is an AMD bundle, then __amdResult will be defined; otherwise it's a pre-amd bundle and the bundle value is returned by eval
+				new Function("bundle", "var __preAmdResult, __amdResult; function define(bundle){__amdResult= bundle;} __preAmdResult= eval(bundle); return [__preAmdResult, __amdResult];"),
 
-							// TODO: make sure closure compiler does not stomp on this function name
-							function define(bundle){
-							  __result= bundle;
-							};
-							results.push(cache[url]= (__fixup(eval(text))));
-						},
-						error:function(){
-							results.push(cache[url]= {});
-						}
-					});
-				}
-			});
-			callback.apply(callback, results);
-		};
+			fixup= function(url, preAmdResult, amdResult){
+				// nls/<locale>/<bundle-name> indicates not the root.
+				return preAmdResult ? (/nls\/[^\/]+\/[^\/]+$/.test(url) ? preAmdResult : {root:preAmdResult, _v1x:1}) : amdResult;
+			},
+
+			syncRequire= function(deps, callback){
+				var results= [];
+				dojo.forEach(deps, function(mid){
+					var url= require.toUrl(mid + ".js");
+					if(cache[url]){
+						results.push(cache[url]);
+					}else{
+
+						try {
+							var bundle= require(mid);
+							if(bundle){
+								results.push(bundle);
+								return;
+							}
+						}catch(e){}
+
+						dojo.xhrGet({
+							url:url,
+							sync:true,
+							load:function(text){
+								var result = evalBundle(text);
+								results.push(cache[url]= fixup(url, result[0], result[1]));
+							},
+							error:function(){
+								results.push(cache[url]= {});
+							}
+						});
+					}
+				});
+				callback.apply(null, results);
+			};
+
 		syncRequire.toAbsMid= function(mid){
 			return require.toAbsMid(mid);
 		};
@@ -151,8 +173,9 @@ define(["./main", "require", "./has"], function(dojo, require, has) {
 		thisModule.getLocalization= function(moduleName, bundleName, locale){
 			var
 				result,
-				l10nName= getL10nName(moduleName, bundleName, locale);
-			load(l10nName.substring(10), syncRequire, function(result_){ result= result_; });
+				l10nName= getL10nName(moduleName, bundleName, locale).substring(10),
+				isXd = require.isXdUrl(require.toUrl(l10nName + ".js"));
+			load(l10nName, isXd ? require : syncRequire, function(result_){ result= result_; });
 			return result;
 		};
 

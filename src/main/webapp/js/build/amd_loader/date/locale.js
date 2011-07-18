@@ -1,6 +1,15 @@
-define(["../main", "../date", "../cldr/supplemental", "../regexp", "../string", "../i18n!../cldr/nls/gregorian"], function(dojo) {
+define([
+	"../_base/kernel",
+	"../_base/array",
+	"../_base/lang",
+	"../date",
+	"../cldr/supplemental",
+	"../regexp",
+	"../string",
+	"../i18n!../cldr/nls/gregorian"
+], function(dojo) {
 	// module:
-	//		dojo/date/local
+	//		dojo/date/locale
 	// summary:
 	//		This modules defines dojo.date.locale, localization methods for Date.
 
@@ -320,9 +329,8 @@ dojo.date.locale.parse = function(/*String*/value, /*dojo.date.locale.__FormatOp
 						//of 80 years before and 20 years after present year
 						var year = '' + new Date().getFullYear(),
 							century = year.substring(0, 2) * 100,
-							cutoff = Math.min(Number(year.substring(2, 4)) + 20, 99),
-							num = (v < cutoff) ? century + v : century - 100 + v;
-						result[0] = num;
+							cutoff = Math.min(Number(year.substring(2, 4)) + 20, 99);
+						result[0] = (v < cutoff) ? century + v : century - 100 + v;
 					}else{
 						//we expected 2 digits and got more...
 						if(options.strict){
@@ -515,7 +523,7 @@ function _buildDateTimeRE(tokens, bundle, options, pattern){
 				s = (l>2) ? '\\S+?' : '1[0-2]|'+p2+'[1-9]';
 				break;
 			case 'D':
-				s = '[12][0-9][0-9]|3[0-5][0-9]|36[0-6]|'+p3+'[1-9][0-9]|'+p2+'[1-9]';
+				s = '[12][0-9][0-9]|3[0-5][0-9]|36[0-6]|'+p2+'[1-9][0-9]|'+p3+'[1-9]';
 				break;
 			case 'd':
 				s = '3[01]|[12]\\d|'+p2+'[1-9]';

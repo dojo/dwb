@@ -131,8 +131,12 @@ public class BuildRequestProcessor implements Runnable {
 		
 		File dojoLocation = new File(buildRequest.getDojoLocation(), "dojo");
 		
+		File baseLoaderPath = new File(amdLoaderPath);
+		
+		//ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), 
+		//	amdLoaderPath, dojoLocation.getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
 		ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), 
-			amdLoaderPath, dojoLocation.getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
+			amdLoaderPath, baseLoaderPath.getParentFile().getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
 		
 		return profileBuilder;
 	}

@@ -1,11 +1,10 @@
-define(["./main"], function(dojo) {
+define(["./_base/kernel", "./_base/lang"], function(dojo, lang) {
 	// module:
 	//		dojo/AdapterRegistry
 	// summary:
 	//		TODOC
 
-
-dojo.AdapterRegistry = function(/*Boolean?*/ returnWrappers){
+var AdapterRegistry = dojo.AdapterRegistry = function(/*Boolean?*/ returnWrappers){
 	//	summary:
 	//		A registry to make contextual calling/searching easier.
 	//	description:
@@ -38,7 +37,12 @@ dojo.AdapterRegistry = function(/*Boolean?*/ returnWrappers){
 	this.returnWrappers = returnWrappers || false; // Boolean
 };
 
-dojo.extend(dojo.AdapterRegistry, {
+/*=====
+// doc alias helpers:
+var lang = dojo, AdapterRegistry = dojo.AdapterRegistry;
+=====*/
+
+lang.extend(AdapterRegistry, {
 	register: function(/*String*/ name, /*Function*/ check, /*Function*/ wrap, /*Boolean?*/ directReturn, /*Boolean?*/ override){
 		//	summary:
 		//		register a check function to determine if the wrap function or
@@ -99,5 +103,5 @@ dojo.extend(dojo.AdapterRegistry, {
 	}
 });
 
-return dojo.AdapterRegistry;
+return AdapterRegistry;
 });

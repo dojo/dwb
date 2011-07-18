@@ -1,64 +1,64 @@
-
 define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
-// summary:
-//		The export of this module is a function that provides core event listening functionality. With this function
-//		you can provide a target, event type, and listener to be notified of 
-//		future matching events that are fired.
-//	target: Element|Object
-//		This is the target object or DOM element that to receive events from
-// type: String|Function
-// 		This is the name of the event to listen for or an extension event type.
-// listener: Function
-// 		This is the function that should be called when the event fires.
-// returns: Object
-// 		An object with a cancel() method that can be used to stop listening for this
-// 		event.
-// description:
-// 		To listen for "click" events on a button node, we can do:
-// 		|	define(["dojo/listen"], function(listen){
-// 		|		listen(button, "click", clickHandler);
-//		|		...
-//  	Plain JavaScript objects can also have their own events.
-// 		|	var obj = {};
-//		|	listen(obj, "foo", fooHandler);
-//		And then we could publish a "foo" event:
-//		|	listen.emit(obj, "foo", {key: "value"});
-//		We can use extension events as well. For example, you could listen for a tap gesture:
-// 		|	define(["dojo/listen", "dojo/gesture/tap", function(listen, tap){
-// 		|		listen(button, tap, tapHandler);
-//		|		...
-//		which would trigger fooHandler. Note that for a simple object this is equivalent to calling:
-//		|	obj.onfoo({key:"value"});
-//		If you use listen.emit on a DOM node, it will use native event dispatching when possible.
-//		You can also use listen function itself as a pub/sub hub:
-//		| 	listen("some/topic", function(event){
-//		|	... do something with event
-//		|	});
-//		|	listen.publish("some/topic", {name:"some event", ...});
-// Evented: 
-// 		The "Evented" property of the export of this module can be used as a mixin or base class, to add on() and emit() methods to a class
-// 		for listening for events and emiting events:
-// 		|	var Evented = listen.Evented;
-// 		|	var EventedWidget = dojo.declare([Evented, dijit._Widget], {...});
-//		|	widget = new EventedWidget();
-//		|	widget.on("open", function(event){
-//		|	... do something with event
-//		|	 });
-//		|
-//		|	widget.emit("open", {name:"some event", ...});
-//
-//
+	// summary:
+	//		The export of this module is a function that provides core event listening functionality. With this function
+	//		you can provide a target, event type, and listener to be notified of
+	//		future matching events that are fired.
+	// target: Element|Object
+	//		This is the target object or DOM element that to receive events from
+	// type: String|Function
+	// 		This is the name of the event to listen for or an extension event type.
+	// listener: Function
+	// 		This is the function that should be called when the event fires.
+	// returns: Object
+	// 		An object with a remove() method that can be used to stop listening for this
+	// 		event.
+	// description:
+	// 		To listen for "click" events on a button node, we can do:
+	// 		|	define(["dojo/on"], function(listen){
+	// 		|		on(button, "click", clickHandler);
+	//		|		...
+	//  	Plain JavaScript objects can also have their own events.
+	// 		|	var obj = {};
+	//		|	on(obj, "foo", fooHandler);
+	//		And then we could publish a "foo" event:
+	//		|	on.emit(obj, "foo", {key: "value"});
+	//		We can use extension events as well. For example, you could listen for a tap gesture:
+	// 		|	define(["dojo/on", "dojo/gesture/tap", function(listen, tap){
+	// 		|		on(button, tap, tapHandler);
+	//		|		...
+	//		which would trigger fooHandler. Note that for a simple object this is equivalent to calling:
+	//		|	obj.onfoo({key:"value"});
+	//		If you use on.emit on a DOM node, it will use native event dispatching when possible.
+	//		You can also use listen function itself as a pub/sub hub:
+	//		| 	on("some/topic", function(event){
+	//		|	... do something with event
+	//		|	});
+	//		|	on.publish("some/topic", {name:"some event", ...});
+	// Evented:
+	// 		The "Evented" property of the export of this module can be used as a mixin or base class, to add on() and emit() methods to a class
+	// 		for listening for events and emiting events:
+	// 		|	var Evented = on.Evented;
+	// 		|	var EventedWidget = dojo.declare([Evented, dijit._Widget], {...});
+	//		|	widget = new EventedWidget();
+	//		|	widget.on("open", function(event){
+	//		|	... do something with event
+	//		|	 });
+	//		|
+	//		|	widget.emit("open", {name:"some event", ...});
+
  	"use strict";
 	var after = aspect.after;
-	if(typeof window != "undefined"){ // check to make sure we are in a browser, this module should work anywhere
+	if(has("dom")){ // check to make sure we are in a browser, this module should work anywhere
 		var major = window.ScriptEngineMajorVersion;
 		has.add("jscript", major && (major() + ScriptEngineMinorVersion() / 10));
 		has.add("event-orientationchange", has("touch") && !dojo.isAndroid); // TODO: how do we detect this?
 	}
-	var listen = function(target, type, listener, dontFix){
+	var on = function(target, type, listener, dontFix){
 		if(!listener){
-			// two args, do pub/sub
-			return listen(listen, target, type);
+			// two args, do pub/sub or window listening
+			// if there is a window event for the given target, we will target the window
+			return on(has("dom") && ("on" + target) in window ? window : on, 
+				target, type);
 		}
 		if(target.on){ 
 			// delegate to the target's on() method, so it can handle it's own listening if it wants
@@ -67,9 +67,14 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 		// delegate to main listener code
 		return addListener(target, type, listener, dontFix, this);
 	};
-	listen.pausable =  function(target, type, listener, dontFix){
+	on.pausable =  function(target, type, listener, dontFix){
+		// summary:
+		//		This function acts the same as on(), but with pausable functionality. The
+		// 		returned signal object has pause() and resume() functions. Calling the
+		//		pause() method will cause the listener to not be called for future events. Calling the
+		//		resume() method will cause the listener to again be called for future events.
 		var paused;
-		var signal = listen(target, type, function(){
+		var signal = on(target, type, function(){
 			if(!paused){
 				return listener.apply(this, arguments);
 			}
@@ -82,15 +87,28 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 		};
 		return signal;
 	};
-	var prototype = (listen.Evented = function(){}).prototype;
+	on.once = function(target, type, listener, dontFix){
+		// summary:
+		//		This function acts the same as on(), but will only call the listener once. The 
+		// 		listener will be called for the first
+		//		event that takes place and then listener will automatically be removed.
+		var signal = on(target, type, function(){
+			// remove this listener
+			signal.remove();
+			// proceed to call the listener
+			return listener.apply(this, arguments);
+		});
+		return signal;
+	};
+	var prototype = (on.Evented = function(){}).prototype;
 	prototype.on = function(type, listener, dontFix){
 		return addListener(this, type, listener, dontFix, this);
-	}
+	};
 	var touchEvents = /^touch/;
 	function addListener(target, type, listener, dontFix, matchesTarget){
 		if(type.call){
 			// event handler function
-			// listen(node, dojo.touch.press, touchListener);
+			// on(node, dojo.touch.press, touchListener);
 			return type.call(matchesTarget, target, listener);
 		}
 
@@ -103,9 +121,9 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 			while(eventName = events[i++]){
 				handles.push(addListener(target, eventName, listener, dontFix, matchesTarget));
 			}
-			handles.cancel = function(){
+			handles.remove = function(){
 				for(var i = 0; i < handles.length; i++){
-					handles[i].cancel();
+					handles[i].remove();
 				}
 			};
 			return handles;
@@ -118,7 +136,7 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 			type = selector[2];
 			selector = selector[1];
 			// create the extension event for selectors and directly call it
-			return listen.selector(selector, type).call(matchesTarget, target, listener);
+			return on.selector(selector, type).call(matchesTarget, target, listener);
 		}
 		// test to see if it a touch event right now, so we don't have to do it every time it fires
 		if(has("touch")){
@@ -138,7 +156,7 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 		if(target.addEventListener){
 			// the target has addEventListener, which should be used if available (might or might not be a node, non-nodes can implement this method as well)
 			var signal = {
-				cancel: function(){
+				remove: function(){
 					target.removeEventListener(type, listener, false);
 				}
 			};
@@ -146,42 +164,41 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 			return signal;
 		}
 		type = "on" + type;
-		if(fixListener && target.attachEvent){
-			return fixListener(target, type, listener);
+		if(fixAttach && target.attachEvent){
+			return fixAttach(target, type, listener);
 		}
 	 // use aop
 		return after(target, type, listener, true);
 	}
 
-	listen.selector = function(selector, eventType){
+	on.selector = function(selector, eventType){
 		// summary:
-		//		Creates a new extension event with event delegation. This is based on 
-		// 		the provided event type (can be extension event) that 
+		//		Creates a new extension event with event delegation. This is based on
+		// 		the provided event type (can be extension event) that
 		// 		only calls the listener when the CSS selector matches the target of the event.
 		//	selector:
 		//		The CSS selector to use for filter events and determine the |this| of the event listener.
 		//	eventType:
 		//		The event to listen for
 		//	example:
-		//		define(["dojo/listen", "dojo/mouse"], function(listen, mouse){
-		//			listen(node, listen.selector(".my-class", mouse.enter), handlerForMyHover); 
+		//		define(["dojo/on", "dojo/mouse"], function(listen, mouse){
+		//			on(node, on.selector(".my-class", mouse.enter), handlerForMyHover);
 		return function(target, listener){
 			var matchesTarget = this;
-			return listen(target, eventType, function(event){
+			return on(target, eventType, function(event){
 				var eventTarget = event.target;
-				// see if we have a valid matchesTarget or default to dojo.query 
+				// see if we have a valid matchesTarget or default to dojo.query
 				matchesTarget = matchesTarget && matchesTarget.matches ? matchesTarget : dojo.query;
 				// there is a selector, so make sure it matches
 				while(!matchesTarget.matches(eventTarget, selector, target)){
-					if(eventTarget == target || !eventTarget){
+					if(eventTarget == target || !(eventTarget = eventTarget.parentNode)){ // intentional assignment
 						return;
 					}
-					eventTarget = eventTarget.parentNode;
 				}
 				return listener.call(eventTarget, event);
 			});
 		};
-	}
+	};
 
 	function syntheticPreventDefault(){
 		this.cancelable = false;
@@ -189,7 +206,8 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 	function syntheticStopPropagation(){
 		this.bubbles = false;
 	}
-	var syntheticDispatch = listen.emit = function(target, type, event){
+	var slice = [].slice,
+		syntheticDispatch = prototype.emit = on.emit = function(target, type, event){
 		// summary:
 		//		Fires an event on the target object.
 		//	target:
@@ -216,46 +234,58 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 		// 		emit will return false.
 		//	details:
 		//		Note that this is designed to emit events for listeners registered through
-		//		dojo/listen. It should actually work with any event listener except those
+		//		dojo/on. It should actually work with any event listener except those
 		// 		added through IE's attachEvent (IE8 and below's non-W3C event emiting
 		// 		doesn't support custom event types). It should work with all events registered
-		// 		through dojo/listen. Also note that the emit method does do any default
+		// 		through dojo/on. Also note that the emit method does do any default
 		// 		action, it only returns a value to indicate if the default action should take
 		// 		place. For example, emiting a keypress event would not cause a character
 		// 		to appear in a textbox.
 		//	example:
 		//		To fire our own click event
-		//	|	listen.emit(dojo.byId("button"), "click", {
+		//	|	on.emit(dojo.byId("button"), "click", {
 		//	|		cancelable: true,
 		//	|		bubbles: true,
 		//	|		screenX: 33,
 		//	|		screenY: 44
 		//	|	});
 		//		We can also fire our own custom events:
-		//	|	listen.emit(dojo.byId("slider"), "slide", {
+		//	|	on.emit(dojo.byId("slider"), "slide", {
 		//	|		cancelable: true,
 		//	|		bubbles: true,
 		//	|		direction: "left-to-right"
 		//	|	});
+		var args = slice.call(arguments, 2);
+		if(typeof target == "string"){
+			// two argument case
+			args.unshift(event = type);
+			type = target;
+			target = this;
+		}
 		var method = "on" + type;
 		if("parentNode" in target){
 			// node (or node-like), create event controller methods
-			event.preventDefault = syntheticPreventDefault;
-			event.stopPropagation = syntheticStopPropagation;
-			event.target = target;
-			event.type = type;
+			var newEvent = args[0] = {};
+			for(var i in event){
+				newEvent[i] = event[i];
+			}
+			newEvent.preventDefault = syntheticPreventDefault;
+			newEvent.stopPropagation = syntheticStopPropagation;
+			newEvent.target = target;
+			newEvent.type = type;
+			event = newEvent;
 		}
 		do{
 			// call any node which has a handler (note that ideally we would try/catch to simulate normal event propagation but that causes too much pain for debugging)
-			target[method] && target[method].call(target, event);
+			target[method] && target[method].apply(target, args);
 			// and then continue up the parent node chain if it is still bubbling (if started as bubbles and stopPropagation hasn't been called)
-		}while(event.bubbles && (target = target.parentNode));
-		return event.cancelable && event; // if it is still true (was cancelable and was cancelled), return the event to indicate default action should happen
+		}while(event && event.bubbles && (target = target.parentNode));
+		return event && event.cancelable && event; // if it is still true (was cancelable and was cancelled), return the event to indicate default action should happen
 	};
 
 	if(has("dom-addeventlistener")){
 		// emiter that works with native event handling
-		listen.emit = function(target, type, event){
+		on.emit = function(target, type, event){
 			if(target.dispatchEvent && document.createEvent){
 				// use the native event emiting mechanism if it is available on the target object
 				// create a generic event				
@@ -278,11 +308,11 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 				}
 				return target.dispatchEvent(nativeEvent) && nativeEvent;
 			}
-			return syntheticDispatch(target, type, event); // emit for a non-node
+			return syntheticDispatch.call(on, target, type, event); // emit for a non-node
 		};
 	}else{
 		// no addEventListener, basically old IE event normalization
-		listen._fixEvent = function(evt, sender){
+		on._fixEvent = function(evt, sender){
 			// summary:
 			//		normalizes properties on the event object including event
 			//		bubbling methods, keystroke normalization, and x/y positions
@@ -298,15 +328,13 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 			if(!evt.target){ // check to see if it has been fixed yet
 				evt.target = evt.srcElement;
 				evt.currentTarget = (sender || evt.srcElement);
-				evt.layerX = evt.offsetX;
-				evt.layerY = evt.offsetY;
 				if(evt.type == "mouseover"){
 					evt.relatedTarget = evt.fromElement;
 				}
 				if(evt.type == "mouseout"){
 					evt.relatedTarget = evt.toElement;
 				}
-				if (!evt.stopPropagation) {
+				if(!evt.stopPropagation){
 					evt.stopPropagation = stopPropagation;
 					evt.preventDefault = preventDefault;
 				}
@@ -330,24 +358,28 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 				}
 			}
 			return evt;
-		}
+		};
 		var IESignal = function(handle){
 			this.handle = handle;
 		};
-		IESignal.prototype.cancel = function(){
-	 		delete _dojoIEListeners_[this.handle];		
-		}
-		var fixListener = function(target, type, listener){
-			var fixedListener = function(evt){
-				evt = listen._fixEvent(evt, this);
+		IESignal.prototype.remove = function(){
+			delete _dojoIEListeners_[this.handle];
+		};
+		var fixListener = function(listener){
+			// this is a minimal function for closing on the previous listener with as few as variables as possible
+			return function(evt){
+				evt = on._fixEvent(evt, this);
 				return listener.call(this, evt);
-			};
+			}
+		}
+		var fixAttach = function(target, type, listener){
+			listener = fixListener(listener);
 			if(((target.ownerDocument ? target.ownerDocument.parentWindow : target.parentWindow || target.window || window) != top || 
 						has("jscript") < 5.8) && 
 					!has("config-_allow_leaks")){
 				// IE will leak memory on certain handlers in frames (IE8 and earlier) and in unattached DOM nodes for JScript 5.7 and below.
 				// Here we use global redirection to solve the memory leaks
-				if(typeof _dojoIEListeners_ == "undefined"){ 
+				if(typeof _dojoIEListeners_ == "undefined"){
 					_dojoIEListeners_ = [];
 				}
 				var emiter = target[type];
@@ -360,10 +392,10 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 					}
 				}
 				var handle;
-				emiter.listeners.push(handle = (_dojoIEListeners_.push(fixedListener) - 1));
+				emiter.listeners.push(handle = (_dojoIEListeners_.push(listener) - 1));
 				return new IESignal(handle);
 			}
-			return after(target, type, fixedListener, true);
+			return after(target, type, listener, true);
 		};
 
 		var _setKeyChar = function(evt){
@@ -374,7 +406,7 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 		var stopPropagation = function(){
 			this.cancelBubble = true;
 		};
-		var preventDefault = listen._preventDefault = function(){
+		var preventDefault = on._preventDefault = function(){
 			// Setting keyCode to 0 is the only way to prevent certain keypresses (namely
 			// ctrl-combinations that correspond to menu accelerator keys).
 			// Otoh, it prevents upstream listeners from getting this information
@@ -394,8 +426,8 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 		};
 	}
 	if(has("touch")){ 
-		var windowOrientation = window.orientation; 
 		var Event = function (){};
+		var windowOrientation = window.orientation; 
 		var fixTouchListener = function(listener){ 
 			return function(originalEvent){ 
 				//Event normalization(for ontouchxxx and resize): 
@@ -415,10 +447,10 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 						// have to delegate methods to make them work
 						event.preventDefault = function(){
 							originalEvent.preventDefault();
-						}
+						};
 						event.stopPropagation = function(){
 							originalEvent.stopPropagation();
-						}
+						};
 					}else{
 						// deletion worked, use property as is
 						event = originalEvent;
@@ -448,10 +480,6 @@ define(["./aspect", "./_base/kernel", "./has"], function(aspect, dojo, has){
 				return listener.call(this, event); 
 			}; 
 		}; 
-	}; 
-	listen.publish = prototype.emit = function(type, event){
-		type = "on" + type;
-		this[type] && this[type](event);
-	};
-	return listen;
+	}
+	return on;
 });

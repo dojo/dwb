@@ -8,6 +8,13 @@ define([
 	"dojo/text!./buildNotice.txt"], function(require, bc, fs, fileUtils, process, dojo, defaultCopyright, defaultBuildNotice) {
 	eval(require.scopeify("./fs, ./fileUtils"));
 	var
+		mix= function(dest, src) {
+			dest= dest || {};
+			src= src || {};
+			for (var p in src) dest[p]= src[p];
+			return dest;
+		},
+
 		defaultBuildProps= {
 			// v1.6- default values
 			profile:"base",
@@ -19,29 +26,33 @@ define([
 			releaseName:"dojo",
 			releaseDir:"../../release/",
 			internStrings:true,
+			internSkipList:[],
 			optimize:"",
 			layerOptimize:"shrinksafe",
 			cssOptimize:"",
 			cssImportIgnore:"",
 			stripConsole:"normal",
-			copyTests:false,
-			mini:true,
-			xdDojoPath:"",
-			symbol:"",
-			scopeDjConfig:"",
-			scopeMap:{},
-			buildLayers:"",
-			query:"default",
+			scopeMap:[["dojo", "dojo"], ["dijit", "dijit"], ["dojox", "dojox"]],
 			replaceLoaderConfig:1,
+			insertAbsMids:1,
+
+			// these will be set in buildControl; see buildControl.js for details
+			//copyTests:false,
+			//mini:true,
 
 			// the following configuration variables are deprecated and have no effect
-			//log:0,
-			//loader:0,
-			//xdScopeArgs:0,
-			//xdDojoScopeName:0,
-			//expandProvide:0,
-			//removeDefaultNameSpaces:0,
-			//addGuards:0,
+			//query,
+			//buildLayers,
+			//scopeDjConfig,
+			//symbol,
+			//xdDojoPath,
+			//log,
+			//loader,
+			//xdScopeArgs,
+			//xdDojoScopeName,
+			//expandProvide,
+			//removeDefaultNameSpaces,
+			//addGuards,
 
 			// the following values are settings understood by the v1.7+ builder that cause behavior like the v1.6- builder
 
@@ -49,76 +60,70 @@ define([
 			noDefaultPackage:1,
 			destPackageBasePath:".",
 
-			packages:[],
-
 			staticHasFeatures: {
-				'dojo-boot':0,
-				'host-browser':1
-/*
-				'dojo-boot':0,
-				'dojo-debug-messages':0,
-				'dojo-guarantee-console':0,
-				'dojo-load-firebug-console':0,
-				'dojo-loader':1,
-				'dojo-register-openAjax':0,
-				'dojo-sniff':1,
-				'dojo-test-sniff':1,
-				'dojo-test-xd':1,
-				'dojo-v1x-i18n-Api':1,
-				'dom':1,
 				'host-browser':1,
-				'host-node':0,
-				'host-rhino':0,
-				"dojo-has-api":1,
-				'dojo-loader-catches':1,
-				'dojo-error-api':1,
+				'dom':1,
+				'dojo-auto-init':0,
+				'dojo-combo-api':0,
+				'dojo-config-addOnLoad':1,
+				'dojo-config-api':1,
+				'dojo-config-require':1,
+				'dojo-debug-messages':0,
+				'dojo-firebug':0,
+				'dojo-guarantee-console':1,
+				'dojo-has-api':1,
+				"dojo-dom-ready-api":1,
 				'dojo-inject-api':1,
-				'dojo-pageload-api':1,
-				'dojo-ready-api':1,
-				'dojo-xhr-factory':1,
-				'dojo-publish-privates':1, // TODO: change to
-				'dojo-requirejs-api':0,
-				'dojo-sniff':0,
-				'dojo-timeoutApi':1,
-				'dojo-trace-api':1,
+				'dojo-loader':1,
+				'dojo-loader-catches':0,
+				'dojo-log-api':1,
+				'dojo-publish-privates':1,
+				'dojo-requirejs-api':1,
+				'dojo-sniff':1,
+				'dojo-sync-loader':1,
+				'dojo-test-sniff':1,
+				'dojo-timeout-api':1,
+				'dojo-trace-api':0,
 				'dojo-undef-api':0,
-				"dojo-gettext-api":1
-*/
+				'dojo-v1x-i18n-Api':1,
+				'dojo-xdomain-test-api':1
 			},
 
-			bootConfig: {
+			defaultConfig:{
 				hasCache:{
-					"host-browser":1,
-					"dom":1,
-					"dojo-amd-factory-scan":1,
-					"dojo-loader":1,
-					"dojo-has-api":1,
-					"dojo-xhr-factory":1,
-					"dojo-inject-api":1,
-					"dojo-timeout-api":1,
-					"dojo-trace-api":1,
-					"dojo-log-api":1,
-					"dojo-loader-catches":0,
+					// these are the values given above, not-build client code may test for these so they need to be available
+					'host-browser':1,
+					'dom':1,
+					'dojo-auto-init':0,
+					'dojo-combo-api':0,
+					'dojo-config-addOnLoad':1,
+					'dojo-config-api':1,
+					'dojo-config-require':1,
+					'dojo-debug-messages':0,
+					'dojo-firebug':0,
+					'dojo-guarantee-console':1,
+					'dojo-has-api':1,
 					"dojo-dom-ready-api":1,
-					"dojo-dom-ready-plugin":1,
-					"dojo-ready-api":1,
-					"dojo-error-api":1,
-					"dojo-publish-privates":1,
-					"dojo-gettext-api":1,
-					"dojo-config-api":1,
-					"dojo-sniff":1,
-					"config-tlmSiblingOfDojo":1,
-					"dojo-sync-loader":1,
-					"dojo-test-sniff":1,
-					"dojo-xdomain-test-api":1
-				},
+					'dojo-inject-api':1,
+					'dojo-loader':1,
+					'dojo-loader-catches':0,
+					'dojo-log-api':1,
+					'dojo-publish-privates':1,
+					'dojo-requirejs-api':1,
+					'dojo-sniff':1,
+					'dojo-sync-loader':1,
+					'dojo-test-sniff':1,
+					'dojo-timeout-api':1,
+					'dojo-trace-api':0,
+					'dojo-undef-api':0,
+					'dojo-v1x-i18n-Api':1,
+					'dojo-xdomain-test-api':1,
 
-				packages: [{
-					// note: like v1.6-, this bootstrap computes baseUrl to be the dojo directory
-					name:'dojo',
-					location:'.',
-					lib:'.'
-				}]
+					// these are not static, but the default values given in the bootstrap
+					"config-tlmSiblingOfDojo":1,
+					"dojo-amd-factory-scan":1
+				},
+				async:bc.cdnBuild ? "xd" : 0
 			}
 		},
 
@@ -161,34 +166,45 @@ define([
 				result[p]= defaultBuildProps[p];
 			}
 
-			// find all the top-level modules by traversing each layer's dependencies
+			// find all the top-level modules by traversing each layer's dependencies (a vector of dotted module names)
 			var topLevelMids= {dojo:1};
 			layers.forEach(function(layer){
 				(layer.dependencies || []).forEach(function(mid) {
-					// pair a [mid, path], mid, a dotted module id, path relative to dojo directory
 					topLevelMids[getTopLevelModule(mid)]= 1;
 				});
 			});
 
 			// convert the prefix vector to a map; make sure all the prefixes are in the top-level map
-			var prefixMap= {}, copyrightMap= {};
+			var prefixMap =
+					// map from top-level mid --> path
+					{},
+				copyrightMap =
+					// map from top-level mid --> copyright message (usually undefined)
+					{},
+				runtimeMap =
+					// map from top-level mid --> runtime environment for computing depenencies in transforms/depsScan (usually undefined)
+					{};
 			prefixes.forEach(function(pair){
-				topLevelMids[pair[0]]= 1;
-				prefixMap[pair[0]]= pair[1];
-				copyrightMap[pair[0]]= pair[2];
+				// pair a [mid, path], mid, a top-level module id, path relative to dojo directory
+				var mid = pair[0];
+				topLevelMids[mid]= 1;
+				prefixMap[mid]= pair[1];
+				copyrightMap[mid]= pair[2];
+				runtimeMap[mid]= pair[3];
 			});
 
-			// make sure we have a dojo prefix; memorize it
-			var activeDojoPath= fileUtils.computePath(require.nameToUrl("dojo/package.json").match(/(.+)\/package\.json$/)[1], process.cwd());
+			// make sure we have a dojo prefix; memorize it;
+			// notice we default to the dojo being used to run the build program; this seems weak, but the only alternative is to quit
+			var activeDojoPath= fileUtils.computePath(require.toUrl("dojo/package.json").match(/(.+)\/package\.json$/)[1], process.cwd());
 			if(!prefixMap.dojo) {
 				// use the loader to find the real dojo path
 				prefixMap.dojo= activeDojoPath;
 			}else{
 				if (profile.basePath===undefined && /^\./.test(prefixMap.dojo) && compactPath(catPath(activeDojoPath, "../util/buildscripts"))!=process.cwd()){
-					bc.logWarn("did not specify profile.basePath, yet did specify a relative dojo path and running build with the current working directory different than util/buildscripts");
+					bc.log("pacify", "oddDojoPath");
 				}
 				if(computePath(prefixMap.dojo, profile.basePath || process.cwd())!=activeDojoPath){
-					bc.logWarn("dojo path specified in profile is different than the dojo being used for the build program");
+					bc.log("pacify", "buildUsingDifferentDojo");
 				}
 			}
 
@@ -209,19 +225,18 @@ define([
 				packages.push({
 					name:mid,
 					location:prefixMap[mid],
-					lib:".",
-					copyright:copyrightMap[mid]!==undefined ? copyrightMap[mid] : defaultCopyright
+					copyright:copyrightMap[mid]!==undefined ? copyrightMap[mid] : defaultCopyright,
+					runtime:runtimeMap[mid]
 				});
 			}
 
-			// remember the doh package info (this is done here to get the location
-			// this will be added to packages in buildControl after the command line
-			// switches are processed (remember, they're not processed here
+			// remember the doh package info (this is done here to get the location and destLocation)
+			// this will be added to packages in buildControl after the command line switches are processed
+			// iff !mini && copyTests (remember, they're not processed here)
 			result.dohPackageInfo= {
-					name:"doh",
-					location:dojoPath + "/../util/doh",
-					lib:".",
-					destLocation:"util/doh"
+				name:"doh",
+				location:dojoPath + "/../util/doh",
+				destLocation:"util/doh"
 			};
 
 			// resolve all the layer names into module names;
@@ -243,7 +258,7 @@ define([
 			layers.forEach(function(layer) {
 				var mid= filenameToMid(computePath(layer.name, dojoPath));
 				if (!mid) {
-					bc.logError("unable to resolve layer name (" + layer.name + ") into a module identifier");
+					bc.log("layerToMidFailed", ["layer", layer.name]);
 					return;
 				}
 				layerNameToLayerMid[layer.name]= mid;
@@ -262,7 +277,7 @@ define([
 						return defaultCopyright + defaultBuildNotice;
 					}
 				},
-				fixedLayers= {"dojo/dojo": {copyright:defaultCopyright + defaultBuildNotice, include:["dojo"], exclude:[]}};
+				fixedLayers= {"dojo/dojo": {copyright:defaultCopyright + defaultBuildNotice, include:["dojo/main"], exclude:[]}};
 			layers.forEach(function(layer) {
 				var
 					mid= layerNameToLayerMid[layer.name],
@@ -272,17 +287,19 @@ define([
 						exclude:(layer.layerDependencies || []).map(function(item) {
 							var mid= layerNameToLayerMid[item];
 							if (!mid) {
-								bc.logError("unable to resolve layer dependency (" + item + ") in layer (" + layer.name + ")");
+								bc.log("layerMissingDependency", ["layer", layer.name, "dependency", item]);
 							}
 							return mid;
 						})
 					};
 				if(mid=="dojo/dojo"){
 					if(!layer.customBase){
-						result.include.push("dojo");
+						result.include.push("dojo/main");
 					}
 				}else{
-					result.exclude.push("dojo");
+					if(!layer.customBase){
+						result.exclude.push("dojo/dojo");
+					}
 				}
 				if (layer.discard) {
 					result.discard= true;
@@ -299,7 +316,7 @@ define([
 
 			if (profile.destBasePath) {
 				if (profile.releaseDir || profile.releaseName) {
-					bc.logWarn("destBasePath given; ignoring releaseDir and releaseName");
+					bc.log("ignoringReleaseDirName");
 				}
 			} else {
 				var
@@ -308,45 +325,41 @@ define([
 				profile.destBasePath= computePath(catPath(releaseDir, releaseName), profile.basePath);
 			}
 
-			for (p in profile) {
-				// the conditional is to keep v1.6- compat
-				// TODO: recognition of "false" should be deprecated
-				if (/loader|xdScopeArgs|xdDojoScopeName|expandProvide|removeDefaultNameSpaces|addGuards/.test(p)) {
-					profile[p]= "deprecated; value(" + profile[p] + ") ignored";
-				}
-				result[p=="layers" ? "rawLayers" : p]= profile[p]=="false" ? false : profile[p];
+			// change the name of v1.6- log property
+			// TODO: warn if command line arg steps on a known, used build control property
+			// see similarly processing in argv
+			if(result.log!==undefined){
+				result.logLevel= result.log;
+				delete result.log;
 			}
-			result.localeList = result.localeList.split(",");
+
+			for (p in profile) {
+				if (/^(loader|xdDojoPath|symbol|scopeDjConfig|xdScopeArgs|xdDojoScopeName|expandProvide|buildLayers|query|removeDefaultNameSpaces|addGuards)$/.test(p)) {
+					bc.log("inputDeprecated", ["switch", p]);
+				}else if(p=="layers"){
+					result.rawLayers= profile[p];
+				}else if(p=="staticHasFeatures"){
+					mix(result.staticHasFeatures, profile.staticHasFeatures);
+				}else if(p!="defaultConfig"){
+					// TODO: recognition of "false" should be deprecated
+					result[p]= (profile[p]=="false" ? false : profile[p]);
+				}
+			}
+
+			if(profile.defaultConfig){
+				for(p in profile.defaultConfig){
+					if(p=="hasCache"){
+						mix(result.defaultConfig.hasCache, profile.defaultConfig.hasCache);
+					}else{
+						result.defaultConfig[p]= profile.defaultConfig[p];
+					}
+				}
+			}
 
 			// TODOC: we now take care of the console without shrink safe
 			// TODO/TODOC: burn in dojoConfig, djConfig
 			// TODO/TODOC: dojoConfig, djConfig should be able to be objects (string restrinction lifted)
 			// TODOC: action is assumed to be build, no more clean, help if you want it explicitly
-
-			bc.defaultConfig= {
-				hasCache: bc.hasCache || {
-					"host-browser":1,
-					"dom":1,
-					"dojo-loader":1,
-					"dojo-has-api":1,
-					"dojo-xhr-factory":1,
-					"dojo-inject-api":1,
-					"dojo-timeout-api":1,
-					"dojo-trace-api":1,
-					"dojo-log-api":1,
-					"dojo-loader-catches":1,
-					"dojo-dom-ready-api":1,
-					"dojo-dom-ready-plugin":1,
-					"dojo-ready-api":1,
-					"dojo-error-api":1,
-					"dojo-publish-privates":1,
-					"dojo-gettext-api":1,
-					"dojo-config-api":1,
-					"dojo-sniff":1,
-					"dojo-sync-loader":1,
-					"dojo-test-sniff":1
-				}
-			};
 
 			return result;
 		},
@@ -356,16 +369,18 @@ define([
 
 			//Remove the call to getDependencyList.js because it is not supported anymore.
 			if (/load\(("|')getDependencyList.js("|')\)/.test(text)) {
-				bc.logWarn("load(\"getDependencyList.js\") is no supported.");
+				bc.log("getDependencyListRemoved", ["profile", filename]);
 				text.replace(/load\(("|')getDependencyList.js("|')\)/, "");
 			}
 
 			// how about calling it a profile (instead of v1.6- dependencies)...
 			var profile= (function(__text){
 				var
-					// the logger is currently depricated; stub it out so profiles to cause exceptions on undefined
+					// the logger is currently deprecated; stub it out so profiles won't cause exceptions on undefined
 					// TODO: should we bring this back?
-					noop = function(){},
+					warn = function(message){
+						bc.log("inputLoggerRemoved");
+					},
 					logger = {
 						TRACE: 0,
 						INFO: 1,
@@ -373,11 +388,11 @@ define([
 						ERROR: 3,
 						level: 0,
 						logPrefix: "",
-						trace:noop,
-						info:noop,
-						warn:noop,
-						error:noop,
-						_print:noop
+						trace:warn,
+						info:warn,
+						warn:warn,
+						error:warn,
+						_print:warn
 					},
 					dependencies= {};
 				eval(__text);
@@ -387,7 +402,7 @@ define([
 		},
 
 		processHtmlFiles= function(files){
-			bc.logInfo("html files: " + files.join(", "));
+			bc.log("processHtmlFiles", ["files", files.join(", ")]);
 			var
 				layers = {},
 				prefix = "",

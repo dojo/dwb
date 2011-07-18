@@ -100,6 +100,7 @@ define(["./fs", "./buildControlBase", "dojo/has"], function(fs, bc, has) {
 			return ts.getFullYear() + f(ts.getMonth()+1) + f(ts.getDate()) + f(ts.getHours()) + f(ts.getMinutes()) + f(ts.getSeconds());
 		},
 
+		// FIXME: either use rwx or get rid of this
 		getMode= function(octal) {
 			for (var result= 0, i= 0; i<octal.length; result= (result * 8) + octal.charCodeAt(i++) - 48);
 			return result;
@@ -136,7 +137,7 @@ define(["./fs", "./buildControlBase", "dojo/has"], function(fs, bc, has) {
 				if (!dirExists(path)) {
 					ensureDirectory(getFilepath(path));
 					try {
-						fs.mkdirSync(path, getMode("774"));
+						fs.mkdirSync(path, getMode("775"));
 					} catch (e) {
 						//squelch
 					}
@@ -149,19 +150,16 @@ define(["./fs", "./buildControlBase", "dojo/has"], function(fs, bc, has) {
 			ensureDirectory(getFilepath(filename));
 		},
 
-		readJson= function(filename) {
+		readAndEval= function(filename, type) {
 			try {
 				if (fileExists(filename)) {
 					return eval("(" + fs.readFileSync(filename, "utf8") + ")");
 				}
 			} catch (e) {
-				bc.logError("failed to read package.json from " + filename + "; error follows...");
-				bc.logInfo(e);
+				bc.log("failedReadAndEval", ["filename", filename, "type", type, "error", e]);
 			}
 			return {};
 		};
-
-
 
 
 	return {
@@ -181,6 +179,6 @@ define(["./fs", "./buildControlBase", "dojo/has"], function(fs, bc, has) {
 		ensureDirectory:ensureDirectory,
 		ensureDirectoryByFilename:ensureDirectoryByFilename,
 		clearCheckedDirectoriesCache:clearCheckedDirectoriesCache,
-		readJson:readJson
+		readAndEval:readAndEval
 	};
 });

@@ -22,27 +22,35 @@ define(["./kernel", "./array", "./lang"], function(dojo){
 		if(color){ this.setColor(color); }
 	};
 
+	/*===== 
+	dojo.mixin(dojo.Color,{
+		named:{
+			// summary: Dictionary list of all CSS named colors, by name. Values are 3-item arrays with corresponding RG and B values. 
+		}
+	});
+	=====*/
+
 	// FIXME:
 	// there's got to be a more space-efficient way to encode or discover
 	// these!! Use hex?
 	dojo.Color.named = {
-        "black":  [0,0,0],
-        "silver": [192,192,192],
-        "gray":   [128,128,128],
-        "white":  [255,255,255],
-        "maroon": [128,0,0],
-        "red":    [255,0,0],
-        "purple": [128,0,128],
-        "fuchsia":[255,0,255],
-        "green":  [0,128,0],
-        "lime":   [0,255,0],
-        "olive":  [128,128,0],
-        "yellow": [255,255,0],
-        "navy":   [0,0,128],
-        "blue":   [0,0,255],
-        "teal":   [0,128,128],
-        "aqua":   [0,255,255],
-        "transparent": dojo.config.transparentColor || [255,255,255]
+		"black":  [0,0,0],
+		"silver": [192,192,192],
+		"gray":	  [128,128,128],
+		"white":  [255,255,255],
+		"maroon": [128,0,0],
+		"red":	  [255,0,0],
+		"purple": [128,0,128],
+		"fuchsia":[255,0,255],
+		"green":  [0,128,0],
+		"lime":	  [0,255,0],
+		"olive":  [128,128,0],
+		"yellow": [255,255,0],
+		"navy":	  [0,0,128],
+		"blue":	  [0,0,255],
+		"teal":	  [0,128,128],
+		"aqua":	  [0,255,255],
+		"transparent": dojo.config.transparentColor || [0,0,0,0]
 	};
 
 	dojo.extend(dojo.Color, {
@@ -84,7 +92,7 @@ define(["./kernel", "./array", "./lang"], function(dojo){
 			//	|	var c = new dojo.Color("#000000");
 			//	|	console.log(c.toRgb()); // [0,0,0]
 			var t = this;
-			return [t.r, t.g, t.b];	// Array
+			return [t.r, t.g, t.b]; // Array
 		},
 		toRgba: function(){
 			// summary:
@@ -120,7 +128,7 @@ define(["./kernel", "./array", "./lang"], function(dojo){
 		}
 	});
 
-	dojo.blendColors = function(
+	dojo.Color.blendColors = dojo.blendColors = function(
 		/*dojo.Color*/ start,
 		/*dojo.Color*/ end,
 		/*Number*/ weight,
@@ -137,7 +145,7 @@ define(["./kernel", "./array", "./lang"], function(dojo){
 		return t.sanitize();	// dojo.Color
 	};
 
-	dojo.colorFromRgb = function(/*String*/ color, /*dojo.Color?*/ obj){
+	dojo.Color.fromRgb = dojo.colorFromRgb = function(/*String*/ color, /*dojo.Color?*/ obj){
 		// summary:
 		//		Returns a `dojo.Color` instance from a string of the form
 		//		"rgb(...)" or "rgba(...)". Optionally accepts a `dojo.Color`
@@ -149,7 +157,7 @@ define(["./kernel", "./array", "./lang"], function(dojo){
 		return m && dojo.colorFromArray(m[1].split(/\s*,\s*/), obj);	// dojo.Color
 	};
 
-	dojo.colorFromHex = function(/*String*/ color, /*dojo.Color?*/ obj){
+	dojo.Color.fromHex = dojo.colorFromHex = function(/*String*/ color, /*dojo.Color?*/ obj){
 		// summary:
 		//		Converts a hex string with a '#' prefix to a color object.
 		//		Supports 12-bit #rgb shorthand. Optionally accepts a
@@ -179,7 +187,7 @@ define(["./kernel", "./array", "./lang"], function(dojo){
 		return t;	// dojo.Color
 	};
 
-	dojo.colorFromArray = function(/*Array*/ a, /*dojo.Color?*/ obj){
+	dojo.Color.fromArray = dojo.colorFromArray = function(/*Array*/ a, /*dojo.Color?*/ obj){
 		// summary:
 		//		Builds a `dojo.Color` from a 3 or 4 element array, mapping each
 		//		element in sequence to the rgb(a) values of the color.
@@ -193,7 +201,7 @@ define(["./kernel", "./array", "./lang"], function(dojo){
 		return t.sanitize();	// dojo.Color
 	};
 
-	dojo.colorFromString = function(/*String*/ str, /*dojo.Color?*/ obj){
+	dojo.Color.fromString = dojo.colorFromString = function(/*String*/ str, /*dojo.Color?*/ obj){
 		// summary:
 		//		Parses `str` for a color value. Accepts hex, rgb, and rgba
 		//		style color values.

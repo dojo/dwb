@@ -12,29 +12,26 @@ define(["dojo", "../gesture"], function(dojo, gesture){
 //		|	dojo.connect(node, dojo.gesture.tap.hold, function(e){});
 //		|	dojo.connect(node, dojo.gesture.tap.doubletap, function(e){});		
 //
-//		B. Used with dojo.listen
-//		|	define(["dojo/listen", "dojo/gesture/tap"], function(listen, tap){
-//		|		listen(node, tap, function(e){});
-//		|		listen(node, tap.hold, function(e){});
-//		|		listen(node, tap.doubletap, function(e){});
+//		B. Used with dojo.on
+//		|	define(["dojo/on", "dojo/gesture/tap"], function(on, tap){
+//		|		on(node, tap, function(e){});
+//		|		on(node, tap.hold, function(e){});
+//		|		on(node, tap.doubletap, function(e){});
 //
 //		C. Used with dojo.gesture.tap.* directly
 //		|	dojo.gesture.tap(node, function(e){});
 //		|	dojo.gesture.tap.hold(node, function(e){});
 //		|	dojo.gesture.tap.doubletap(node, function(e){});
 //
-//		Though there is always a default singleton gesture instance if required e.g. require("dojo.gesture.tap")
-//		It's possible to create a new one with different parameters to overwrite it
+//		Though there is always a default singleton gesture instance after being required, e.g 
+//		|	require(["dojo/gesture/tap"], function(){...});
+//		It's possible to unRegister it and create a new one with different parameter setting:
+//		|	dojo.gesture.unRegister(dojo.gesture.tap);
 //		|	var myTap = new dojo.gesture.tap.Tap({holdThreshold: 300});
 //		|	dojo.gesture.register(myTap);
 //		|	dojo.connect(node, myTap, function(e){});
 //		|	dojo.connect(node, myTap.hold, function(e){});
 //		|	dojo.connect(node, myTap.doubletap, function(e){});
-
-function clearTimer(timer){
-	clearTimeout(timer);
-	delete timer;
-}
 
 var clz = dojo.declare(null, {
 	
@@ -42,9 +39,7 @@ var clz = dojo.declare(null, {
 	
 	doubleTapTimeout: 250,
 	
-	tapRadius: 8,
-	
-	tapContext: {x:0,y:0,t:0,c:0},
+	tapRadius: 10,
 	
 	defaultEvent: 'tap',
 	
@@ -53,45 +48,60 @@ var clz = dojo.declare(null, {
 	constructor: function(args){
 		dojo.mixin(this, args);
 	},
-	press: function(gestureElement, e){
-		this._initTap(e);
-		clearTimer(gestureElement.tapTimeOut);
-		gestureElement.tapTimeOut = setTimeout(dojo.hitch(this, function(){
-			if(this._isTap(e)){
-				gesture.fire(gestureElement, 'tap.hold', e);
+	press: function(data, e){
+		if(e.touches && e.touches.length >= 2){
+			//tap gesture is only for single touch
+			delete data.tapContext;
+			return;
+		}
+		var target = e.currentTarget;
+		this._initTap(data, e);
+		clearTimeout(data.tapTimeOut);
+		data.tapTimeOut = setTimeout(dojo.hitch(this, function(){
+			if(this._isTap(data, e)){
+				gesture.fire(target, 'tap.hold');
 			}
-			clearTimer(gestureElement.tapTimeOut);
-			this.tapContext.t = 0;
-			this.tapContext.c = 0;
+			clearTimeout(data.tapTimeOut);
+			delete data.tapContext;
 		}), this.holdThreshold);
 	},
-	release: function(gestureElement, e){
-		switch(this.tapContext.c){
+	release: function(data, e){
+		if(!data.tapContext){
+			clearTimeout(data.tapTimeOut);
+			return;
+		}
+		switch(data.tapContext.c){
 		case 1: 
-			gesture.fire(gestureElement, 'tap', e);
+			gesture.fire(e.currentTarget, 'tap');
 			break;
 		case 2:
-			gesture.fire(gestureElement, 'tap.doubletap', e);
+			if(this._isTap(data, e)){
+				gesture.fire(e.currentTarget, 'tap.doubletap');
+			}
 			break;
 		}
-		clearTimer(gestureElement.tapTimeOut);
+		clearTimeout(data.tapTimeOut);
 	},
-	_initTap: function(e){
-		var ct = new Date().getTime();
-		if(ct - this.tapContext.t <= this.doubleTapTimeout){
-			this.tapContext.c++;
-		}else{
-			this.tapContext.c = 1;
-			this.tapContext.x = e.screenX;
-			this.tapContext.y = e.screenY;
+	_initTap: function(data, e){
+		if(!data.tapContext){
+			data.tapContext = {x: 0, y: 0, t: 0, c: 0};
 		}
-		this.tapContext.t = ct;
+		var ct = new Date().getTime();
+		if(ct - data.tapContext.t <= this.doubleTapTimeout){
+			data.tapContext.c++;
+		}else{
+			data.tapContext.c = 1;
+			data.tapContext.x = e.screenX;
+			data.tapContext.y = e.screenY;
+		}
+		data.tapContext.t = ct;
 	},
-	_isTap: function(e){
-		var dx = Math.abs(this.tapContext.x - e.screenX);
-		var dy = Math.abs(this.tapContext.y - e.screenY);
+	_isTap: function(data, e){
+		var dx = Math.abs(data.tapContext.x - e.screenX);
+		var dy = Math.abs(data.tapContext.y - e.screenY);
 		return dx <= this.tapRadius && dy <= this.tapRadius;
-	}
+	},
+	destroy: function(){}
 });
 
 //register a default singleton Tap instance

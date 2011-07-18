@@ -1,4 +1,4 @@
-define(["./main"], function(dojo) {
+define(["./_base/kernel", "./_base/html", "./_base/sniff", "./_base/window"], function(dojo) {
 	// module:
 	//		dojo/window
 	// summary:
@@ -14,8 +14,15 @@ dojo.window.getBox = function(){
 
 	// get scroll position
 	var scroll = dojo._docScroll(); // scrollRoot.scrollTop/Left should work
+
+	var uiWindow = dojo.doc.parentWindow || dojo.doc.defaultView;   // use UI window, not dojo.global window
 	// dojo.global.innerWidth||dojo.global.innerHeight is for mobile
-	return { w: dojo.global.innerWidth || scrollRoot.clientWidth, h: dojo.global.innerHeight || scrollRoot.clientHeight, l: scroll.x, t: scroll.y };
+	return {
+		l: scroll.x,
+		t: scroll.y,
+		w: uiWindow.innerWidth || scrollRoot.clientWidth,
+		h: uiWindow.innerHeight || scrollRoot.clientHeight
+	};
 };
 
 dojo.window.get = function(doc){
