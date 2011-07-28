@@ -129,14 +129,10 @@ public class BuildRequestProcessor implements Runnable {
 			amdLoaderPath = buildStatusManager.getLoaderModulePath(),
 			buildPackageLocation = buildStatusManager.getBuildModulePath();
 		
-		File dojoLocation = new File(buildRequest.getDojoLocation(), "dojo");
+		File amdLoaderParent = (new File(amdLoaderPath)).getParentFile();
 		
-		File baseLoaderPath = new File(amdLoaderPath);
-		
-		//ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), 
-		//	amdLoaderPath, dojoLocation.getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
 		ProfileBuilder profileBuilder = new ProfileBuilder(profileFile, buildRequest.getBuildResultDir(), 
-			amdLoaderPath, baseLoaderPath.getParentFile().getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
+			amdLoaderPath, amdLoaderParent.getAbsolutePath(), buildPackageLocation, buildRequest.getBuildReference());
 		
 		return profileBuilder;
 	}
@@ -216,39 +212,18 @@ public class BuildRequestProcessor implements Runnable {
 	 * @return List of files to archive
 	 */
 	protected Collection<File> extractBuildArtifactFiles() {		
-		Collection<File> artifactFiles = buildRequest.getBuildArtifactFiles(), 
-			themeFiles = new ArrayList<File>();
+		File artifactFiles = new File(buildRequest.getBuildResultArtifactsPath());		
+		Iterator<File> fileIter = FileUtils.iterateFiles(artifactFiles, null, true);		
+		Collection<File> buildArtifactFiles = new ArrayList<File>();
 		
-		// If we find a CSS artifact to be included in the build result, user
-		// has requested a theme and we need to pull in all related theme artifacts.
-		Iterator<File> iter = artifactFiles.iterator();
-		
-		while(iter.hasNext()) {
-			String artifactPath = (iter.next()).getAbsolutePath();
-			if (artifactPath.endsWith("css")) {
-				themeFiles = findAllThemeArtifacts(artifactPath);
-				break;
+		while(fileIter.hasNext()) {
+			// Ensure build-report.txt is not included....
+			File artifactFile = fileIter.next();
+			if (!artifactFile.getName().equals("build-report.txt")) {
+				buildArtifactFiles.add(fileIter.next());
 			}
 		}
-
-		artifactFiles.addAll(themeFiles);		
-		return artifactFiles;
-	}
-	
-	/**
-	 * Find all theme artifacts related to the a desired theme.
-	 * Currently this consists all a series of image files referenced
-	 * by the compacted theme's CSS file.  
-	 * 
-	 * @param path - Theme CSS file 
-	 * @return File paths that are associated with this theme
-	 */
-	protected Collection<File> findAllThemeArtifacts(String path) {		
-		// Search for all image artifacts under the parent theme
-		// directory
-		File themeParentFile = (new File(path)).getParentFile();		
-		String[] themeArtifactExtensions = new String[]{ "png", "gif" };
 		
-		return FileUtils.listFiles(themeParentFile, themeArtifactExtensions, true);
+		return buildArtifactFiles;
 	}
 }

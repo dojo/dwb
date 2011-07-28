@@ -1,4 +1,4 @@
-define(["../buildControl", "../fileUtils", "../fs"], function(bc, fileUtils, fs) {
+define(["../buildControl", "../fileUtils", "../fs", "dojo/_base/lang", "dojo/json"], function(bc, fileUtils, fs, lang, json) {
 	var
 		computingLayers
 			// the set of layers being computed; use this to detect circular layer dependencies
@@ -97,6 +97,12 @@ define(["../buildControl", "../fileUtils", "../fs"], function(bc, fileUtils, fs)
 			return text.replace(/(define\s*\(\s*)(.*)/, "$1\"" + resource.mid + "\", $2");
 		},
 
+		getCacheEntry = function(
+			pair
+		){
+			return "'" + pair[0] + "':" + pair[1];
+		},
+
 		getLayerText= function(
 			resource,
 			include,
@@ -108,8 +114,8 @@ define(["../buildControl", "../fileUtils", "../fs"], function(bc, fileUtils, fs)
 				moduleSet= computeLayerContents(resource, include, exclude);
 			for (var p in moduleSet) if(!resource || p!=resource.mid){
 				var module= moduleSet[p];
-				if (module.getPluginLayerText) {
-					pluginLayerText+= module.getPluginLayerText();
+				if (module.internStrings) {
+					cache.push(getCacheEntry(module.internStrings()));
 				} else if(module.getText){
 					cache.push("'" + p + "':function(){\n" + module.getText() + "\n}");
 				} else {
@@ -130,13 +136,13 @@ define(["../buildControl", "../fileUtils", "../fs"], function(bc, fileUtils, fs)
 		getStrings= function(
 			resource
 		){
-			var result= "";
+			var cache = [];
 			resource.deps.forEach(function(dep){
 				if(dep.internStrings){
-					result+= dep.internStrings();
+					cache.push(getCacheEntry(dep.internStrings()));
 				}
 			});
-			return result;
+			return cache.length ? "require({cache:{\n" + cache.join(",\n") + "}});\n" : "";
 		},
 
 		getDestFilename= function(resource){
@@ -148,7 +154,7 @@ define(["../buildControl", "../fileUtils", "../fs"], function(bc, fileUtils, fs)
 		},
 
 		write= function(resource, callback) {
-			fileUtils.ensureDirectoryByFilename(resource.dest);
+			//fileUtils.ensureDirectoryByFilename(resource.dest);
 			var text, copyright= "";
 			if(resource.tag.syncNls){
 				text= resource.getText();
@@ -168,9 +174,10 @@ define(["../buildControl", "../fileUtils", "../fs"], function(bc, fileUtils, fs)
 				resource.text= text;
 				copyright= resource.pack.copyright || "";
 			}
-			fs.writeFile(getDestFilename(resource), copyright + "//>>built\n" + text, resource.encoding, function(err) {
-				callback(resource, err);
-			});
+            callback(resource, null);
+		//	fs.writeFile(getDestFilename(resource), copyright + "//>>built\n" + text, resource.encoding, function(err) {
+		//		callback(resource, err);
+		//	});
 			return callback;
 		};
 		write.getLayerText= getLayerText;

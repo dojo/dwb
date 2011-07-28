@@ -81,7 +81,8 @@ define(["./buildControlBase"], function(bc) {
 				function(resource) {
 					return resource.tag.copyOnly;
 				},
-				["copy"]
+				//["copy"]
+                []
 			],[
 				// the synthetic report module
 				function(resource) {
@@ -146,7 +147,8 @@ define(["./buildControlBase"], function(bc) {
 					return false;
 				},
 				// just like regular AMD modules (the next transform job), but without a bunch of unneeded transforms
-				["writeAmd", "writeOptimized"]
+			//	["writeAmd", "writeOptimized"]
+                []
 			],[
 				// AMD module:
 				// already marked as an amd resource
@@ -159,31 +161,47 @@ define(["./buildControlBase"], function(bc) {
 					}
 					return false;
 				},
-				["read", "dojoPragmas", "hasFindAll", "hasFixup", "depsScan", "writeAmd", "writeOptimized"]
-			],[
+				//["read", "dojoPragmas", "hasFindAll", "hasFixup", "depsScan", "writeAmd", "writeOptimized"]
+				["read", "dojoPragmas", "hasFindAll", "hasFixup", "depsScan", "writeAmd"]
+			],/*[
 				// a test resource; if !bc.copyTests then the resource was filtered in the first item; otherwise, if the resource is a potential module and building tests, then it was filtered above;
 				function(resource, bc) {
 					return resource.tag.test;
 				},
 				["read", "dojoPragmas", "write"]
-			],[
+			],*/[
 				// html file; may need access contents for template interning and/or dojoPragmas; therefore, can't use copy transform
 				function(resource, bc) {
 					return /\.(html|htm)$/.test(resource.src);
 				},
-				["read", "dojoPragmas", "write"]
+				["read"]
 			],[
 				// css that are designated to compact
 				function(resource, bc) {
-					return /\.css$/.test(resource.src);
+                    if (/\.css$/.test(resource.src) && /themes\/claro/.test(resource.src)) {
+					    return true;
+                    }
+                    return false;
 				},
 				["read", "optimizeCss", "write"]
+            // Copy across all theme files...
 			],[
+                function (resource, bc) {
+                    if (/\.png$/.test(resource.src) &&  /themes\/claro/.test(resource.src)) {
+                        return true;
+                    }
+                    return false;
+                },
+                ["read", "write"]
+            ],
+            
+            [
+
 				// just copy everything else except tests which were copied above iff desired...
 				function(resource) {
 					return !resource.tag.test;
 				},
-				["copy"]
+				[]
 			]
 		]
 	};

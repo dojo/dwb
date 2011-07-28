@@ -53,7 +53,7 @@ define(["require", "dojo/has"], function(require, has) {
 		console.log("running under rhino");
 		define("commandLineArgs", [], function() {
 			var result= [];
-			require.commandLineArgs.forEach(function(item) {
+			require.rawConfig.commandLineArgs.forEach(function(item) {
 				var parts= item.split("=");
 				if (parts[0]!="baseUrl") {
 					result.push(item);
@@ -194,7 +194,7 @@ define(["require", "dojo/has"], function(require, has) {
 			}
 			if (bc.resourcesByDest[dest]) {
 				// multiple srcs scheduled to write into a single dest
-				bc.log("outputCollide", ["source1", src, "source-2", bc.resourcesByDest[dest].src]);
+				bc.log("outputCollide", ["source-1", src, "source-2", bc.resourcesByDest[dest].src]);
 				return;
 			}
 			// remember the resources in the global maps
