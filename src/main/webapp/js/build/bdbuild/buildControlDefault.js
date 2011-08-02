@@ -178,7 +178,7 @@ define(["./buildControlBase"], function(bc) {
 			],[
 				// css that are designated to compact
 				function(resource, bc) {
-                    if (/\.css$/.test(resource.src) && /themes\/claro/.test(resource.src)) {
+                    if (/\.css$/.test(resource.src) && bc.theme && resource.src.match("themes\/" + bc.theme)) {
 					    return true;
                     }
                     return false;
@@ -187,7 +187,7 @@ define(["./buildControlBase"], function(bc) {
             // Copy across all theme files...
 			],[
                 function (resource, bc) {
-                    if (/\.png$/.test(resource.src) &&  /themes\/claro/.test(resource.src)) {
+                    if (/\.png$/.test(resource.src) && bc.theme && resource.src.match("themes\/" + bc.theme)) {
                         return true;
                     }
                     return false;

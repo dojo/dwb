@@ -116,6 +116,8 @@ public class BuildRequest {
 		// all always run CSS compacting....
 		if (!"none".equals(theme)) {
 			buildProfile.put("cssOptimize", "on");
+			buildProfile.put("theme", theme);
+			
 			// Need to force reference to dijit or the theme resources won't be 
 			// copied across. 			
 			if (!containsDijitPrefix(modulePrefixes)) {				
