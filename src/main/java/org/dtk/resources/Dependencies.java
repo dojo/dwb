@@ -307,6 +307,9 @@ public class Dependencies {
 		// Store list of discovered modules within repsonse map.
 		moduleAnalysis.put("requiredDojoModules", requiredDojoModules);
 		
+		// Add discovered Dojo version
+		moduleAnalysis.put("dojoVersion", webPage.getDojoVersion().getValue());
+		
 		// Custom module list stored in temporary package
 		moduleAnalysis.put("availableModules", customModuleNames);
 		

@@ -10062,6 +10062,13 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 		var discoveredModules = this._parseDiscoveredModules(response);
 		var customPackages = response.packages || [];
 		
+		// Switch Dojo version if a known one was discovered. 
+		dojo.query(".dijitPopup .dijitCheckBoxInput[value=\"" + response.dojoVersion + "\"]").forEach(function (node) {
+			if (!dijit.byId(node.id).get("checked")) {
+				node.click();
+			}
+		});
+		
 		// Process results, try to find module description from modules store. 
 		var completed = dwb.util.Util._populateModuleDetails(this.globalModulesStore, discoveredModules);
 		
@@ -25994,32 +26001,44 @@ dojo.declare("dwb.service.Package", null, {
 
     constructor: function () {
         dojo.subscribe("dwb/package/change_to_version", dojo.hitch(this, function (pkge) {
-            var version = dojo.filter(this.packageVersionsAvailable[pkge.name], function (version) {
-                return (version.name === pkge.version);
-            })[0];
-
-            dojo.xhrGet({
-                url: version.link,
-                handleAs: "json"
-            }).then(dojo.hitch(this, function (data) {
-                // Compose meta-package object from name, version
-                // and module list. 
-                var packageInfo = {
-                    "name": pkge.name,
-                    "version": version.name,
-                    "modules": data.modules
-                };
-
-                // Replace package modules with new version
-                this.currentPackageModules = dojo.map(this.currentPackageModules, function (pkge_modules) {
-                    return (pkge_modules.name === packageInfo.name ? packageInfo : pkge_modules); 
-                });
-
-                this.packagesAndModulesAvailable(this.currentPackageModules);
-            }), this.loadingError);
-        }));
+            var version = this.findPackageVersionLink(pkge);
+        	
+            if (version !== null) {
+	            dojo.xhrGet({
+	                url: version.link,
+	                handleAs: "json"
+	            }).then(dojo.hitch(this, function (data) {
+	                // Compose meta-package object from name, version
+	                // and module list. 
+	                var packageInfo = {
+	                    "name": pkge.name,
+	                    "version": version.name,
+	                    "modules": data.modules
+	                };
+	
+	                // Replace package modules with new version
+	                this.currentPackageModules = dojo.map(this.currentPackageModules, function (pkge_modules) {
+	                    return (pkge_modules.name === packageInfo.name ? packageInfo : pkge_modules); 
+	                });
+	
+	                this.packagesAndModulesAvailable(this.currentPackageModules);
+	            }), this.loadingError);
+            }
+	    }));
     }, 
 
+    // Find the version link for this package version. 
+    // Return null if package or version details not available 
+    findPackageVersionLink: function (pkge) {
+    	var allPackageVersions = this.packageVersionsAvailable[pkge.name] || [];
+    	
+    	var version = dojo.filter(this.packageVersionsAvailable[pkge.name], function (version) {
+            return (version.name === pkge.version);
+        });
+    	
+    	return version.length > 0 ? version[0] : null;
+    },
+    
     // Start loading of the package meta-data for this endpoint 
     load: function () {
 		var d = dojo.xhrGet({
@@ -44799,12 +44818,12 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             // Set highest Dojo version as selected and show version in header
             dojo.query(".dijitRadio", this.versionDialog.domNode).at(0).forEach(function (node) {
                 dijit.byNode(node).set("checked", "true");
-                dojo.attr(dojo.byId("version_link"), "innerHTML", dijit.byNode(node).get("value")); 
+                dojo.attr("version_link", "innerHTML", dijit.byNode(node).get("value")); 
             });
 
             // Add event handlers to signal change in Dojo version when user selects...
             dojo.query("input", this.versionDialog.domNode).connect("onclick", dojo.hitch(this, function (e) {
-                dojo.attr(dojo.byId("version_link"), "innerHTML", e.target.value); 
+            	dojo.attr("version_link", "innerHTML", e.target.value);
                 dojo.publish("dwb/package/change_to_version", [ 
                     { "name": "dojo", "version": e.target.value }
                 ]);
@@ -45055,7 +45074,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             }
         }));
     },
-
+    
     addHoverMenu: function (dialog, link_name) {
         var link = dojo.byId(link_name);
         this.connect(link, "onmouseover", dojo.hitch(this, dojo.hitch(function (e) {
