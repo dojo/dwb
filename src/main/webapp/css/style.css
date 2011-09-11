@@ -633,8 +633,6 @@ body.claro {
     width: 28px;
 }
 
-
-
 /* Tooltip dialogs used to change Dojo version and display mode */
 
 
@@ -650,7 +648,6 @@ body.claro {
     float: right;
 }
 
-
 /* Used to cover screen while application is loading. */
 #preloader {
   width:100%; height:100%; margin:0; padding:0;
@@ -664,15 +661,8 @@ body.claro {
 	display: none;
 }
 
-/* Used to cover screen while application is loading. */
-#preloader {
-  width:100%; height:100%; margin:0; padding:0;
-  background:#fff url("../js/release/dojox/image/resources/images/loading.gif") no-repeat center center;
-  position:absolute;
-  z-index:900;
-}
-
-/* Utility class to hide element */
-.hidden {
-	display: none;
+@media all and (max-width: 1090px) {
+	.github {
+		display: none;
+	}
 }
