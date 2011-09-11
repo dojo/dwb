@@ -18,6 +18,7 @@ public class DojoScriptVersions {
 	 * whose version we don't support and invalid dojo scripts.
 	 */
 	public enum Versions {
+		ONE_SIX_ONE("1.6.1"),
 		ONE_SIX_ZERO("1.6.0"),
 		ONE_FIVE_ZERO("1.5.0"),
 		ONE_FOUR_THREE("1.4.3"),
@@ -40,6 +41,10 @@ public class DojoScriptVersions {
 
 	static {
 		Map<String, Versions> map = new HashMap<String, Versions>();
+		/** **/
+		/** Local, Compressed */
+		map.put("56042852b70bc32c64634c7af64f25d3", Versions.ONE_SIX_ONE);
+		
 		/** Dojo Toolkit 1.6.0 **/   	
 		/** Local, Source */
 		map.put("3a4681ac7cc73ce89c7a29e3027f0195", Versions.ONE_SIX_ZERO);

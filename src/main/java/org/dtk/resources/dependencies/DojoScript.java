@@ -136,8 +136,13 @@ public class DojoScript {
 	 * @return Script contents 
 	 * @throws ParseException - Failed to retrieve contents.
 	 */
-	protected byte[] getScriptSource() throws ParseException {
-		byte[] scriptSource = new byte[0];	
+	protected byte[] getScriptSource() throws ParseException {				
+		if ("".equals(scriptLocation.toString())) {
+			return new byte[0];
+		}
+		
+		byte[] scriptSource = new byte[0];			
+		
 		try {
 			HttpGet httpget = new HttpGet(scriptLocation);
 			HttpResponse response = client.execute(httpget);
