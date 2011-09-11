@@ -156,6 +156,23 @@ dojo.declare("dwb.ui.AutoAnalysisModuleTab", [dwb.ui.ModuleTab], {
 		var discoveredModules = this._parseDiscoveredModules(response);
 		var customPackages = response.packages || [];
 		
+		var majorVersion = function (fullVersion) {
+			var versionNumbers = fullVersion.split(".");
+			versionNumbers.pop();
+			return versionNumbers.join(".");
+		};
+		
+		var respMajorVersion = majorVersion(response.dojoVersion);
+		
+		// Switch Dojo version if a known one was discovered, we only matching 
+		// on major versions!
+		dojo.query(".dijitPopup .dijitCheckBoxInput").forEach(function (node) {
+			if (respMajorVersion == majorVersion(node.value) 
+				&& !dijit.byId(node.id).get("checked")) {
+				node.click();
+			}
+		});
+		
 		// Process results, try to find module description from modules store. 
 		var completed = dwb.util.Util._populateModuleDetails(this.globalModulesStore, discoveredModules);
 		

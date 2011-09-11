@@ -1,6 +1,8 @@
 package org.dtk.resources.dependencies;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +21,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.dtk.resources.dependencies.DojoScriptVersions.Versions;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -35,6 +38,8 @@ public class WebPage {
 	protected List<String> modules = new ArrayList<String>();
 	protected Map<String, String> customModuleContent = new HashMap<String, String>();
 
+	protected Versions dojoVersion = Versions.UNKNOWN;
+	
 	// When analysing a static HTML file, we can't access source for any custom modules requires.
 	// Just ignore these references and carry on...
 	protected boolean ignoreCustomModules = false;
@@ -43,9 +48,10 @@ public class WebPage {
 
 	protected static final Pattern dtkModulePrefixPattern = Pattern.compile(dtkModulePrefixPatternStr);
 
-	protected static final String dojoScriptPatternStr = "^dojo(.)*\\.js$";
-
-	protected static final Pattern dojoScriptPattern = Pattern.compile(dojoScriptPatternStr);
+	/** Regular expression used to match module path attributes in user's djConfig variable */
+	protected static final String regexPattern = "modulePaths:\\s*(\\{.*\\})";		
+	
+	protected static final Pattern modulePathsPattern = Pattern.compile(regexPattern);
 
 	public WebPage(URL location) throws IOException {
 		this.document = Jsoup.connect(location.toString()).get();	
@@ -58,7 +64,6 @@ public class WebPage {
 
 	public boolean parse() {
 		boolean parsed = false;
-		boolean parsedDojoCore = false;
 
 		// If parsing fails, log causing exception and return false
 		// to callee. This may be due to malformed source content or
@@ -69,8 +74,8 @@ public class WebPage {
 			for (Element scriptTag: scriptTags) {
 				// Before we've found Dojo, just look for djConfig 
 				// variable and actual Dojo script. 
-				if (!parsedDojoCore) {
-					parsedDojoCore = parsePreDojoScript(scriptTag);
+				if (dojoVersion.equals(Versions.UNKNOWN)) {
+					parsePreDojoScript(scriptTag);
 				} else {
 					parsePostDojoScript(scriptTag);
 				}
@@ -82,6 +87,10 @@ public class WebPage {
 		} catch (IOException ioe) {
 			this.parsingFailure = ioe;
 		} catch (EvaluatorException ee) {
+			this.parsingFailure = ee;
+		} catch (URISyntaxException ee) {
+			this.parsingFailure = ee;	
+		} catch (org.dtk.exception.ParseException ee) {
 			this.parsingFailure = ee;
 		}
 
@@ -180,19 +189,33 @@ public class WebPage {
 		return moduleLocation;
 	}
 
-	protected boolean parsePreDojoScript(Element script) throws ParseException, IOException {
-		boolean parsedDojoScript = false;
+	/**
+	 * Parse page script tag before we have identified Dojo script. This may be Dojo script
+	 * tag or another JS source file. Attempt to determine if script is Dojo, with exact version,
+	 * otherwise check for djConfig. 
+	 * 
+	 * @param script - Page script
+	 * @throws ParseException
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 * @throws org.dtk.exception.ParseException
+	 */
+	protected void parsePreDojoScript(Element script) throws ParseException, IOException, 
+		URISyntaxException, org.dtk.exception.ParseException {
+		
+		DojoScript pageScript = new DojoScript(new URI(script.attr("abs:src")), new DefaultHttpClient());
+
+		// Detect whether script is Dojo 
+		Versions dojoVersionDetected = pageScript.getVersion();
 
 		// Check if script is dojo, otherwise analyse for
 		// module path definitions
-		if (isDojoScript(script.attr("abs:src"))) {
-			parseModulePaths(script);
-			parsedDojoScript = true;
-		} else {
+		if(Versions.INVALID.equals(dojoVersionDetected)) {
 			parseDjConfig(script);
+		} else {
+			parseModulePaths(script);
+			dojoVersion = dojoVersionDetected;
 		}
-
-		return parsedDojoScript;
 	}
 
 	// Parse all JavaScript files for djConfig definitions. 
@@ -254,21 +277,6 @@ public class WebPage {
 					 this.modulePaths.put((String) moduleId, thisModulePath);
 				 }
 			} 			
-	}
-	
-	protected boolean isDojoScript(String scriptLocation) {
-		boolean isDojoScript = false;
-
-		if (scriptLocation != null) {
-			String scriptName = extractScriptFileName(scriptLocation);
-			Matcher match = dojoScriptPattern.matcher(scriptName);
-
-			if (match.find()) {
-				isDojoScript = true;
-			}
-		}
-
-		return isDojoScript;
 	}
 
 	/**
@@ -355,6 +363,10 @@ public class WebPage {
 		}	
 	}
 
+	public Versions getDojoVersion() {
+		return dojoVersion;
+	}
+	
 	public List<String> getModules() {
 		return this.modules;
 	}

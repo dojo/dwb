@@ -476,12 +476,12 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             // Set highest Dojo version as selected and show version in header
             dojo.query(".dijitRadio", this.versionDialog.domNode).at(0).forEach(function (node) {
                 dijit.byNode(node).set("checked", "true");
-                dojo.attr(dojo.byId("version_link"), "innerHTML", dijit.byNode(node).get("value")); 
+                dojo.attr("version_link", "innerHTML", dijit.byNode(node).get("value")); 
             });
 
             // Add event handlers to signal change in Dojo version when user selects...
             dojo.query("input", this.versionDialog.domNode).connect("onclick", dojo.hitch(this, function (e) {
-                dojo.attr(dojo.byId("version_link"), "innerHTML", e.target.value); 
+            	dojo.attr("version_link", "innerHTML", e.target.value);
                 dojo.publish("dwb/package/change_to_version", [ 
                     { "name": "dojo", "version": e.target.value }
                 ]);
@@ -732,7 +732,7 @@ dojo.declare("dwb.Main", dwb.Main._base, {
             }
         }));
     },
-
+    
     addHoverMenu: function (dialog, link_name) {
         var link = dojo.byId(link_name);
         this.connect(link, "onmouseover", dojo.hitch(this, dojo.hitch(function (e) {
