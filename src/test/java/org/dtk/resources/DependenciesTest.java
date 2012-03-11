@@ -269,10 +269,12 @@ public class DependenciesTest {
 		
 		// Compare lists of dojo.require() modules that were contained within the test
 		// application we submitted. 
-		assertEquals(Arrays.asList("dijit.form.FilteringSelect","web_builder.app","dojo.back",
-			"web_builder.child","web_builder.util.util","dijit.form.Button","dijit.form.Form",
-			"dojo.parser"),
+		assertEquals(Arrays.asList("dijit.form.FilteringSelect","dojo.back", "dijit.form.Button",
+			"dijit.form.Form", "dojo.parser"),
 			jsonResponse.get("requiredDojoModules"));
+		
+		assertEquals(Arrays.asList("web_builder.util.util", "web_builder.child", "web_builder.app"),
+			jsonResponse.get("availableModules"));
 		
 		// Response should also contain a single entry in the temporary packages object for 
 		// the "web_builder" modules. This is the temporary package reference. 

@@ -142,7 +142,7 @@ public class DojoScript {
 		}
 		
 		byte[] scriptSource = new byte[0];			
-		
+
 		try {
 			HttpGet httpget = new HttpGet(scriptLocation);
 			HttpResponse response = client.execute(httpget);
