@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,7 +25,6 @@ import org.dtk.resources.dependencies.WebPage;
 import org.dtk.resources.exceptions.ConfigurationException;
 import org.dtk.resources.exceptions.IncorrectParameterException;
 import org.dtk.resources.packages.PackageRepository;
-import org.dtk.util.ContextListener;
 import org.dtk.util.FileUtil;
 import org.dtk.util.HttpUtil;
 import org.dtk.util.JsonUtil;
@@ -242,6 +240,8 @@ public class Dependencies {
 			throw new IncorrectParameterException(incorrectUrlErrorText);
 		} catch (IOException e) {
 			throw new IncorrectParameterException(incorrectUrlErrorText);
+		} catch (IllegalArgumentException e) {
+            throw new IncorrectParameterException(incorrectUrlErrorText);
 		}
 	}
 

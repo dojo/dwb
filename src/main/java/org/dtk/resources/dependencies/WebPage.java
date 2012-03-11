@@ -257,26 +257,26 @@ public class WebPage {
 	 * @param djConfigAttr - djConfig script tag attribute
 	 */
 	protected void parseDjConfigModulePaths(String djConfigAttr) {
-			// Use Rhino to evaluate choice instead of parsing manually with
-			// brittle regular expressions. Assign object to variable and return 
-			// result from script.
-			String djConfigObject = "var djconfig = {";
-			djConfigObject += djConfigAttr;
-			djConfigObject += "}; djconfig";
+		// Use Rhino to evaluate choice instead of parsing manually with
+		// brittle regular expressions. Assign object to variable and return 
+		// result from script.
+		String djConfigObject = "var djconfig = {";
+		djConfigObject += djConfigAttr;
+		djConfigObject += "}; djconfig";
 
-			org.mozilla.javascript.Context cx = ContextFactory.getGlobal().enterContext();
-			Scriptable scope = cx.initStandardObjects();			       
-			NativeObject result = (NativeObject) cx.evaluateString(scope, djConfigObject, "modulePaths.js", 1, null);
+		org.mozilla.javascript.Context cx = ContextFactory.getGlobal().enterContext();
+		Scriptable scope = cx.initStandardObjects();			       
+		NativeObject result = (NativeObject) cx.evaluateString(scope, djConfigObject, "modulePaths.js", 1, null);
 
-			// Check for presence of the djConfig attribute and pull out user-defined modules
-			// paths.
-			if (result.has("modulePaths", scope)) {
-				 NativeObject userModulePaths = (NativeObject) result.get("modulePaths", scope);
-				 for(Object moduleId: userModulePaths.getAllIds()) {
-					 String thisModulePath = (String) userModulePaths.get((String) moduleId, scope);
-					 this.modulePaths.put((String) moduleId, thisModulePath);
-				 }
-			} 			
+		// Check for presence of the djConfig attribute and pull out user-defined modules
+		// paths.
+		if (result.has("modulePaths", scope)) {
+			NativeObject userModulePaths = (NativeObject) result.get("modulePaths", scope);
+			for(Object moduleId: userModulePaths.getAllIds()) {
+				String thisModulePath = (String) userModulePaths.get((String) moduleId, scope);
+				this.modulePaths.put((String) moduleId, thisModulePath);
+			}
+		} 			
 	}
 
 	/**

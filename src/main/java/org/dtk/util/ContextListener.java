@@ -34,14 +34,20 @@ public class ContextListener implements ServletContextListener {
 	/** System property for fixed build result cache path */
 	protected static final String cachePathParam = "cachepath";
 
+	/** User property to override default location for package repository */
+	protected static final String packageRepoPathParam = "packagespath";
+	
 	/** Relative path to custom Dojo build script */
-	protected static final String buildScriptsDirParam = "/js/build/";
+	protected static final String buildModulePathParam = "/js/build/bdbuild/";
 
+	/** Relative path to custom Dojo build script */
+	protected static final String loaderModulePathParam = "/js/build/amd_loader/dojo.js";
+	
 	/** Relative path to custom build parameters configuration */
 	protected static final String buildParametersConfig = "/WEB-INF/config/build_options.json";
 
-	/** Relative directory path for package details */
-	protected static final String packageRepoPath = "/WEB-INF/config/packages/";
+	/** Relative directory path for default package details directory */
+	protected static final String defaultPackageRepoPath = "/WEB-INF/config/packages/";
 	
 	/** Class loggers which should be logged to a file **/
 	protected static final List<String> fileLoggingClasses = Arrays.asList(
@@ -80,9 +86,13 @@ public class ContextListener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent contextEvent) {
 		currentContext = contextEvent.getServletContext();
 		
+		// Check for user configuration overrides to cache and package
+		// directories
 		String cachePath = getCacheDirectoryPath();
-		String packagePath = currentContext.getRealPath(packageRepoPath);
-		String buildScriptsDir = currentContext.getRealPath(buildScriptsDirParam);
+		String packagePath = getPackageRepoPath();
+		
+		String builderModulePath = currentContext.getRealPath(buildModulePathParam);
+		String loaderModulePath = currentContext.getRealPath(loaderModulePathParam);
 
 		PackageRepository packageRepo = PackageRepository.getInstance();
 		packageRepo.setPackageBaseLocation(packagePath);
@@ -90,7 +100,8 @@ public class ContextListener implements ServletContextListener {
 		
 		BuildStatusManager buildStatusManager = BuildStatusManager.getInstance();
 		buildStatusManager.setBuildResultCachePath(cachePath);
-		buildStatusManager.setBuildScriptsDir(buildScriptsDir);
+		buildStatusManager.setBuildModulePath(builderModulePath);
+		buildStatusManager.setLoaderModulePath(loaderModulePath);
 		
 		// Add file handlers to certain class loggers
 		initialiseLoggingHandlers();
@@ -120,12 +131,12 @@ public class ContextListener implements ServletContextListener {
     /**
      * Retrieve the cache directory for build results. By default, create a new temporary
      * directory to hold the build results unless the user has manually specified the location
-     * using the context parameter property or system property, dwb.cachepath.
+     * using the context parameter property or system property, cachepath.
      * 
      * @return Directory path for built result cache
      */
     protected String getCacheDirectoryPath() {
-    	String dirPath = getUsersCachePathParam();
+    	String dirPath = lookupUsersConfigParam(cachePathParam);
 
     	// If parameter wasn't specified or it's an empty string, create a new temporary
     	// cache path.
@@ -138,9 +149,8 @@ public class ContextListener implements ServletContextListener {
 			}
 		} 
     	
-		// Sanity check the path value to ensure it exists and is a directory.
-		File dirPathFile = new File(dirPath);
-		if (!dirPathFile.exists() || !dirPathFile.isDirectory()) {
+		// Sanity check the path value to ensure it exists and is a directory.		
+		if (!isValidDirectory(dirPath)) {
 			throw new NullPointerException("Cache path, "+ dirPath +", does not exist or is not a directory.");
 		}
 		
@@ -148,24 +158,65 @@ public class ContextListener implements ServletContextListener {
     }
     
     /**
-     * Access user configurable cache path parameter. Check local
-     * application context param, and if missing global system properties, 
-     * for "dwb.cachepath". 
+     * Retrieve the directory path for the package repository. This value 
+     * may be overridden by the user, if missing we fall back to a local default
+     * value, packages_path, as a init or system parameter.
+     * 
+     * Value will be checked to ensure it's an actual directory and errors 
+     * thrown if not.
+     * 
+     * @return Directory path to package repository  
+     */
+    protected String getPackageRepoPath() {
+    	String dirPath = lookupUsersConfigParam(packageRepoPathParam);
+    	
+    	// If user hasn't given a path, use default 
+    	if (isParameterMissing(dirPath)) {
+    		dirPath = currentContext.getRealPath(defaultPackageRepoPath);
+    	} 
+    	
+    	if (!isValidDirectory(dirPath)) {
+    		throw new NullPointerException("Packages path, "+ dirPath +", does not exist or is not a directory.");
+    	}    		
+    	
+    	return dirPath;
+    }
+    
+    /**
+     * Look up a user configurable parameter value. 
+     * 
+     * Properties are resolved as init parameters in the local application context, 
+     * failing back to system properties if missing no value was found. 
+     * 
+     * We also resolve environment variables here in case these are included in
+     * the path string.
      * 
      * @return User's cache path parameter if available
      */
-    protected String getUsersCachePathParam() {
-		String dirPath = currentContext.getInitParameter(cachePathParam);
+    protected String lookupUsersConfigParam(String configParamName) {
+		String configParam = currentContext.getInitParameter(configParamName);
 		
-		if (isParameterMissing(dirPath)) {
-			dirPath = System.getProperty(cachePathParam);
+		if (isParameterMissing(configParam)) {
+			configParam = System.getProperty(configParamName);
 		}
 		
-		// Resolve environment variables in user's path to 
-		// actual locations.
-		dirPath = FileUtil.resolveEnvironmentVariables(dirPath);
+		// Resolve environment variables in user's parameter to 
+		// actual values.
+		configParam = FileUtil.resolveEnvironmentVariables(configParam);
 		
-    	return dirPath;
+    	return configParam;
+    }    
+    
+    /**
+     * Confirm the path parameter points to an existing directory
+     * on the system.
+     * 
+     * @param dirPath - Path to directory 
+     * @return Path is a valid directory 
+     */
+    protected boolean isValidDirectory(String dirPath) {
+		File dirPathFile = new File(dirPath);		
+		return (dirPathFile.exists() && dirPathFile.isDirectory());
     }
     
     /**

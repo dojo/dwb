@@ -41,10 +41,10 @@ public class DojoScriptVersions {
 
 	static {
 		Map<String, Versions> map = new HashMap<String, Versions>();
-		/** **/
+		/** Dojo Toolkit 1.6.1 **/
 		/** Local, Compressed */
-		map.put("56042852b70bc32c64634c7af64f25d3", Versions.ONE_SIX_ONE);
-		
+		map.put("56042852b70bc32c64634c7af64f25d3", Versions.ONE_SIX_ONE);		
+
 		/** Dojo Toolkit 1.6.0 **/   	
 		/** Local, Source */
 		map.put("3a4681ac7cc73ce89c7a29e3027f0195", Versions.ONE_SIX_ZERO);

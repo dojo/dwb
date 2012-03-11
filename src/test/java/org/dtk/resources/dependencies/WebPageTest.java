@@ -47,6 +47,7 @@ public class WebPageTest {
 			"jellard.widgets.DateTextBox",
 			"dijit.TitlePane",
 			"dojox.grid.DataGrid",
+			"dojox.charting.Chart2D",
 			"dojo.data.ItemFileWriteStore",
 	        "dijit.form.Form",
 	        "dijit.form.Button",

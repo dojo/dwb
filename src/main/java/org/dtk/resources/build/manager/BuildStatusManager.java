@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 
-import org.dtk.resources.build.BuildProcess;
+import org.dtk.resources.build.BuildRequestProcessor;
 import org.dtk.resources.build.BuildRequest;
 import org.dtk.resources.exceptions.MissingResourceException;
 
@@ -37,11 +37,11 @@ public final class BuildStatusManager {
 	/** Directory containing cached build results */
 	protected String buildResultCachePath;
 	
-	/** Full path for main build script */
-	protected String buildScriptPath;
+	/** AMD build module location */
+	protected String buildModulePath;
 	
-	/** Directory containing local build scripts */
-	protected String buildScriptsDir;
+	/** AMD loader module location */
+	protected String loaderModulePath;
 	
 	/**
 	 * Private constructor to enforce singleton pattern.
@@ -74,9 +74,6 @@ public final class BuildStatusManager {
 		// Retrieve unique identifier for this build request, 
 		// just a digest of the parameters
 		String reference = buildRequest.getBuildReference();
-		
-		// Holds next build state for the current request
-		
 		
 		// Does a build need scheduling for the current request?
 		boolean scheduleBuild = false;
@@ -141,7 +138,7 @@ public final class BuildStatusManager {
 		// Code will go here to kick off new build thread, running
 		// in the background. When thread completes, it'll change
 		// the state to FINISHED or FAILED.
-		BuildProcess t = new BuildProcess(buildRequest);
+		BuildRequestProcessor t = new BuildRequestProcessor(buildRequest);
 		new Thread(t).start();
 	}
 	
@@ -315,36 +312,41 @@ public final class BuildStatusManager {
 	public String getBuildResultCachePath() {
 		return this.buildResultCachePath;
 	}
-	
+
 	/**
-	 * Get the absolute file path for the build script.
+	 * Set the build module's path directory. 
 	 * 
-	 * @return Build script path
+	 * @param buildModulesPathDir - Build modules path dir 
 	 */
-	public String getBuildScriptPath() {
-		return this.buildScriptPath;
+	public void setBuildModulePath(String buildModulePath) {
+		this.buildModulePath= buildModulePath;
 	}
 	
 	/**
-	 * Get the full path for the directory containing
-	 * the build scripts.
+	 * Get the location to the build module
 	 * 
-	 * @return Build scripts directory path
+	 * @return Build module path directory
 	 */
-	public String getBuildScriptsDir() {
-		return this.buildScriptsDir;
+	public String getBuildModulePath() {
+		return this.buildModulePath;
 	}
 	
 	/**
+	 * Set the AMD loader module's path directory. 
 	 * 
-	 * @param buildScriptsDir
+	 * @param loaderModulePathDir - Loader modules path dir 
 	 */
-	public void setBuildScriptsDir(String buildScriptsDir) {
-		this.buildScriptsDir = buildScriptsDir;
-		// Now derive the full path for the build script
-		// from the absolute scripts path and build file name.
-		File buildScript = (new File(this.buildScriptsDir, this.buildScriptName));
-		this.buildScriptPath = buildScript.getAbsolutePath();
+	public void setLoaderModulePath(String loaderModulePath) {
+		this.loaderModulePath = loaderModulePath;
+	}
+	
+	/**
+	 * Get the location to the AMD loader module
+	 * 
+	 * @return AMD loader module path directory
+	 */
+	public String getLoaderModulePath() {
+		return this.loaderModulePath;
 	}
 	
 	/**
