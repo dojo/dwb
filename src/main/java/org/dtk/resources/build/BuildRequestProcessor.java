@@ -220,7 +220,7 @@ public class BuildRequestProcessor implements Runnable {
 			// Ensure build-report.txt is not included....
 			File artifactFile = fileIter.next();
 			if (!artifactFile.getName().equals("build-report.txt")) {
-				buildArtifactFiles.add(fileIter.next());
+				buildArtifactFiles.add(artifactFile);
 			}
 		}
 		

@@ -52,8 +52,7 @@ public class WebPage {
 	protected static final String regexPattern = "modulePaths:\\s*(\\{.*\\})";		
 	
 	protected static final Pattern modulePathsPattern = Pattern.compile(regexPattern);
-	
-	
+
 	public WebPage(URL location) throws IOException {
 		this.document = Jsoup.connect(location.toString()).get();	
 	}
@@ -250,29 +249,55 @@ public class WebPage {
 		return scriptPath.substring(0, baseParentPath);
 	}
 
+	/**
+	 * Update this page's Dojo module paths by parsing 
+	 * the djConfig attribute on the script tag which includes
+	 * Dojo.  
+	 * 
+	 * @param djConfigAttr - djConfig script tag attribute
+	 */
 	protected void parseDjConfigModulePaths(String djConfigAttr) {
-		Matcher modulePathsMatcher = modulePathsPattern.matcher(djConfigAttr);
-		
-		if (modulePathsMatcher.find()) {			
-			// Use Rhino to evaluate choice instead of parsing manually with
-			// brittle regular expressions. Assign object to variable and return 
-			// result from script.
-			String modulePathsScript = "var mp = ";
-			modulePathsScript += modulePathsMatcher.group(1); 
-			modulePathsScript += "; mp";
+		// Use Rhino to evaluate choice instead of parsing manually with
+		// brittle regular expressions. Assign object to variable and return 
+		// result from script.
+		String djConfigObject = "var djconfig = {";
+		djConfigObject += djConfigAttr;
+		djConfigObject += "}; djconfig";
 
-			org.mozilla.javascript.Context cx = ContextFactory.getGlobal().enterContext();
-			Scriptable scope = cx.initStandardObjects();			       
-			NativeObject result = (NativeObject) cx.evaluateString(scope, modulePathsScript, "modulePaths.js", 1, null);
+		org.mozilla.javascript.Context cx = ContextFactory.getGlobal().enterContext();
+		Scriptable scope = cx.initStandardObjects();			       
+		NativeObject result = (NativeObject) cx.evaluateString(scope, djConfigObject, "modulePaths.js", 1, null);
 
-			Object[] ids = result.getAllIds();
-			for(Object moduleId: ids) {
-				String modulePath = (String) result.get((String) moduleId, null);
-				this.modulePaths.put((String) moduleId, modulePath);
+		// Check for presence of the djConfig attribute and pull out user-defined modules
+		// paths.
+		if (result.has("modulePaths", scope)) {
+			NativeObject userModulePaths = (NativeObject) result.get("modulePaths", scope);
+			for(Object moduleId: userModulePaths.getAllIds()) {
+				String thisModulePath = (String) userModulePaths.get((String) moduleId, scope);
+				this.modulePaths.put((String) moduleId, thisModulePath);
 			}
-		}
+		} 			
 	}
 
+	/**
+	 * 
+	 * @param scriptPath
+	 * @return
+	 */
+	protected String extractScriptFileName(String scriptPath) {
+		// Strip off any query parameters, used for versioning 
+		// scripts to override local cache 
+		if (scriptPath.contains("?")) {
+			scriptPath = scriptPath.substring(0, scriptPath.indexOf('?'));
+		}
+		
+		// 
+		String[] scriptSourcePaths = scriptPath.split("/");
+
+		// Find actual script name from URI path 
+		return scriptSourcePaths[scriptSourcePaths.length - 1];
+	}
+	
 	/**
 	 * Extract complete script contents and search through
  	 * for any dojo.require calls. 

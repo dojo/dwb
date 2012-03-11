@@ -60,7 +60,9 @@ public class WebPageTest {
 	        "dijit.Dialog",
 	        "dijit.Menu",
 	        "dijit.form.DropDownButton",
-	        "dijit.form.ComboBox"));
+	        "dijit.form.ComboBox",
+	        "dojox.charting.Chart2D",
+	        "dijit.Editor"));
 		put(CUSTOM_MODULES, Arrays.asList(
 			"jellard.widgets.TabContainerIntelligentClose",
 			"jellard.widgets.DateTextBox"));
