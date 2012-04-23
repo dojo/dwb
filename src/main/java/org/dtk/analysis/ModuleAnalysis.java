@@ -19,7 +19,7 @@ public interface ModuleAnalysis {
 	 * implementing resource source material. Modules identified are organised
 	 * by their respective packages. 
 	 * 
-	 * @return Map of packages -> module identifers discovered during analysis
+	 * @return Map of packages -> module identifiers discovered during analysis
 	 * @throws FatalErrorPerformingAnalysis - Unable to perform analysis, internal 
 	 * error prevented module discovery from completing
 	 */
