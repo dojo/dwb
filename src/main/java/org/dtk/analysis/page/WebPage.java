@@ -64,7 +64,7 @@ public abstract class WebPage implements ModuleAnalysis {
 	 *  
 	 * @param document - Parsed HTML source for page
 	 */
-	public WebPage(Document document) {
+	protected WebPage(Document document) {
 		this.document = document;
 		parse();
 	}
@@ -100,7 +100,7 @@ public abstract class WebPage implements ModuleAnalysis {
 	 * @param script - Script tag for identifier
 	 * @return Absolute module identifier
 	 */
-	abstract protected String getAbsoluteModuleIdentifer(String moduleIdentifer, Element script);	
+	abstract protected String getAbsoluteModuleIdentifier(String moduleIdentifer, Element script);	
 	
 	/**
 	 * Return package identifier for this module.
@@ -146,7 +146,9 @@ public abstract class WebPage implements ModuleAnalysis {
 	protected void parsePreDojoScript(Element script) {
 		if (isDojoScript(script)) {
 			parsePhase = ParsePhase.POST_DOJO;
-		}			
+			// Is AMD script? - Must parse djConfig.....
+			// TODO: 
+		}		
 	}	
 	
 	/**
@@ -165,7 +167,7 @@ public abstract class WebPage implements ModuleAnalysis {
 			List<String> moduleDependencies = analyseModuleDependencies(scriptContents);
 			
 			for(String moduleIdentifier: moduleDependencies) {
-				 String absoluteModuleIdentifier = getAbsoluteModuleIdentifer(moduleIdentifier, script),
+				 String absoluteModuleIdentifier = getAbsoluteModuleIdentifier(moduleIdentifier, script),
 				 	packageName = getPackageIdentifier(absoluteModuleIdentifier);
 				 			 
 				 updateDiscoveredModules(packageName, absoluteModuleIdentifier);			 
@@ -247,10 +249,11 @@ public abstract class WebPage implements ModuleAnalysis {
 	
 	/**
 	 * Return all the document scripts within the web page.
+	 * Empty list returned if document has none.
 	 * 
 	 * @return List of script tags
 	 */
 	protected Elements findAllScriptTags () {
-		return this.document.getElementsByTag("script");
+		return this.document.getElementsByTag("script");		
 	}
 }
