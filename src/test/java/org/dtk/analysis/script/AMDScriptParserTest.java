@@ -93,4 +93,11 @@ public class AMDScriptParserTest {
 		assertEquals(Arrays.asList("some/module/id", "another/module/id"), 
 			getScriptDeps("define('this/module/id', ['some/module/id', 'another/module/id'], function () {});"));
 	}	
+	
+	@Test 
+	public void detectCJSCompatibleRequireCallWrappedWithinDefine() {
+		assertEquals(Arrays.asList("some/module/id", "another/module/id"), 
+			getScriptDeps("define(function (require, exports, module) " +
+				"{ var a = require('some/module/id'), b = require('another/module/id')});"));		
+	}
 }
