@@ -1,6 +1,8 @@
 package org.dtk.analysis.script;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.dtk.resources.dependencies.ScriptParserErrorReporter;
@@ -144,21 +146,43 @@ public abstract class BaseScriptParser {
 	 * @param argIndex - Argument index to access
 	 * @return String argument value, null if not available or not a string.
 	 */
-	protected String functionCallArgument(Node functionCallNodes, int argIndex) {
+	protected String getFnCallArgumentStr(Node fnCallNode, int argIndex) {
 		String fnCallArg = null;
+		Node argument = getFnCallArgument(fnCallNode, argIndex);
 		
-		Node argument = functionCallNodes.getNext();
-		while (argument != null && argIndex > 0) {
-			argument = argument.getNext();
-			argIndex--;
-		};
-		
-		// Check we have a simple type value.
-		if (argument != null && argument.getType() == Token.STRING) {
-			fnCallArg = argument.getString();
+		if (argument != null) {
+			fnCallArg = getStringNodeLabel(argument);				
 		}
 		
 		return fnCallArg;
+	}
+	
+	/**
+	 * Return raw AST node corresponding to function call parameter at 
+	 * given index. If parameter isn't available, null value returned. 
+	 * 
+	 * @param fnCallNode - AST nodes containing function arguments
+	 * @param argIndex - Argument index to retrieve
+	 * @return Argument node, null if not found
+	 */
+	protected Node getFnCallArgument(Node fnCallNode, int argIndex) {
+		Node argument = fnCallNode.getNext();
+		while (argument != null && argIndex > 0) {
+			argument = argument.getNext();
+			argIndex--;
+		};		
+		
+		return argument;
+	}
+	
+	/**
+	 * Return string label name for a function node.
+	 * 
+	 * @param fnNode - Function node
+	 * @return Label string, null if node found.
+	 */
+	protected String getFunctionName(Node fnNode) {		
+		return getStringNodeLabel(fnNode.getFirstChild());		
 	}
 	
 	/**
@@ -167,19 +191,52 @@ public abstract class BaseScriptParser {
 	 * @param propertyLookup - Function reference to search
 	 * @return Function property name, null if value not found or not a string.
 	 */
-	protected String functionPropertyName(Node propertyLookup) {
-		String propertyName = null;
-		
+	protected String getFunctionPropertyName(Node propertyLookup) {
+		String propertyName = null;		
 		Node objectReference = propertyLookup.getFirstChild();
 		
 		if (objectReference != null) {
-			Node propertyNameNode = objectReference.getNext();
-		
-			if (propertyNameNode != null && propertyNameNode.getType() == Token.STRING) {
-				propertyName = propertyNameNode.getString();
-			}
+			propertyName = getStringNodeLabel(objectReference.getNext());
 		}
 		
 		return propertyName;
+	}
+
+	/**
+	 * Return string labels for all child nodes for the parent 
+	 * node that are either a Token.STRING or Token.NAME. 
+	 *  
+	 * @param node - Parent node 
+	 * @return Available string labels for child nodes
+	 */
+	protected List<String> getNodeStringChildren(Node node) {
+		List<String> childStrings = new ArrayList<String>();
+		Node child = node.getFirstChild();
+		
+		while (child != null) {			
+			String nodeLabel = getStringNodeLabel(child);
+			if (nodeLabel != null) {
+				childStrings.add(nodeLabel);
+			}
+			child = child.getNext();
+		};		
+		
+		return childStrings;
+	}
+	
+	/**
+	 * Return label identifier for a string node.
+	 * 
+	 * @param strNode - Node to retrieve label for. 
+	 * @return Label string node
+	 */
+	protected String getStringNodeLabel(Node strNode) {
+		String strNodeLabel = null;
+		
+		if (strNode != null && (strNode.getType() == Token.STRING || strNode.getType() == Token.NAME)) {
+			strNodeLabel = strNode.getString();
+		}
+		
+		return strNodeLabel;
 	}
 }
