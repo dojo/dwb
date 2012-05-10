@@ -233,7 +233,9 @@ public abstract class BaseScriptParser {
 	protected String getStringNodeLabel(Node strNode) {
 		String strNodeLabel = null;
 		
-		if (strNode != null && (strNode.getType() == Token.STRING || strNode.getType() == Token.NAME)) {
+		if (strNode != null && (strNode.getType() == Token.STRING 
+			|| strNode.getType() == Token.NAME 
+			|| strNode.getType() == Token.BINDNAME)) {
 			strNodeLabel = strNode.getString();
 		}
 		

@@ -1,4 +1,4 @@
-package org.dtk.analysis.script;
+package org.dtk.analysis.script.dependency;
 
 import static org.junit.Assert.*;
 

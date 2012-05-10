@@ -20,6 +20,7 @@ import org.mozilla.javascript.Token;
  * 
  * @author James Thomas
  */
+
 public abstract class BaseScriptConfigParser extends BaseScriptParser implements ScriptConfigParser {
 
 	/**
@@ -52,8 +53,12 @@ public abstract class BaseScriptConfigParser extends BaseScriptParser implements
 	 */
 	@Override
 	protected void parseNode(Node node) {
+		System.out.println(node.getType());
+		
 		switch(node.getType()) {
+		
 		case Token.VAR: 
+		case Token.EXPR_RESULT:
 			if (isConfigurationDefinition(node)) {
 				List<String> configurationKeys = retrieveConfigurationKeys(node);
 
@@ -121,5 +126,5 @@ public abstract class BaseScriptConfigParser extends BaseScriptParser implements
 	 * @param key - Configuration key
 	 * @return Configuration value for key or null
 	 */
-	protected abstract List<String> retrieveConfigurationValue(Node node, String key);
+	protected abstract Object retrieveConfigurationValue(Node node, String key);
 }
