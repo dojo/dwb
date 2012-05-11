@@ -52,11 +52,8 @@ public abstract class BaseScriptConfigParser extends BaseScriptParser implements
 	 * @param node - AST node 
 	 */
 	@Override
-	protected void parseNode(Node node) {
-		System.out.println(node.getType());
-		
-		switch(node.getType()) {
-		
+	protected void parseNode(Node node) {		
+		switch(node.getType()) {		
 		case Token.VAR: 
 		case Token.EXPR_RESULT:
 			if (isConfigurationDefinition(node)) {

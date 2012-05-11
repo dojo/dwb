@@ -29,13 +29,6 @@ import org.mozilla.javascript.Token;
 public class LoaderConfigParser extends BaseScriptConfigParser {
 
 	/**
-	 * Configuration variable names for Dojo Toolkit parameters. These can be 
-	 * either a local or global variable declaration.
-	 */
-	protected static final String LOADER_CONFIG_DJCONFIG = "djConfig";
-	protected static final String LOADER_CONFIG_DOJO_CONFIG = "dojoConfig";
-	
-	/**
 	 * Internal configuration map, updated from any configuration values 
 	 * discovered during script parsing.
 	 */
@@ -174,6 +167,6 @@ public class LoaderConfigParser extends BaseScriptConfigParser {
 	 * @return Label matches DTK configuration declaration
 	 */
 	protected boolean matchesLoaderConfigName(String label) {
-		return LOADER_CONFIG_DOJO_CONFIG.equals(label) || LOADER_CONFIG_DJCONFIG.equals(label);
+		return DojoConfigAttrs.LOADER_CONFIG_DOJO_CONFIG.equals(label) || DojoConfigAttrs.LOADER_CONFIG_DJCONFIG.equals(label);
 	}
 }

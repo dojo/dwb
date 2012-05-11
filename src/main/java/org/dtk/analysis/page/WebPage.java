@@ -8,6 +8,9 @@ import java.util.Map;
 import org.dtk.analysis.ModuleAnalysis;
 import org.dtk.analysis.ModuleFormat;
 import org.dtk.analysis.exceptions.FatalAnalysisError;
+import org.dtk.analysis.script.config.DojoConfigAttrs;
+import org.dtk.analysis.script.config.LoaderConfigParser;
+import org.dtk.analysis.script.config.ScriptConfigParser;
 import org.dtk.analysis.script.dependency.AMDScriptParser;
 import org.dtk.analysis.script.dependency.NonAMDScriptParser;
 import org.dtk.analysis.script.dependency.ScriptDependencyParser;
@@ -56,6 +59,13 @@ public abstract class WebPage implements ModuleAnalysis {
 	 * from any dojo configurations values defined.
 	 */
 	protected ModuleFormat moduleFormat = ModuleFormat.NON_AMD;
+	
+	/**
+	 * Dojo configuration wrapper for custom config attributes passed as 
+	 * into the <script> tag custom attribute.
+	 */
+	static protected final String DOJO_CONFIG_DECLARATION = "var " 
+		+ DojoConfigAttrs.LOADER_CONFIG_DOJO_CONFIG + " = { %s };";
 	
 	/**
 	 * Default WebPage constructor, must pass in the parsed 
@@ -139,17 +149,26 @@ public abstract class WebPage implements ModuleAnalysis {
 	
 	/**
 	 * Check whether this script tag contain the Dojo loader,
-	 * updating the internal parse state if found.  
+	 * updating the internal parse state if found. We also look 
+	 * for AMD loader configuration flags.
 	 * 
 	 * @param script - Document script 
 	 */
 	protected void parsePreDojoScript(Element script) {
-		if (isDojoScript(script)) {
+		String scriptSource;
+		
+		if (isDojoScript(script)) {			
+			scriptSource = constructConfigDeclarationFromScriptAttr(script);
 			parsePhase = ParsePhase.POST_DOJO;
-			// Is AMD script? - Must parse djConfig.....
-			// TODO: 
-		}		
-	}	
+		} else {
+			scriptSource = retrieveScriptContents(script); 
+		}				
+		 
+		Map<String, Object> parsedScriptConfig = parseScriptConfiguration(scriptSource);
+		if (parsedScriptConfig.containsKey(DojoConfigAttrs.AMD_CONFIG_FLAG)) {
+			enableAmdModuleFormat((Boolean) parsedScriptConfig.get(DojoConfigAttrs.AMD_CONFIG_FLAG));
+		}
+	}		
 	
 	/**
 	 * Parse document script tag for all module identifiers listed as 
@@ -238,6 +257,56 @@ public abstract class WebPage implements ModuleAnalysis {
 	}
 
 	/**
+	 * Parse any script configuration values present in the script source.
+	 * 
+	 * @param scriptSource - JavaScript source text
+	 * @return Lookup for configuration values, empty if no config found
+	 */
+	protected Map<String, Object> parseScriptConfiguration(String scriptSource) {
+		ScriptConfigParser scriptConfigParser = new LoaderConfigParser(scriptSource); 
+		return scriptConfigParser.getScriptConfig();
+	}
+	
+	/**
+	 * Extract available configuration passed as custom HTML attr on the script
+	 * tag. May be either "data-dojo-config" or "djConfig".
+	 * 
+	 * @param script - Script element
+	 * @return Custom configuration value, empty string otherwise.
+	 */
+	protected String extractDojoConfigAttrContents(Element script) {
+		String dojoScriptConfigAttr = script.attr(DojoConfigAttrs.LOADER_CONFIG_DJCONFIG);
+		
+		if ("".equals(dojoScriptConfigAttr)) {
+			dojoScriptConfigAttr = script.attr(DojoConfigAttrs.LOADER_CONFIG_DATA_DOJO_CONFIG);
+		}
+		
+		return dojoScriptConfigAttr;
+	}	
+	
+	/**
+	 * Extract custom loader config wrapped within script tag attr and wrap
+	 * within normal dojo config literal declaration.
+	 * 
+	 * @param script - Script source
+	 * @return Dojo config literal declaration
+	 */
+	protected String constructConfigDeclarationFromScriptAttr(Element script) {
+		String configLiteralContents = extractDojoConfigAttrContents(script);		
+		return generateConfigDeclarationFromLiteral(configLiteralContents);
+	}
+	
+	/**
+	 * Wrap literal contents within outer configuration declaration.
+	 * 
+	 * @param literal - Object literal contents
+	 * @return Dojo config declaration
+	 */
+	protected String generateConfigDeclarationFromLiteral(String literal) {				
+		return String.format(DOJO_CONFIG_DECLARATION, literal);
+	}
+	
+	/**
 	 * Has the script tag containing the Dojo loader been
 	 * discovered during parsing?
 	 * 
@@ -255,5 +324,14 @@ public abstract class WebPage implements ModuleAnalysis {
 	 */
 	protected Elements findAllScriptTags () {
 		return this.document.getElementsByTag("script");		
+	}		
+	
+	/**
+	 * Ensure script parsing uses AMD module format parser rather than old style.
+	 * 
+	 * @param enabled - AMD module format enabled
+	 */
+	protected void enableAmdModuleFormat(boolean enabled) {
+		moduleFormat = enabled ? ModuleFormat.AMD : ModuleFormat.NON_AMD;
 	}
 }
