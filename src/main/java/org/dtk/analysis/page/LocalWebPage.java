@@ -74,8 +74,7 @@ public class LocalWebPage extends WebPage {
 	 * @return Absolute module identifier
 	 */
 	@Override
-	protected String getAbsoluteModuleIdentifier(String moduleIdentifier,
-			Element script) {
+	protected String getAbsoluteModuleIdentifier(String moduleIdentifier) {
 		return moduleIdentifier;
 	}
 

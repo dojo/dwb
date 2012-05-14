@@ -110,7 +110,7 @@ public abstract class WebPage implements ModuleAnalysis {
 	 * @param script - Script tag for identifier
 	 * @return Absolute module identifier
 	 */
-	abstract protected String getAbsoluteModuleIdentifier(String moduleIdentifer, Element script);	
+	abstract protected String getAbsoluteModuleIdentifier(String moduleIdentifer);	
 	
 	/**
 	 * Return package identifier for this module.
@@ -163,12 +163,22 @@ public abstract class WebPage implements ModuleAnalysis {
 		} else {
 			scriptSource = retrieveScriptContents(script); 
 		}				
-		 
-		Map<String, Object> parsedScriptConfig = parseScriptConfiguration(scriptSource);
+				
+		updateInternalLoaderConfig(parseScriptConfiguration(scriptSource));
+	}		
+	
+	/**
+	 * Update internal loader configuration from parsed loader configuration
+	 * discovered in page script source. Looks for module format flag, either
+	 * AMD or non-AMD to determine further module format.
+	 * 
+	 * @param parsedScriptConfig - Converted JavaScript configuration values. 
+	 */
+	protected void updateInternalLoaderConfig(Map<String, Object> parsedScriptConfig) {
 		if (parsedScriptConfig.containsKey(DojoConfigAttrs.AMD_CONFIG_FLAG)) {
 			enableAmdModuleFormat((Boolean) parsedScriptConfig.get(DojoConfigAttrs.AMD_CONFIG_FLAG));
 		}
-	}		
+	}
 	
 	/**
 	 * Parse document script tag for all module identifiers listed as 
@@ -186,7 +196,7 @@ public abstract class WebPage implements ModuleAnalysis {
 			List<String> moduleDependencies = analyseModuleDependencies(scriptContents);
 			
 			for(String moduleIdentifier: moduleDependencies) {
-				 String absoluteModuleIdentifier = getAbsoluteModuleIdentifier(moduleIdentifier, script),
+				 String absoluteModuleIdentifier = getAbsoluteModuleIdentifier(moduleIdentifier),
 				 	packageName = getPackageIdentifier(absoluteModuleIdentifier);
 				 			 
 				 updateDiscoveredModules(packageName, absoluteModuleIdentifier);			 

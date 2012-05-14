@@ -24,7 +24,7 @@ public class LoaderConfigParserTest {
 		return parser.getScriptConfig();		
 	}
 	
-	private Map<String, Object> getPrepopulatedMap(Object... keyValues) {
+	static public Map<String, Object> getPrepopulatedMap(Object... keyValues) {
 		Map<String, Object> prepopulatedMap = new HashMap<String, Object>();
 		
 		for(int i = 1; i < keyValues.length; i += 2) {
