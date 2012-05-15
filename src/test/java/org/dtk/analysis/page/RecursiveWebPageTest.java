@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import org.apache.commons.io.IOUtils;
 import org.dtk.analysis.ModuleFormat;
 import org.dtk.analysis.script.config.LoaderConfigParserTest;
 import org.jsoup.nodes.Attributes;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Tag;
 import org.junit.Test;
@@ -265,7 +267,7 @@ public class RecursiveWebPageTest {
 		public String identifier = "\\.";
 		
 		protected MockWebPage() throws IOException {
-			super(null, null);
+			super(new Document("http://localhost"), new URL("http://localhost"));
 		}
 
 		@Override

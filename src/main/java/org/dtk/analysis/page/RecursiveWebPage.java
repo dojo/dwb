@@ -45,11 +45,6 @@ import org.jsoup.select.Elements;
  */
 
 public abstract class RecursiveWebPage extends WebPage implements RecursiveModuleAnalysis {
-
-	/**
-	 * Location for the source web page being parsed.
-	 */
-	protected URL location;
 	
 	/**
 	 * Collection of packages whose modules should not be recursively 
@@ -66,6 +61,12 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 	 * Loader configuration, resolved module paths discovered. 
 	 */
 	protected Map<String, String> modulePaths = new HashMap<String, String>();
+
+	/**
+	 * URL containing page location being analysed. Used to resolve linked
+	 * resource paths.
+	 */
+	protected URL location;
 	
 	/**
 	 * Static logging instance.
@@ -80,9 +81,10 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 	 * @param location - Page location
 	 * @throws IOException - Unable to analyse HTML page
 	 */
-	protected RecursiveWebPage(Document document, URL location) throws IOException {		
-		super(document);		
+	protected RecursiveWebPage(Document document, URL location) {		
+		super(document);
 		this.location = location;
+		this.document.setBaseUri(location.toString());
 	}
 	
 	/**

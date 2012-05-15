@@ -53,18 +53,10 @@ public class LocalWebPage extends WebPage {
 	 * @return Script is a Dojo script tag
 	 */
 	@Override
-	protected boolean isDojoScript(Element script) {
-		boolean isDojoScript = false;		
-		String scriptSrcAttr = script.attr("src");		
-		
-		if (!"".equals(scriptSrcAttr)) {
-			String scriptFileName = getScriptFileName(scriptSrcAttr); 			
-			isDojoScript = dojoScriptPattern.matcher(scriptFileName).find();				
-		}		
-		
-		return isDojoScript;
+	protected boolean isDojoScript(Element script) {		
+		return doesScriptNameMatchDojo(script);
 	}
-
+	
 	/**
 	 * Return absolute module identifier for dependency from referenced script.
 	 * For local web pages, there is no additional path information. 
@@ -107,12 +99,30 @@ public class LocalWebPage extends WebPage {
 	}
 
 	/**
+	 * Match script tag name against expected dojo script name format. 
+	 * 
+	 * @param script - Script tag element
+	 * @return Script name matches dojo format
+	 */
+	static protected boolean doesScriptNameMatchDojo(Element script) {
+		boolean isDojoScript = false;		
+		String scriptSrcAttr = script.attr("src");		
+		
+		if (!"".equals(scriptSrcAttr)) {
+			String scriptFileName = getScriptFileName(scriptSrcAttr); 			
+			isDojoScript = dojoScriptPattern.matcher(scriptFileName).find();				
+		}		
+		
+		return isDojoScript;
+	}
+
+	/**
 	 * Return file name for a script path. 
 	 * 
 	 * @param scriptURL - Full script URL
 	 * @return File name containing script
 	 */
-	protected String getScriptFileName(String scriptURL) {
+	static protected String getScriptFileName(String scriptURL) {
 		String scriptPath = getScriptPath(scriptURL);
 		String[] scriptSourcePaths = scriptPath.split("/");			
 		
@@ -125,7 +135,7 @@ public class LocalWebPage extends WebPage {
 	 * @param URL - URL to script file
 	 * @return Script path if available, empty string if not.
 	 */
-	protected String getScriptPath(String URL) {
+	static protected String getScriptPath(String URL) {
 		String scriptPath = "";
 		try { 
 			URI scriptPathURI = new URI(URL);
