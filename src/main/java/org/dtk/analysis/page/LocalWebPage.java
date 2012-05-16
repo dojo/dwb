@@ -43,6 +43,7 @@ public class LocalWebPage extends WebPage {
 	 */
 	public LocalWebPage(String htmlPageContent) {
 		super(Jsoup.parse(htmlPageContent));
+		parse();
 	}
 	
 	/**

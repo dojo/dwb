@@ -103,6 +103,7 @@ public class WebPageTest {
 		
 		protected MockWebPage() {
 			super(null);
+			parse();
 		}
 
 		@Override

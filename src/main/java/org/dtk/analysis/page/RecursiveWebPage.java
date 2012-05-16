@@ -75,14 +75,13 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 	
 	/**
 	 * Default constructor, pass parsed HTML page and original location.
-	 * Will kick off module dependency parsing.
 	 *  
 	 * @param document - Parsed HTML page
 	 * @param location - Page location
 	 * @throws IOException - Unable to analyse HTML page
-	 */
-	protected RecursiveWebPage(Document document, URL location) {		
-		super(document);
+	 */	
+	protected RecursiveWebPage(Document document, URL location) {
+		super(document);		
 		this.location = location;
 		this.document.setBaseUri(location.toString());
 	}
@@ -123,9 +122,11 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 			 updateDiscoveredModules(packageName, absoluteModuleIdentifier);			 
 			 			 
 			if (shouldAnalyseForDependencies(packageName, absoluteModuleIdentifier)) {
-				String moduleContents = retrieveModuleSource(absoluteModuleIdentifier);					
-				moduleSource.put(absoluteModuleIdentifier, moduleContents);
-				recursivelyAnalyseScriptDependencies(moduleContents);
+				String moduleContents = retrieveModuleSource(absoluteModuleIdentifier);		
+				if (moduleContents != null) {
+					moduleSource.put(absoluteModuleIdentifier, moduleContents);
+					recursivelyAnalyseScriptDependencies(moduleContents);
+				}
 			 }			
 		 }
 	}

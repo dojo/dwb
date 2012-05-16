@@ -1,7 +1,9 @@
 package org.dtk.analysis.page;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import org.apache.http.HttpResponse;
@@ -53,9 +55,24 @@ public class RemoteWebPage extends RecursiveWebPage {
 	 * @param location - Remote resource location
 	 * @param httpClient - Http Client
 	 */
+	protected RemoteWebPage(Document document, URL location, HttpClient httpClient, Set<String> ignoredPackages) {
+		super(document, location);
+		this.httpClient = httpClient;
+		this.setIgnoredPackages(ignoredPackages);
+		parse();	
+	}
+	
+	/**
+	 * Default constructor, store http client internal and delegate to super class.
+	 * 
+	 * @param document - Parsed HTML document to analyse
+	 * @param location - Remote resource location
+	 * @param httpClient - Http Client
+	 */
 	protected RemoteWebPage(Document document, URL location, HttpClient httpClient) {
 		super(document, location);
-		this.httpClient = httpClient;			
+		this.httpClient = httpClient;
+		parse();					
 	}
 	
 	/**
@@ -68,9 +85,28 @@ public class RemoteWebPage extends RecursiveWebPage {
 	protected void parsePreDojoScript(Element script) {
 		super.parsePreDojoScript(script);
 		
-		if (parsePhase == ParsePhase.POST_DOJO) {
-			instantiatePathResolver();
+		if (parsePhase == ParsePhase.POST_DOJO) {			
+			instantiatePathResolver(script.absUrl("src"));
 		}
+	}
+	
+	/**
+	 * Return URL matching parent directory path
+	 * for a URL path. 
+	 * 
+	 * @param absUrl - Absolute URL string
+	 * @return Parent URL or null if parameter invalid URL.
+	 */
+	protected URL getParentUrlForPath(String absUrl) {
+		URL parentUrl = null;
+		
+		try {
+			parentUrl =  new URL(new URL(absUrl), "./../");
+		} catch (MalformedURLException e) {			
+			logger.warning("Unable to resolve parent path for absolute url... " + absUrl);
+		}		
+		
+		return parentUrl;
 	}
 	
 	/**
@@ -149,11 +185,13 @@ public class RemoteWebPage extends RecursiveWebPage {
 	 * Create the new path resolver based upon the current discovered
 	 * module format.
 	 */
-	protected void instantiatePathResolver() {
+	protected void instantiatePathResolver(String loaderPath) {
+		URL loaderParentDir = getParentUrlForPath(loaderPath);
+		
 		if (ModuleFormat.AMD.equals(moduleFormat)) {
-			resolver = new AmdModulePathResolver(location, modulePaths);
+			resolver = new AmdModulePathResolver(loaderParentDir, modulePaths);
 		} else {
-			resolver = new NonAmdModulePathResolver(location, modulePaths);
+			resolver = new NonAmdModulePathResolver(loaderParentDir, modulePaths);
 		}	
 	}	
 

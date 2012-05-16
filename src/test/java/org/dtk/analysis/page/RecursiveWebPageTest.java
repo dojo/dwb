@@ -268,6 +268,7 @@ public class RecursiveWebPageTest {
 		
 		protected MockWebPage() throws IOException {
 			super(new Document("http://localhost"), new URL("http://localhost"));
+			parse();
 		}
 
 		@Override

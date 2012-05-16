@@ -13,10 +13,21 @@ import org.dtk.analysis.ModuleFormat;
 
 public class NonAmdModulePathResolver extends AbstractModulePathResolver {
 	
+	/**
+	 * Default constructor. 
+	 * 
+	 * @param baseUrl - Directory path containing module loader 
+	 * @param modulePaths - Configuration paths for module locations
+	 */
 	public NonAmdModulePathResolver(URL baseUrl, Map<String, String> modulePaths) {
 		super(baseUrl, modulePaths);
 	}
-
+	
+	/**
+	 * Module path fragment separator for the non-AMD module format.
+	 * 
+	 * @return Path separator character
+	 */
 	@Override
 	protected char getModulePathSeparator() {
 		return ModuleFormat.getPathSeparator(ModuleFormat.NON_AMD);

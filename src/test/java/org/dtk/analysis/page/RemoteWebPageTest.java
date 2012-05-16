@@ -9,8 +9,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -34,7 +36,10 @@ import org.apache.http.message.BasicStatusLine;
 import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.HttpContext;
 import org.dtk.analysis.exceptions.FatalAnalysisError;
+import org.dtk.analysis.exceptions.ModuleSourceNotAvailable;
+import org.dtk.analysis.exceptions.UnknownModuleIdentifier;
 import org.dtk.util.FileUtil;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -80,13 +85,189 @@ public class RemoteWebPageTest {
 		assertEquals(scriptContents, webPage.retrieveScriptContents(inlineScript));		
 	}
 		
+	@Test
+	public void willRecursivelyParseAmdModulesDependencies() throws MalformedURLException, IOException, FatalAnalysisError, ModuleSourceNotAvailable, UnknownModuleIdentifier {		
+		MockHttpClient mockHttpClient = new MockHttpClient();
+
+		// Set pre-canned response
+		mockHttpClient.hostPrefix = "http://localhost/";
+		mockHttpClient.appDir = "sample_apps/amd/local_dtk_with_only_dtk_reqs/";		 
+		
+		Document document = Jsoup.parse(getResourceAsString("sample_apps/amd/local_dtk_with_only_dtk_reqs/index.html"), mockHttpClient.hostPrefix);
+		
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix), mockHttpClient);										
+		
+		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
+			put("dojo", Arrays.asList("dojo/parser"));
+			put("dijit", Arrays.asList("dijit/form/Button"));
+			put("dojox", Arrays.asList("dojox/grid/EnhancedGrid"));
+		}};
+				
+		assertEquals(packages, webPage.getModules());
+		assertEquals(getResourceAsString("sample_apps/amd/local_dtk_with_only_dtk_reqs/lib/dojo/parser.js"),
+			webPage.getModuleSource("dojo/parser"));
+		assertEquals(getResourceAsString("sample_apps/amd/local_dtk_with_only_dtk_reqs/lib/dijit/form/Button.js"),
+				webPage.getModuleSource("dijit/form/Button"));
+		assertEquals(getResourceAsString("sample_apps/amd/local_dtk_with_only_dtk_reqs/lib/dojox/grid/EnhancedGrid.js"),
+				webPage.getModuleSource("dojox/grid/EnhancedGrid"));					
+	}
 	
-	// Start filling out this method with local web page tests.....
-	// Must support AMD and non-AMD 
+	@Test
+	public void willRecursivelyParseNonAmdModulesDependencies() throws MalformedURLException, IOException, FatalAnalysisError, ModuleSourceNotAvailable, UnknownModuleIdentifier {		
+		MockHttpClient mockHttpClient = new MockHttpClient();
+
+		// Set pre-canned response
+		mockHttpClient.hostPrefix = "http://localhost/";
+		mockHttpClient.appDir = "sample_apps/non_amd/local_dtk_with_only_dtk_reqs/";		 
+		
+		Document document = Jsoup.parse(getResourceAsString("sample_apps/non_amd/local_dtk_with_only_dtk_reqs/index.html"), mockHttpClient.hostPrefix);
+		
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix), mockHttpClient);										
+		
+		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
+			put("dojo", Arrays.asList("dojo.parser"));
+			put("dijit", Arrays.asList("dijit.form.Button"));
+			put("dojox", Arrays.asList("dojox.grid.EnhancedGrid"));
+		}};
+				
+		assertEquals(packages, webPage.getModules());
+		assertEquals(getResourceAsString("sample_apps/non_amd/local_dtk_with_only_dtk_reqs/lib/dojo/parser.js"),
+			webPage.getModuleSource("dojo.parser"));
+		assertEquals(getResourceAsString("sample_apps/non_amd/local_dtk_with_only_dtk_reqs/lib/dijit/form/Button.js"),
+				webPage.getModuleSource("dijit.form.Button"));
+		assertEquals(getResourceAsString("sample_apps/non_amd/local_dtk_with_only_dtk_reqs/lib/dojox/grid/EnhancedGrid.js"),
+				webPage.getModuleSource("dojox.grid.EnhancedGrid"));					
+	}
+	
+	@Test
+	public void willRecursivelyParseAmdModulesWithPathsConfig() throws MalformedURLException, IOException, FatalAnalysisError, ModuleSourceNotAvailable, UnknownModuleIdentifier {		
+		MockHttpClient mockHttpClient = new MockHttpClient();
+		
+		// Set pre-canned response
+		mockHttpClient.hostPrefix = "http://localhost/";
+		mockHttpClient.appDir = "sample_apps/amd/local_dtk_with_custom_modules_paths/";		 
+		
+		Document document = Jsoup.parse(getResourceAsString(mockHttpClient.appDir + "index.html"), mockHttpClient.hostPrefix);
+		
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix + mockHttpClient.appDir), mockHttpClient);										
+		
+		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
+			put("dojo", Arrays.asList("dojo/parser"));
+			put("dijit", Arrays.asList("dijit/form/Button"));
+			put("dojox", Arrays.asList("dojox/grid/EnhancedGrid"));
+			put("custom", Arrays.asList("custom/custom"));
+			put("sample", Arrays.asList("sample/app", "sample/dep_one", "sample/dep_two", "sample/dep_three"));
+		}};
+				
+		assertEquals(packages, webPage.getModules());
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dojo/parser.js"),
+			webPage.getModuleSource("dojo/parser"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dijit/form/Button.js"),
+				webPage.getModuleSource("dijit/form/Button"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dojox/grid/EnhancedGrid.js"),
+				webPage.getModuleSource("dojox/grid/EnhancedGrid"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/custom/custom.js"),
+				webPage.getModuleSource("custom/custom"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/app.js"),
+				webPage.getModuleSource("sample/app"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/dep_one.js"),
+				webPage.getModuleSource("sample/dep_one"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/dep_two.js"),
+				webPage.getModuleSource("sample/dep_two"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/dep_three.js"),
+				webPage.getModuleSource("sample/dep_three"));
+	}
+	
+	@Test
+	public void willRecursivelyParseNonAmdModulesWithPathsConfig() throws MalformedURLException, IOException, FatalAnalysisError, ModuleSourceNotAvailable, UnknownModuleIdentifier {		
+		MockHttpClient mockHttpClient = new MockHttpClient();
+		
+		// Set pre-canned response
+		mockHttpClient.hostPrefix = "http://localhost/";
+		mockHttpClient.appDir = "sample_apps/non_amd/local_dtk_with_custom_modules_paths/";		 
+		
+		Document document = Jsoup.parse(getResourceAsString(mockHttpClient.appDir + "index.html"), mockHttpClient.hostPrefix);
+		
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix + mockHttpClient.appDir), mockHttpClient);										
+		
+		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
+			put("dojo", Arrays.asList("dojo.parser"));
+			put("dijit", Arrays.asList("dijit.form.Button"));
+			put("dojox", Arrays.asList("dojox.grid.EnhancedGrid"));
+			put("custom", Arrays.asList("custom.custom"));
+			put("sample", Arrays.asList("sample.app", "sample.dep_one", "sample.dep_two", "sample.dep_three"));
+		}};
+				
+		assertEquals(packages, webPage.getModules());
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dojo/parser.js"),
+			webPage.getModuleSource("dojo.parser"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dijit/form/Button.js"),
+				webPage.getModuleSource("dijit.form.Button"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dojox/grid/EnhancedGrid.js"),
+				webPage.getModuleSource("dojox.grid.EnhancedGrid"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/custom/custom.js"),
+				webPage.getModuleSource("custom.custom"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/app.js"),
+				webPage.getModuleSource("sample.app"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/dep_one.js"),
+				webPage.getModuleSource("sample.dep_one"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/dep_two.js"),
+				webPage.getModuleSource("sample.dep_two"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/dep_three.js"),
+				webPage.getModuleSource("sample.dep_three"));
+	}
+	
+	@Test
+	public void willIgnoreExplicitPackagesForRecursivelyParsing() throws MalformedURLException, IOException, FatalAnalysisError, ModuleSourceNotAvailable, UnknownModuleIdentifier {		
+		MockHttpClient mockHttpClient = new MockHttpClient();
+		
+		// Set pre-canned response
+		mockHttpClient.hostPrefix = "http://localhost/";
+		mockHttpClient.appDir = "sample_apps/amd/local_dtk_with_custom_modules_paths/";		 
+		
+		Document document = Jsoup.parse(getResourceAsString(mockHttpClient.appDir + "index.html"), mockHttpClient.hostPrefix);
+		
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix + mockHttpClient.appDir), 
+			mockHttpClient, new HashSet<String>() {{
+			add("sample");
+		}});										
+		
+		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
+			put("dojo", Arrays.asList("dojo/parser"));
+			put("dijit", Arrays.asList("dijit/form/Button"));
+			put("dojox", Arrays.asList("dojox/grid/EnhancedGrid"));
+			put("custom", Arrays.asList("custom/custom"));
+			put("sample", Arrays.asList("sample/app"));
+		}};
+				
+		assertEquals(packages, webPage.getModules());
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dojo/parser.js"),
+			webPage.getModuleSource("dojo/parser"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dijit/form/Button.js"),
+				webPage.getModuleSource("dijit/form/Button"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/dtk/dojox/grid/EnhancedGrid.js"),
+				webPage.getModuleSource("dojox/grid/EnhancedGrid"));
+		assertEquals(getResourceAsString(mockHttpClient.appDir + "/lib/custom/custom.js"),
+				webPage.getModuleSource("custom/custom"));
+		
+		boolean sourceAvailable = false;
+		
+		try {
+			assertEquals(getResourceAsString(mockHttpClient.appDir + "/sample/app.js"),
+				webPage.getModuleSource("sample/app"));
+			sourceAvailable = true;
+		} catch (ModuleSourceNotAvailable e) {			
+		}
+		
+		assertFalse(sourceAvailable);		
+	}
 	
 	// Utility method
 	private String getResourceAsString(String filePath) throws IOException {
 		InputStream is = getClass().getClassLoader().getResourceAsStream(filePath);		
+		if (is == null) {
+			return null;
+		}
 		return IOUtils.toString(is);
 	}
 		
@@ -101,8 +282,6 @@ public class RemoteWebPageTest {
 		public String hostPrefix;
 		public String appDir;
 		
-		public Map<String, String> mockHttpResponses = new HashMap<String, String>(); 
-		
 		@Override
 		public HttpResponse execute(HttpUriRequest request) throws IOException,
 			ClientProtocolException {
@@ -116,9 +295,17 @@ public class RemoteWebPageTest {
 			url = appDir + url.substring(hostPrefix.length());
 			String responseText = getResourceAsString(url);
 			
-			StatusLine statusLine = new BasicStatusLine(new ProtocolVersion("HTTP", 2, 0), HttpStatus.SC_OK, null);			
-			HttpResponse response = new BasicHttpResponse(statusLine);
-			response.setEntity(new StringEntity(responseText));
+			StatusLine statusLine;			
+			HttpResponse response;
+			
+			if (responseText != null) {
+				statusLine = new BasicStatusLine(new ProtocolVersion("HTTP", 2, 0), HttpStatus.SC_OK, null);			
+				response = new BasicHttpResponse(statusLine);				
+				response.setEntity(new StringEntity(responseText));
+			} else {
+				statusLine = new BasicStatusLine(new ProtocolVersion("HTTP", 2, 0), HttpStatus.SC_NOT_FOUND, null);			
+				response = new BasicHttpResponse(statusLine);
+			}
 			
 			return response;
 		}

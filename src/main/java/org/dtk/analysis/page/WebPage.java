@@ -66,17 +66,15 @@ public abstract class WebPage implements ModuleAnalysis {
 	 */
 	static protected final String DOJO_CONFIG_DECLARATION = "var " 
 		+ DojoConfigAttrs.LOADER_CONFIG_DOJO_CONFIG + " = { %s };";
-	
+		
 	/**
-	 * Default WebPage constructor, must pass in the parsed 
-	 * HTML source for the page to be analysed. Module analysis
-	 * is automatically kicked off on creation.
+	 * WebPage constructor for automatic parsing, must pass in the parsed 
+	 * HTML source for the page to be analysed.
 	 *  
 	 * @param document - Parsed HTML source for page
 	 */
 	protected WebPage(Document document) {
 		this.document = document;
-		parse();
 	}
 	
 	/**
