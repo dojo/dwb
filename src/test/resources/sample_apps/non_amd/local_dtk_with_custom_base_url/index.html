@@ -5,10 +5,11 @@
 <link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/dojo/1.5/dijit/themes/claro/claro.css">
 <link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/dojo/1.5/dojox/grid/enhanced/resources/claroEnhancedGrid.css">
 <link rel="stylesheet" type="text/css" href="./css/style.css">  
-<script djConfig="async: true, parseOnLoad:true, paths: {'sample': '/sample', 'custom':'../../custom'}", src="./lib/dtk/dojo/dojo.js" type="text/javascript"></script>
+<script djConfig="parseOnLoad:true, baseUrl:'/dojo/'" src="./lib/dtk/dojo/dojo.js" type="text/javascript"></script>
 <script>	
-    require(["dojo/parser", "dijit/form/Button", "dojox/grid/EnhancedGrid", "sample/app", "custom/custom"], function () {
-    });
+    dojo.require("dojo.parser");
+    dojo.require("dijit.form.Button");
+    dojo.require("dojox.grid.EnhancedGrid");
 </script>
 <title>App Title</title>
 </head>

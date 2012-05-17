@@ -55,7 +55,6 @@ abstract public class AbstractModulePathResolver implements ModulePathResolver {
 	 */
 	public AbstractModulePathResolver(URL baseUrl, Map<String, String> modulePaths) {
 		this.baseUrl = baseUrl;
-		this.root.setValue(".");
 		setUpModulePathLookup(modulePaths);
 	}
 	
@@ -215,7 +214,7 @@ abstract public class AbstractModulePathResolver implements ModulePathResolver {
 	 * descendent paths values.
 	 */
     private class ModulePath {
-        private String value;
+        private String value = "..";
         private Map<String, ModulePath> paths = new HashMap<String, ModulePath>();        
         
         public String getValue() {

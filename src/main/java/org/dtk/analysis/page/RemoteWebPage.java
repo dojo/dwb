@@ -86,29 +86,14 @@ public class RemoteWebPage extends RecursiveWebPage {
 		super.parsePreDojoScript(script);
 		
 		if (parsePhase == ParsePhase.POST_DOJO) {			
-			instantiatePathResolver(script.absUrl("src"));
+			if (missingBaseUrlConfig()) {
+				baseUrl = script.attr("src");
+			}
+			
+			instantiatePathResolver();
 		}
 	}
-	
-	/**
-	 * Return URL matching parent directory path
-	 * for a URL path. 
-	 * 
-	 * @param absUrl - Absolute URL string
-	 * @return Parent URL or null if parameter invalid URL.
-	 */
-	protected URL getParentUrlForPath(String absUrl) {
-		URL parentUrl = null;
 		
-		try {
-			parentUrl =  new URL(new URL(absUrl), "./../");
-		} catch (MalformedURLException e) {			
-			logger.warning("Unable to resolve parent path for absolute url... " + absUrl);
-		}		
-		
-		return parentUrl;
-	}
-	
 	/**
 	 * Retrieve the remote source file for this absolute module
 	 * identifier on the page. Resolve module identifier to a remote
@@ -185,16 +170,46 @@ public class RemoteWebPage extends RecursiveWebPage {
 	 * Create the new path resolver based upon the current discovered
 	 * module format.
 	 */
-	protected void instantiatePathResolver(String loaderPath) {
-		URL loaderParentDir = getParentUrlForPath(loaderPath);
+	protected void instantiatePathResolver() {
+		URL baseUrl = getAbsoluteBaseUrl();
 		
 		if (ModuleFormat.AMD.equals(moduleFormat)) {
-			resolver = new AmdModulePathResolver(loaderParentDir, modulePaths);
+			resolver = new AmdModulePathResolver(baseUrl, modulePaths);
 		} else {
-			resolver = new NonAmdModulePathResolver(loaderParentDir, modulePaths);
+			resolver = new NonAmdModulePathResolver(baseUrl, modulePaths);
 		}	
 	}	
+	
+	/**
+	 * Return absolute URL for the base url 
+	 * for module resolution. 
+	 * 
+	 * @return Absolute base URL path, null if URL 
+	 * can't be resolved.
+	 */
+	protected URL getAbsoluteBaseUrl() {
+		URL absBaseUrl = null;
+		
+		try {
+			// base url may be a file or directory path, ensure we always 
+			// return a directory.
+			absBaseUrl = new URL(new URL(location, baseUrl), "./");
+		} catch (MalformedURLException e) {
+			parsePhase = ParsePhase.ERROR;
+		}
+		
+		return absBaseUrl;
+	}
 
+	/**
+	 * Is the page missing custom base url configuration?
+	 *  
+	 * @return Page has not custom base url config
+	 */
+	protected boolean missingBaseUrlConfig() {
+		return baseUrl == null;
+	}	
+	
 	/**
 	 * Use HttpClient to request and return response content 
 	 * for a given URL. Returns a null response when there's an

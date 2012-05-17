@@ -63,10 +63,16 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 	protected Map<String, String> modulePaths = new HashMap<String, String>();
 
 	/**
+	 * Configuration for URL path from current page location that module identifiers are 
+	 * resolved relative to. 
+	 */
+	protected String baseUrl = null; 
+	
+	/**
 	 * URL containing page location being analysed. Used to resolve linked
 	 * resource paths.
 	 */
-	protected URL location;
+	protected URL location = null;
 	
 	/**
 	 * Static logging instance.
@@ -152,7 +158,8 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 	
 	/**
 	 * Override parent loader configuration to support parsing module paths.
-	 * Used to calculate absolute module locations from relative identifiers. 
+	 * Used to calculate absolute module locations from relative identifiers and 
+	 * find any custom base URL parameters set.
 	 * 
 	 * @param parsedScriptConfig - Converted JavaScript object value containing loader config.
 	 */
@@ -166,6 +173,10 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 		
 		if (parsedScriptConfig.containsKey(DojoConfigAttrs.PATHS_CONFIG_FLAG)) {
 			updateInternalPathsConfig((ObjectLiteral) parsedScriptConfig.get(DojoConfigAttrs.PATHS_CONFIG_FLAG));
+		}
+		
+		if (parsedScriptConfig.containsKey(DojoConfigAttrs.BASE_URL_CONFIG_FLAG)) {
+			baseUrl = (String) parsedScriptConfig.get(DojoConfigAttrs.BASE_URL_CONFIG_FLAG);
 		}
 	}
 	

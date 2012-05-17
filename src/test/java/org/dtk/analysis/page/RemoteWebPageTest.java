@@ -149,7 +149,7 @@ public class RemoteWebPageTest {
 		
 		Document document = Jsoup.parse(getResourceAsString(mockHttpClient.appDir + "index.html"), mockHttpClient.hostPrefix);
 		
-		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix + mockHttpClient.appDir), mockHttpClient);										
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix), mockHttpClient);										
 		
 		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
 			put("dojo", Arrays.asList("dojo/parser"));
@@ -188,7 +188,7 @@ public class RemoteWebPageTest {
 		
 		Document document = Jsoup.parse(getResourceAsString(mockHttpClient.appDir + "index.html"), mockHttpClient.hostPrefix);
 		
-		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix + mockHttpClient.appDir), mockHttpClient);										
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix), mockHttpClient);										
 		
 		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
 			put("dojo", Arrays.asList("dojo.parser"));
@@ -217,6 +217,61 @@ public class RemoteWebPageTest {
 				webPage.getModuleSource("sample.dep_three"));
 	}
 	
+
+	@Test
+	public void willRecursivelyParseAmdModulesDependenciesWithCustomBaseUrl() throws MalformedURLException, IOException, FatalAnalysisError, ModuleSourceNotAvailable, UnknownModuleIdentifier {		
+		MockHttpClient mockHttpClient = new MockHttpClient();
+
+		// Set pre-canned response
+		mockHttpClient.hostPrefix = "http://localhost/";
+		mockHttpClient.appDir = "sample_apps/amd/local_dtk_with_custom_base_url/";		 
+		
+		Document document = Jsoup.parse(getResourceAsString("sample_apps/amd/local_dtk_with_custom_base_url/index.html"), mockHttpClient.hostPrefix);
+		
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix), mockHttpClient);										
+		
+		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
+			put("dojo", Arrays.asList("dojo/parser"));
+			put("dijit", Arrays.asList("dijit/form/Button"));
+			put("dojox", Arrays.asList("dojox/grid/EnhancedGrid"));
+		}};
+				
+		assertEquals(packages, webPage.getModules());
+		assertEquals(getResourceAsString("sample_apps/amd/local_dtk_with_custom_base_url/dojo/parser.js"),
+			webPage.getModuleSource("dojo/parser"));
+		assertEquals(getResourceAsString("sample_apps/amd/local_dtk_with_custom_base_url/dijit/form/Button.js"),
+				webPage.getModuleSource("dijit/form/Button"));
+		assertEquals(getResourceAsString("sample_apps/amd/local_dtk_with_custom_base_url/dojox/grid/EnhancedGrid.js"),
+				webPage.getModuleSource("dojox/grid/EnhancedGrid"));					
+	}
+	
+	@Test
+	public void willRecursivelyParseNonAmdModulesDependenciesWithCustomBaseUrl() throws MalformedURLException, IOException, FatalAnalysisError, ModuleSourceNotAvailable, UnknownModuleIdentifier {		
+		MockHttpClient mockHttpClient = new MockHttpClient();
+
+		// Set pre-canned response
+		mockHttpClient.hostPrefix = "http://localhost/";
+		mockHttpClient.appDir = "sample_apps/non_amd/local_dtk_with_custom_base_url/";		 
+		
+		Document document = Jsoup.parse(getResourceAsString("sample_apps/non_amd/local_dtk_with_custom_base_url/index.html"), mockHttpClient.hostPrefix);
+		
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix), mockHttpClient);										
+		
+		Map<String, List<String>> packages = new HashMap<String, List<String>>() {{
+			put("dojo", Arrays.asList("dojo.parser"));
+			put("dijit", Arrays.asList("dijit.form.Button"));
+			put("dojox", Arrays.asList("dojox.grid.EnhancedGrid"));
+		}};
+				
+		assertEquals(packages, webPage.getModules());
+		assertEquals(getResourceAsString("sample_apps/non_amd/local_dtk_with_custom_base_url/dojo/parser.js"),
+			webPage.getModuleSource("dojo.parser"));
+		assertEquals(getResourceAsString("sample_apps/non_amd/local_dtk_with_custom_base_url/dijit/form/Button.js"),
+				webPage.getModuleSource("dijit.form.Button"));
+		assertEquals(getResourceAsString("sample_apps/non_amd/local_dtk_with_custom_base_url/dojox/grid/EnhancedGrid.js"),
+				webPage.getModuleSource("dojox.grid.EnhancedGrid"));					
+	}
+	
 	@Test
 	public void willIgnoreExplicitPackagesForRecursivelyParsing() throws MalformedURLException, IOException, FatalAnalysisError, ModuleSourceNotAvailable, UnknownModuleIdentifier {		
 		MockHttpClient mockHttpClient = new MockHttpClient();
@@ -227,7 +282,7 @@ public class RemoteWebPageTest {
 		
 		Document document = Jsoup.parse(getResourceAsString(mockHttpClient.appDir + "index.html"), mockHttpClient.hostPrefix);
 		
-		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix + mockHttpClient.appDir), 
+		RemoteWebPage webPage = new RemoteWebPage(document, new URL(mockHttpClient.hostPrefix), 
 			mockHttpClient, new HashSet<String>() {{
 			add("sample");
 		}});										

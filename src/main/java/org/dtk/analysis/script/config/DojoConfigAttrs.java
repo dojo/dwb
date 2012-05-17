@@ -22,6 +22,8 @@ public final class DojoConfigAttrs {
 	 */
 	static public final String AMD_CONFIG_FLAG = "async";	
 	
+	static public final String BASE_URL_CONFIG_FLAG = "baseUrl";	
+	
 	static public final String PATHS_CONFIG_FLAG = "paths";
 	
 	static public final String MODULE_PATHS_CONFIG_FLAG = "modulePaths";
