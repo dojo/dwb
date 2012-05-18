@@ -1,13 +1,11 @@
 package org.dtk.analysis.script.config;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import org.dtk.analysis.page.LocalWebPageTest;
 import org.dtk.analysis.script.exceptions.InvalidLiteralNode;
 import org.dtk.analysis.script.node.ObjectLiteral;
 import org.mozilla.javascript.Node;
