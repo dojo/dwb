@@ -4,10 +4,14 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,15 +23,31 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.wink.common.model.multipart.BufferedInMultiPart;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.dtk.analysis.ModuleAnalysis;
+import org.dtk.analysis.ModuleFormat;
+import org.dtk.analysis.RecursiveModuleAnalysis;
+import org.dtk.analysis.exceptions.FatalAnalysisError;
+import org.dtk.analysis.exceptions.ModuleSourceNotAvailable;
+import org.dtk.analysis.exceptions.UnknownModuleIdentifier;
+import org.dtk.analysis.page.LocalWebPage;
+import org.dtk.analysis.page.RemoteWebPage;
+import org.dtk.analysis.page.RemoteWebPageTest;
+import org.dtk.resources.dependencies.DependenciesResponse;
+import org.dtk.resources.dependencies.DojoScriptVersions;
+import org.dtk.resources.dependencies.ExplicitModuleFormatAnalysisDependenciesResponse;
 import org.dtk.resources.dependencies.InputType;
-import org.dtk.resources.dependencies.WebPage;
+import org.dtk.resources.dependencies.ModuleAnalysisDependenciesResponse;
 import org.dtk.resources.exceptions.ConfigurationException;
 import org.dtk.resources.exceptions.IncorrectParameterException;
 import org.dtk.resources.packages.PackageRepository;
 import org.dtk.util.FileUtil;
 import org.dtk.util.HttpUtil;
 import org.dtk.util.JsonUtil;
+import org.jsoup.Jsoup;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.NativeArray;
@@ -111,7 +131,8 @@ public class Dependencies {
 		logger.entering(this.getClass().getName(), "analyseDependencies");
 
 		String encodedJson = null;
-		Map<String, Object> dependencies = null;
+		
+		ModuleAnalysis moduleAnalysis = null;
 		
 		// Process form submission, parsing text strings from values.
 		MultivaluedMap<String, Object> formFields = HttpUtil.retrieveMultiPartFormValues(multiPartForm, String.class);
@@ -125,24 +146,49 @@ public class Dependencies {
 		// Invoke analysis based upon input type (web_page, url or profile).
 		switch(inputType) {
 		case WEB_PAGE:
-			dependencies = analyseModulesFromWebpage(inputValue);
+			moduleAnalysis = analyseModulesFromWebpage(inputValue);
 			break;
-		case PROFILE:
+		/*case PROFILE:
 			dependencies = extractLayersFromProfile(inputValue);
-			break;
+			break;*/
 		case URL: 
-			dependencies = analyseModulesFromUrl(inputValue);
+			moduleAnalysis = analyseModulesFromUrl(inputValue);
 			break;
 		}
 
 		// Convert Java Map to Json object and then encode inside HTML.
 		// If parsing errors are thrown, return an internal server error
 		// HTTP response.
-		try {
-			encodedJson = JsonUtil.writeJavaToHtmlEncodedJson(dependencies);
-		} catch(IOException e) {
+		try {						
+			DependenciesResponse response;
+			
+			if (moduleAnalysis instanceof RecursiveModuleAnalysis) {
+				String customPackageIdentifier = createTemporaryPackageForRetrievedSource((RecursiveModuleAnalysis) moduleAnalysis);
+				response = new ExplicitModuleFormatAnalysisDependenciesResponse(moduleAnalysis, 
+					customPackageIdentifier, ModuleFormat.NON_AMD);
+			} else {
+				response = new ExplicitModuleFormatAnalysisDependenciesResponse(moduleAnalysis, ModuleFormat.NON_AMD);	
+			}
+			
+			encodedJson = JsonUtil.writeJavaToHtmlEncodedJson(response);
+		} catch (FatalAnalysisError e) {
 			logger.log(Level.SEVERE, String.format(errorGeneratingJsonLogMsg, inputType.name(), inputValue));					
 			throw new ConfigurationException(internalServerErrorText);
+		} catch (JsonParseException e) {
+			logger.log(Level.SEVERE, String.format(errorGeneratingJsonLogMsg, inputType.name(), inputValue));					
+			throw new ConfigurationException(internalServerErrorText);
+		} catch (JsonMappingException e) {
+			logger.log(Level.SEVERE, String.format(errorGeneratingJsonLogMsg, inputType.name(), inputValue));					
+			throw new ConfigurationException(internalServerErrorText);
+		} catch (IOException e) {
+			logger.log(Level.SEVERE, String.format(errorGeneratingJsonLogMsg, inputType.name(), inputValue));					
+			throw new ConfigurationException(internalServerErrorText);			
+		} catch (UnknownModuleIdentifier e) {
+			logger.log(Level.SEVERE, String.format(errorGeneratingJsonLogMsg, inputType.name(), inputValue));					
+			throw new ConfigurationException(internalServerErrorText);		
+		} catch (ModuleSourceNotAvailable e) {
+			logger.log(Level.SEVERE, String.format(errorGeneratingJsonLogMsg, inputType.name(), inputValue));					
+			throw new ConfigurationException(internalServerErrorText);		
 		}
 
 		logger.exiting(this.getClass().getName(), "analyseDependencies");
@@ -151,6 +197,34 @@ public class Dependencies {
 		return encodedJson;
 	}
 
+	protected String createTemporaryPackageForRetrievedSource(RecursiveModuleAnalysis analysis) 
+	throws FatalAnalysisError, UnknownModuleIdentifier, ModuleSourceNotAvailable {
+		String packageIdentifier = null;
+		
+		Set<String> ignoredPackages = analysis.getIgnoredPackages();
+		
+		Map<String, String> customModules = new HashMap<String, String>();
+		
+		for (Entry<String, List<String>> packageAndModules: analysis.getModules().entrySet()) {
+			String packageName = packageAndModules.getKey();
+			List<String> packageModules = packageAndModules.getValue();
+			
+			if (!ignoredPackages.contains(packageName)) {
+				for(String moduleIdentifier: packageModules) {
+					if (analysis.isModuleSourceAvailable(moduleIdentifier)) {
+						customModules.put(moduleIdentifier, analysis.getModuleSource(moduleIdentifier));
+					}
+				}
+			}
+		}
+		
+		if (customModules.keySet().size() > 0) {
+			packageIdentifier = createTemporaryPackage(customModules);	
+		}
+		
+		return packageIdentifier;		
+	}
+	
 	/**
 	 * Extract layer information from an existing build profile.
 	 * The profile is evaluated in a JS engine and result interrogated. 
@@ -226,7 +300,7 @@ public class Dependencies {
 	 * @return Modules discovered and temporary packages
 	 * @throws IncorrectParameterException
 	 */
-	protected Map<String, Object> analyseModulesFromUrl(String textUrl)  {
+	protected RecursiveModuleAnalysis analyseModulesFromUrl(String textUrl)  {
 		URL url;
 		try {
 			// Prefix http protocol when URL is missing a protocol identifier.
@@ -234,15 +308,20 @@ public class Dependencies {
 				textUrl = "http://" + textUrl;
 			}
 			url = new URL(textUrl);
-			WebPage webPage = new WebPage(url);
-			return analyseModulesFromWebpage(webPage);
+			RecursiveModuleAnalysis remotePage = new RemoteWebPage(Jsoup.connect(url.toString()).get(), url, new DefaultHttpClient(), new HashSet<String>() {{
+				add("dojo");
+				add("dojox");
+				add("dijit");
+			}});
+			
+			return remotePage;
 		} catch (MalformedURLException e) {
 			throw new IncorrectParameterException(incorrectUrlErrorText);
 		} catch (IOException e) {
 			throw new IncorrectParameterException(incorrectUrlErrorText);
 		} catch (IllegalArgumentException e) {
             throw new IncorrectParameterException(incorrectUrlErrorText);
-		}
+		}		
 	}
 
 	/**
@@ -253,9 +332,10 @@ public class Dependencies {
 	 * @return Modules discovered and temporary packages
 	 * @throws IncorrectParameterException
 	 */
-	protected Map<String, Object> analyseModulesFromWebpage(String htmlContent)  {
-		WebPage webPage = new WebPage(htmlContent);
-		return analyseModulesFromWebpage(webPage);
+	protected ModuleAnalysis analyseModulesFromWebpage(String htmlContent)  {
+		org.dtk.analysis.page.WebPage webPage = new LocalWebPage(htmlContent);
+				
+		return webPage;
 	}
 
 	/**
@@ -266,8 +346,81 @@ public class Dependencies {
 	 * @return Modules discovered and temporary packages
 	 * @throws IncorrectParameterException
 	 */
-	protected Map<String, Object> analyseModulesFromWebpage(WebPage webPage) 
+	protected Map<String, Object> analyseModulesFromWebpage(RecursiveModuleAnalysis webPage) 
 	throws IncorrectParameterException {
+		
+		Map<String, Object> moduleAnalysis = new HashMap<String, Object>();
+		List<String> requiredDojoModules = new ArrayList<String>();
+		List<String> customModuleNames = new ArrayList<String>();
+		Map<String, String> customModules = new HashMap<String, String>();
+		Map<String, String> packageDetails = new HashMap<String, String>();
+		List<Map<String, String>> temporaryPackages = new ArrayList<Map<String, String>>();
+		
+		try {
+			Map<String, List<String>> pageModules = webPage.getModules();
+			Set<String> packageNames = pageModules.keySet();
+			Set<String> DTK = new HashSet<String>() {{
+				add("dojo"); add("dijit"); add("dojox");
+			}};
+			
+			for(String packageName: packageNames) {
+				List<String> packageModules = pageModules.get(packageName);
+				if (packageModules != null) {
+					if (DTK.contains(packageName)) {
+						requiredDojoModules.addAll(packageModules);
+					} else {
+						customModuleNames.addAll(packageModules);
+						for(String moduleName: packageModules) {
+							customModules.put(moduleName, webPage.getModuleSource(moduleName));
+						}
+					}					
+				}				
+			}
+			
+			String temporaryPackageId = createTemporaryPackage(customModules);
+			// Turn discovered custom modules into a new temporary package, allowing reference 
+			// when building. 		
+			packageDetails.put("name", temporaryPackageId);
+			
+			// Temporary package details, use arbitrary version for temporary packages.
+			packageDetails.put("version", "1.0.0");
+
+			temporaryPackages.add(packageDetails);
+
+			logger.log(Level.INFO, String.format(webPageParseLogMsg, webPage.getModules().size(), temporaryPackageId, customModuleNames.size()));
+			
+		} catch (FatalAnalysisError e) {
+			logger.log(Level.SEVERE, String.format(failedWebPageParseLogMsg, e));
+			throw new IncorrectParameterException(parsingFailureErrorText);
+		} catch (ModuleSourceNotAvailable e) {
+			logger.log(Level.SEVERE, String.format(failedWebPageParseLogMsg, e));
+			throw new IncorrectParameterException(parsingFailureErrorText);
+		} catch (UnknownModuleIdentifier e) {
+			logger.log(Level.SEVERE, String.format(failedWebPageParseLogMsg, e));
+			throw new IncorrectParameterException(parsingFailureErrorText);
+		}
+		
+				
+		moduleAnalysis.put("requiredDojoModules", requiredDojoModules);
+		
+		// Custom module list stored in temporary package
+		moduleAnalysis.put("availableModules", customModuleNames);
+		
+		// Store temporary package references into response
+		moduleAnalysis.put("packages", temporaryPackages);
+		
+		moduleAnalysis.put("dojoVersion", DojoScriptVersions.Versions.UNKNOWN);
+		
+		
+		return moduleAnalysis;		
+		
+		
+		
+		
+		/*
+		
+		
+		
 		Map<String, Object> moduleAnalysis = new HashMap<String, Object>();
 
 		// If web page fails to parse, invalid source or unable to contact 
@@ -318,7 +471,7 @@ public class Dependencies {
 
 		logger.log(Level.INFO, String.format(webPageParseLogMsg, webPage.getModules().size(), temporaryPackageId, customModuleNames.size()));
 		
-		return moduleAnalysis;
+		return moduleAnalysis;*/
 	}
 
 	/**

@@ -1,0 +1,1 @@
+dojo.require("sample.app");

@@ -1,0 +1,2 @@
+define("dojo/dojo", [], function () {
+});

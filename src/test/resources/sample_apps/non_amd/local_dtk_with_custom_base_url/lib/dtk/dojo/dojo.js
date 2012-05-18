@@ -1,0 +1,2 @@
+dojo.declare("dojo", [], {
+});
