@@ -93,6 +93,18 @@ public abstract class WebPage implements ModuleAnalysis {
 	}
 	
 	/**
+	 * Return the module format for all discovered modules during analysis. 
+	 * This will correspond to the module identifier format returned
+	 * using "getModules". Defaults to non-AMD mode.
+	 * 
+	 * @return Analysed module format
+	 */
+	@Override
+	public ModuleFormat getModuleFormat() {
+		return moduleFormat;
+	}
+	
+	/**
 	 * Does this document script tag contain the DTK loader code?
 	 * 
 	 * @param script - Document script tag

@@ -55,7 +55,7 @@ public class RemoteWebPage extends RecursiveWebPage {
 	 * @param location - Remote resource location
 	 * @param httpClient - Http Client
 	 */
-	protected RemoteWebPage(Document document, URL location, HttpClient httpClient, Set<String> ignoredPackages) {
+	public RemoteWebPage(Document document, URL location, HttpClient httpClient, Set<String> ignoredPackages) {
 		super(document, location);
 		this.httpClient = httpClient;
 		this.setIgnoredPackages(ignoredPackages);
@@ -69,7 +69,7 @@ public class RemoteWebPage extends RecursiveWebPage {
 	 * @param location - Remote resource location
 	 * @param httpClient - Http Client
 	 */
-	protected RemoteWebPage(Document document, URL location, HttpClient httpClient) {
+	public RemoteWebPage(Document document, URL location, HttpClient httpClient) {
 		super(document, location);
 		this.httpClient = httpClient;
 		parse();					

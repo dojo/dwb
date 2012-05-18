@@ -10,6 +10,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +53,7 @@ public class DependenciesTest {
 	final protected String baseResourcePath = "/api/dependencies/";
 	
 	/** Sample web address with Dojo application */
-	final protected String validWebAddress = "http://jamesthom.as/sample.html";
+	final protected String validWebAddress = "http://public.jamesthom.as/dwb_test_files/sample.html";
 	
 	/** Simple invalid web address */
 	final protected String invalidWebAddress = "\\";
@@ -137,7 +138,7 @@ public class DependenciesTest {
 	 * @throws ClientProtocolException 
 	 */
 	@Test
-	public void test_AnalyseWebPage() throws ClientProtocolException, IOException, URISyntaxException {
+	public void test_AnalyseNonAmdWebPage() throws ClientProtocolException, IOException, URISyntaxException {
 		// Simulate multipart html FORM submission. 
 		MultipartEntity reqEntity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 		
@@ -145,7 +146,7 @@ public class DependenciesTest {
 		StringBody strBody = new StringBody("web_page");
 		reqEntity.addPart("type", strBody);
 		
-		InputStream is = getClass().getClassLoader().getResourceAsStream("sample.html");		
+		InputStream is = getClass().getClassLoader().getResourceAsStream("sample_pages/non_amd/local.html");		
 		InputStreamBody htmlPage = new InputStreamBody(is, "sample.html");
 		reqEntity.addPart("value", htmlPage);
 		
@@ -159,14 +160,60 @@ public class DependenciesTest {
 		
 		// Compare lists of dojo.require() modules that were contained within the test
 		// web page we submitted. 
-		assertEquals(Arrays.asList("dijit.form.Button", "dijit.form.Form", "dojo.parser",
-			"dijit.layout.BorderContainer", "dijit.layout.ContentPane", "dijit.layout.TabContainer", 
-			"dijit.form.Select", "dijit.TitlePane", "dijit.form.CheckBox", "dojox.grid.EnhancedGrid", 
-			"dojox.grid.enhanced.plugins.IndirectSelection", "dojo.data.ItemFileReadStore", 
-			"dojo.data.ItemFileWriteStore", "dojox.data.AndOrWriteStore"),
-			jsonResponse.get("requiredDojoModules"));
+		List<String> expected = Arrays.asList("dijit.form.Button", "dijit.form.Form", "dojo.parser",
+				"dijit.layout.ContentPane", "dijit.layout.TabContainer", "dijit.form.Select", "dojox.grid.EnhancedGrid", 
+				"dojox.grid.enhanced.plugins.IndirectSelection", "dojo.data.ItemFileReadStore", "dojox.data.AndOrWriteStore"),
+				actual = (List<String>) jsonResponse.get("requiredDojoModules");
+		
+		Collections.sort(expected);
+		Collections.sort(actual);
+		
+		assertEquals(expected, actual);
 	}
 
+	/**
+	 * Test dependency analysis for a static HTML file. Simulate a 
+	 * HTML form submission containing the HTML file. Verify resulting 
+	 * response contains expected modules contained within page. 
+	 * 
+	 * @throws URISyntaxException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 */
+	@Test
+	public void test_AnalyseAmdWebPage() throws ClientProtocolException, IOException, URISyntaxException {
+		// Simulate multipart html FORM submission. 
+		MultipartEntity reqEntity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+		
+		// Add HTML file and type="web_page" fields.
+		StringBody strBody = new StringBody("web_page");
+		reqEntity.addPart("type", strBody);
+		
+		InputStream is = getClass().getClassLoader().getResourceAsStream("sample_pages/amd/local_with_require.html");		
+		InputStreamBody htmlPage = new InputStreamBody(is, "sample.html");
+		reqEntity.addPart("value", htmlPage);
+		
+		// Simulate form submission, check HTTP status and parse JSON from HTML response.
+		HttpResponse response = simulateMultiPartFormSubmission(reqEntity);
+		assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+		
+		// JSON response is encoded within a HTML <textarea> element. Retrieve and 
+		// convert to a map collection.
+		Map<String, Object> jsonResponse = extractJsonFromHTMLEncodedResponse(response);
+		
+		// Compare lists of dojo.require() modules that were contained within the test
+		// web page we submitted. 
+		List<String> expected = Arrays.asList("dijit.form.Button", "dijit.form.Form", "dojo.parser",
+				"dijit.layout.ContentPane", "dijit.layout.TabContainer", "dijit.form.Select", "dojox.grid.EnhancedGrid", 
+				"dojox.grid.enhanced.plugins.IndirectSelection", "dojo.data.ItemFileReadStore", "dojox.data.AndOrWriteStore"),
+				actual = (List<String>) jsonResponse.get("requiredDojoModules");
+		
+		Collections.sort(expected);
+		Collections.sort(actual);
+		
+		assertEquals(expected, actual);
+	}
+	
 	/**
 	 * Test dependency analysis for a static HTML file. Simulate a 
 	 * HTML form submission containing the HTML file. Use HTML file 
@@ -178,7 +225,7 @@ public class DependenciesTest {
 	 * @throws ClientProtocolException 
 	 */
 	@Test
-	public void test_AnalyseWebPageNoModules() throws ClientProtocolException, IOException, URISyntaxException {
+	public void test_AnalyseNonAmdWebPageWithNoModules() throws ClientProtocolException, IOException, URISyntaxException {
 		// Simulate multipart html FORM submission. 
 		MultipartEntity reqEntity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 		
@@ -269,12 +316,21 @@ public class DependenciesTest {
 		
 		// Compare lists of dojo.require() modules that were contained within the test
 		// application we submitted. 
-		assertEquals(Arrays.asList("dijit.form.FilteringSelect","dojo.back", "dijit.form.Button",
+		List<String> expected = Arrays.asList("dijit.form.FilteringSelect","dojo.back", "dijit.form.Button",
 			"dijit.form.Form", "dojo.parser"),
-			jsonResponse.get("requiredDojoModules"));
+			actual = (List<String>) jsonResponse.get("requiredDojoModules");
 		
-		assertEquals(Arrays.asList("web_builder.util.util", "web_builder.child", "web_builder.app"),
-			jsonResponse.get("availableModules"));
+		Collections.sort(expected);
+		Collections.sort(actual);		
+		assertEquals(expected, actual);
+		
+		expected = Arrays.asList("web_builder.util.util", "web_builder.child", "web_builder.app");
+		actual = (List<String>) jsonResponse.get("availableModules");		
+
+		Collections.sort(expected);
+		Collections.sort(actual);		
+		assertEquals(expected, actual);
+		
 		
 		// Response should also contain a single entry in the temporary packages object for 
 		// the "web_builder" modules. This is the temporary package reference. 
@@ -478,7 +534,7 @@ public class DependenciesTest {
 		Map<String, Object> jsonObj = extractJsonFromHTMLEncodedResponse(response);
 		
 		// Should contain list of object layers from profile
-		List<Object> layers = (List<Object>) jsonObj.get("layers");;
+		List<Object> layers = (List<Object>) jsonObj.get("layers");
 		
 		assertNotNull(layers);
 		

@@ -7,7 +7,6 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import org.dtk.analysis.ModuleFormat;
-import org.dtk.resources.Build;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 
@@ -34,7 +33,7 @@ public class LocalWebPage extends WebPage {
 	/**
 	 * Static logging instance.
 	 */
-	protected static final Logger logger = Logger.getLogger(LocalWebPageTest.class.getName());	
+	protected static final Logger logger = Logger.getLogger(LocalWebPage.class.getName());	
 	
 	/**
 	 * Default constructor, start parsing of HTML page contents.

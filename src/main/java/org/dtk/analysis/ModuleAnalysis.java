@@ -24,4 +24,13 @@ public interface ModuleAnalysis {
 	 * error prevented module discovery from completing
 	 */
 	public Map<String, List<String>> getModules() throws FatalAnalysisError;
+	
+	/**
+	 * Return the module format for all discovered modules during analysis. 
+	 * This will correspond to the module identifier format returned
+	 * using "getModules". 
+	 * 
+	 * @return Analysed module format
+	 */
+	public ModuleFormat getModuleFormat(); 
 }
