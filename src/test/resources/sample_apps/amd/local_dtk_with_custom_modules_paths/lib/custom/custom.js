@@ -1,0 +1,2 @@
+define("custom/custom", {
+});

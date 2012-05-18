@@ -138,8 +138,10 @@ define([], function(){
 
 		log = function(id, args){
 			if(id=="pacify"){
-                var logger = Packages.org.dtk.resources.build.manager.BuildStatusManager.getInstance();
-                logger.addNewBuildLog(this.buildReference, "\n" + args);
+                if (this.buildReference) {
+                    var logger = Packages.org.dtk.resources.build.manager.BuildStatusManager.getInstance();
+                    logger.addNewBuildLog(this.buildReference, "\n" + args);
+                }
 				console.log(args);
 			}else if(id in messageMap){
 				var item = messageMap[id];
