@@ -245,6 +245,29 @@ public class DependenciesIntegrationTest {
 		testAnalyseWebApplicationFromDirectory("sample_apps/amd/local_dtk_with_custom_modules_paths");				
 	}
 	
+	/**
+	 * Test dependency analysis for a remote web application (using old dojo module style). Simulate a 
+	 * HTML form submission containing the URL. Verify resulting response contains expected modules 
+	 * contained within app.
+	 * @throws Exception 
+	 */
+	@Test
+	public void test_AnalyseWebApplicationWithNoCustomModules() throws Exception {
+		FileServer fs = FileServer.spawn(testPort, "sample_apps/amd/local_dtk_with_only_dtk_reqs");		
+		
+		HttpResponse response = generateHTMLFormPost("url", validWebAddress);		
+		assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());	
+		
+		Map<String, Object> jsonResponse = extractJsonFromHTMLEncodedResponse(response);
+		
+		compareUnsortedModuleLists(Arrays.asList("dojo.parser", "dijit.form.Button", "dojox.grid.EnhancedGrid"), 
+			(List<String>) jsonResponse.get("requiredDojoModules"));
+		assertEquals(Collections.EMPTY_LIST, (List<String>) jsonResponse.get("availableModules"));		
+		assertEquals(Collections.EMPTY_LIST, (List) jsonResponse.get("packages"));
+		
+		fs.stop();				
+	}
+	
 	public void testAnalyseWebApplicationFromDirectory(String directoryPath) throws Exception {
 		FileServer fs = FileServer.spawn(testPort, directoryPath);		
 		

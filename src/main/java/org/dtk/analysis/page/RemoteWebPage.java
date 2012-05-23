@@ -141,9 +141,10 @@ public class RemoteWebPage extends RecursiveWebPage {
 	 * @return Package identifier
 	 */
 	@Override
-	protected String getPackageIdentifier(String moduleIdentifier) {
+	protected String getPackageIdentifier(String moduleIdentifier) {		
 		char separator = ModuleFormat.getPathSeparator(moduleFormat);
-		return moduleIdentifier.split("\\" + Character.toString(separator))[0];
+		return moduleIdentifier.indexOf(separator) == -1 ? null : 
+			moduleIdentifier.split("\\" + Character.toString(separator))[0];
 	}
 
 	/**

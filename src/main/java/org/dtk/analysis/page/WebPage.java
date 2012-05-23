@@ -208,11 +208,13 @@ public abstract class WebPage implements ModuleAnalysis {
 			for(String moduleIdentifier: moduleDependencies) {
 				 String absoluteModuleIdentifier = getAbsoluteModuleIdentifier(moduleIdentifier),
 				 	packageName = getPackageIdentifier(absoluteModuleIdentifier);
-				 			 
-				 updateDiscoveredModules(packageName, absoluteModuleIdentifier);			 
+				 
+				 if (shouldIncludeDiscoveredModule(packageName, absoluteModuleIdentifier)) {
+					 updateDiscoveredModules(packageName, absoluteModuleIdentifier); 
+				 }				 			 
 			 }
 		}
-	}
+	}	
 	
 	/**
 	 * Return list of module dependencies within a JavaScript source
@@ -228,7 +230,7 @@ public abstract class WebPage implements ModuleAnalysis {
 	
 	/**
 	 * Add module identifier to the global dependencies state, 
-	 * unless it is already present.
+	 * unless it is already present. 
 	 * 
 	 * @param packageName - Package identifier for module
 	 * @param moduleIdentifier - Absolute module identifier
@@ -353,5 +355,17 @@ public abstract class WebPage implements ModuleAnalysis {
 	 */
 	protected void enableAmdModuleFormat(boolean enabled) {
 		moduleFormat = enabled ? ModuleFormat.AMD : ModuleFormat.NON_AMD;
+	}
+
+	/**
+	 * Discovered modules must be non-empty strings to be included within analysis response. 
+	 * 
+	 * @param packageName - Package name 
+	 * @param absoluteModuleIdentifier - Module identifier
+	 * @return Module should be included
+	 */
+	protected boolean shouldIncludeDiscoveredModule(String packageName, String absoluteModuleIdentifier) {
+		return packageName != null && !packageName.equals("") 
+			&& absoluteModuleIdentifier != null && !absoluteModuleIdentifier.equals("");
 	}
 }

@@ -156,13 +156,17 @@ public class Dependencies {
 		// HTTP response.
 		try {						
 			DependenciesResponse response;
+			String customPackageIdentifier = null;
 			
 			if (moduleAnalysis instanceof RecursiveModuleAnalysis) {
-				String customPackageIdentifier = createTemporaryPackageForRetrievedSource((RecursiveModuleAnalysis) moduleAnalysis);
+				customPackageIdentifier = createTemporaryPackageForRetrievedSource((RecursiveModuleAnalysis) moduleAnalysis);
+			}
+			
+			if (customPackageIdentifier != null) {
 				response = new ExplicitModuleFormatAnalysisDependenciesResponse(moduleAnalysis, 
-					customPackageIdentifier, ModuleFormat.NON_AMD);
+					customPackageIdentifier, ModuleFormat.NON_AMD);	
 			} else {
-				response = new ExplicitModuleFormatAnalysisDependenciesResponse(moduleAnalysis, ModuleFormat.NON_AMD);	
+				response = new ExplicitModuleFormatAnalysisDependenciesResponse(moduleAnalysis, ModuleFormat.NON_AMD);
 			}
 			
 			encodedJson = JsonUtil.writeJavaToHtmlEncodedJson(response);
