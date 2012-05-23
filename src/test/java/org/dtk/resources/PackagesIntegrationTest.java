@@ -44,7 +44,7 @@ import org.dtk.util.Options;
  * @author James Thomas
  */
 
-public class PackagesTest {
+public class PackagesIntegrationTest {
 
 	/**
 	 * Service end point path.

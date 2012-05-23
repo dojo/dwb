@@ -141,9 +141,10 @@ public class RemoteWebPage extends RecursiveWebPage {
 	 * @return Package identifier
 	 */
 	@Override
-	protected String getPackageIdentifier(String moduleIdentifier) {
+	protected String getPackageIdentifier(String moduleIdentifier) {		
 		char separator = ModuleFormat.getPathSeparator(moduleFormat);
-		return moduleIdentifier.split("\\" + Character.toString(separator))[0];
+		return moduleIdentifier.indexOf(separator) == -1 ? null : 
+			moduleIdentifier.split("\\" + Character.toString(separator))[0];
 	}
 
 	/**
@@ -227,6 +228,9 @@ public class RemoteWebPage extends RecursiveWebPage {
 	
 			if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				moduleContents = EntityUtils.toString(response.getEntity());	
+			} else {
+				EntityUtils.toString(response.getEntity());
+				logger.warning("Unable to retrieve URL: " + location);
 			}
 		} catch (IOException ioe) {
 			logger.warning("Unable to retrieve resource at location: " + location);

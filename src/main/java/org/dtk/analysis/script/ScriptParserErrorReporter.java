@@ -1,4 +1,4 @@
-package org.dtk.resources.dependencies;
+package org.dtk.analysis.script;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;

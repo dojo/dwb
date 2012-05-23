@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.dtk.resources.dependencies.ScriptParserErrorReporter;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.EvaluatorException;

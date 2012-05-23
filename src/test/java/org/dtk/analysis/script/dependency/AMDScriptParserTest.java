@@ -4,8 +4,13 @@ import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import org.dtk.analysis.script.ScriptParserErrorReporter;
 import org.dtk.analysis.script.dependency.AMDScriptParser;
+import org.dtk.resources.Dependencies;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -26,6 +31,12 @@ import org.junit.Test;
 
 public class AMDScriptParserTest {
 
+	@BeforeClass
+	static public void turnOffLogging() {
+		Logger.getLogger(Dependencies.class.getName()).setLevel(Level.OFF);
+		Logger.getLogger(BaseScriptDependencyParser.class.getName()).setLevel(Level.OFF);
+	}
+	
 	private static List<String> getScriptDeps(String source) {
 		AMDScriptParser parser = new AMDScriptParser(source);		
 		return parser.getModuleDependencies();		

@@ -47,7 +47,7 @@ import static org.junit.Assert.* ;
  * @author James Thomas
  */
 
-public class BuildTest {
+public class BuildIntegrationTest {
 
 	/**
 	 * API end point details.
