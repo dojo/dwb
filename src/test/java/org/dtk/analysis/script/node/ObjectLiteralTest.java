@@ -8,10 +8,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.dtk.analysis.script.ScriptParserErrorReporter;
 import org.dtk.analysis.script.exceptions.InvalidLiteralNode;
 import org.dtk.analysis.script.node.ArrayLiteral;
 import org.dtk.analysis.script.node.ObjectLiteral;
-import org.dtk.resources.dependencies.ScriptParserErrorReporter;
 import org.junit.Test;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.ContextFactory;

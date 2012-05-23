@@ -17,7 +17,7 @@ import org.mozilla.javascript.Token;
  * 		require(["some/module",...]);  
  * or the define method:  
  * 		define(["some/module"],...);
- *		define("module/id", ["some/module"],...);  
+ *		define("module/id", ["some/module"],...);
  * 
  * @author James Thomas
  */

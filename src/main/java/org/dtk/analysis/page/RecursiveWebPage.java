@@ -122,16 +122,18 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 		List<String> moduleDependencies = analyseModuleDependencies(scriptSource);
 		
 		for(String moduleIdentifier: moduleDependencies) {
-			 String absoluteModuleIdentifier = getAbsoluteModuleIdentifier(moduleIdentifier),
-			 	packageName = getPackageIdentifier(absoluteModuleIdentifier);
-			 			 
-			 updateDiscoveredModules(packageName, absoluteModuleIdentifier);			 
-			 			 
-			if (shouldAnalyseForDependencies(packageName, absoluteModuleIdentifier)) {
-				String moduleContents = retrieveModuleSource(absoluteModuleIdentifier);		
-				if (moduleContents != null) {
-					moduleSource.put(absoluteModuleIdentifier, moduleContents);
-					recursivelyAnalyseScriptDependencies(moduleContents);
+			String absoluteModuleIdentifier = getAbsoluteModuleIdentifier(moduleIdentifier),
+				packageName = getPackageIdentifier(absoluteModuleIdentifier);
+
+			if (shouldIncludeDiscoveredModule(packageName, absoluteModuleIdentifier)) {
+				updateDiscoveredModules(packageName, absoluteModuleIdentifier);			 
+	 			 
+				if (shouldAnalyseForDependencies(packageName, absoluteModuleIdentifier)) {
+					String moduleContents = retrieveModuleSource(absoluteModuleIdentifier);		
+					if (moduleContents != null) {
+						moduleSource.put(absoluteModuleIdentifier, moduleContents);
+						recursivelyAnalyseScriptDependencies(moduleContents);
+					}
 				}
 			 }			
 		 }

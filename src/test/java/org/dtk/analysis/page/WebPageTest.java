@@ -97,6 +97,20 @@ public class WebPageTest {
 		assertEquals(ModuleFormat.AMD, webPage.moduleFormat);
 	}
 	
+	@Test
+	public void mustNotIncludeInvalidModulesDiscovered() {
+		MockWebPage webPage = new MockWebPage();
+		
+		assertFalse(webPage.shouldIncludeDiscoveredModule("aaaa", ""));
+		assertFalse(webPage.shouldIncludeDiscoveredModule("aaaa", null));
+		assertFalse(webPage.shouldIncludeDiscoveredModule("", "aaa"));
+		assertFalse(webPage.shouldIncludeDiscoveredModule(null, "aaa"));
+		assertFalse(webPage.shouldIncludeDiscoveredModule(null, null));
+		assertFalse(webPage.shouldIncludeDiscoveredModule("", ""));
+		
+		assertTrue(webPage.shouldIncludeDiscoveredModule("aaaa", "aaa"));
+	}
+	
 	private class MockWebPage extends WebPage {
 		public boolean isDojoScript = false;
 		public String scriptContents = "";
