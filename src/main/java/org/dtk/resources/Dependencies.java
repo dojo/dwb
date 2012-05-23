@@ -146,9 +146,6 @@ public class Dependencies {
 		case WEB_PAGE:
 			moduleAnalysis = analyseModulesFromWebpage(inputValue);
 			break;
-		/*case PROFILE:
-			dependencies = extractLayersFromProfile(inputValue);
-			break;*/
 		case URL: 
 			moduleAnalysis = analyseModulesFromUrl(inputValue);
 			break;
@@ -221,72 +218,7 @@ public class Dependencies {
 		}
 		
 		return packageIdentifier;		
-	}
-	
-	/**
-	 * Extract layer information from an existing build profile.
-	 * The profile is evaluated in a JS engine and result interrogated. 
-	 * 
-	 * @param buildProfile - Dojo build profile text
-	 * @return Layers details for a given build profile
-	 */
-	protected Map<String, Object> extractLayersFromProfile(String buildProfile) throws IncorrectParameterException {
-		Map<String, Object> moduleAnalysis = new HashMap<String, Object>();
-
-		try {
-			// Create new JS evaluator context 
-			org.mozilla.javascript.Context cx = ContextFactory.getGlobal().enterContext();
-			Scriptable scope = cx.initStandardObjects();			       
-			
-			// Return dependency layers JS object as the result of script evaluation
-			NativeArray result = (NativeArray) cx.evaluateString(scope, buildProfile + "; dependencies.layers", "profile.js", 1, null);
-			
-			// For each dependency layer, convert details to Java context
-			// and return.
-			List<Object> profileLayers = new ArrayList<Object>();
-
-			for (Object o : result.getIds()) {
-				Map<String, Object> layerDetails = extractLayerDetails(result, (Integer) o);
-				profileLayers.add(layerDetails);
-			}	        
-
-			moduleAnalysis.put("layers", profileLayers);
-		// Caught error from JS engine parsing source file, return to user as 400 status. 
-		} catch (EvaluatorException e) {
-			logger.log(Level.SEVERE, String.format(buildProfileParseLogMsg, buildProfile));
-			throw new IncorrectParameterException(buildProfileParseErrorText);
-		}
-		
-		return moduleAnalysis;
-	}
-
-	/** 
-	 * Convert an object at given index point to Java instance.
-	 * 
-	 * @param layers - Collection of JS objects
-	 * @param index - Index of element to extract from
-	 * @return JS object details from result
-	 */
-	protected Map<String, Object> extractLayerDetails(NativeArray layers, int index) {
-		Map<String, Object> details = new HashMap<String, Object>();
-
-		// Get layer name from JS object 
-		ScriptableObject layer = (ScriptableObject) layers.get(index, null);
-		String layerName = (String) layer.get("name", null);
-		details.put("name", layerName);
-
-		// Pull all dependencies from layer details
-		NativeArray nativeDependencies = (NativeArray) layer.get("dependencies", null);
-		List<String> dependencies = new ArrayList<String>();	            
-		for (Object idx : nativeDependencies.getIds()) {   
-			int nidx = (Integer) idx;
-			String moduleName = (String) nativeDependencies.get(nidx, null);
-			dependencies.add(moduleName);
-		}
-		details.put("dependencies", dependencies);
-
-		return details;
-	}
+	}	
 	
 	/**
 	 * Analyse remote web application for Dojo module dependencies. Web crawler
@@ -410,66 +342,7 @@ public class Dependencies {
 		moduleAnalysis.put("dojoVersion", DojoScriptVersions.Versions.UNKNOWN);
 		
 		
-		return moduleAnalysis;		
-		
-		
-		
-		
-		/*
-		
-		
-		
-		Map<String, Object> moduleAnalysis = new HashMap<String, Object>();
-
-		// If web page fails to parse, invalid source or unable to contact 
-		// remote resources, flag to user as an error.
-		if (!webPage.parse()) {
-			logger.log(Level.SEVERE, String.format(failedWebPageParseLogMsg, webPage.getParsingFailure()));
-			throw new IncorrectParameterException(parsingFailureErrorText);
-		} 
-		
-		Map<String, String> customModules = webPage.getCustomModuleContent();
-		List<String> customModuleNames = new ArrayList<String>(customModules.keySet());
-		
-		Map<String, String> packageDetails = new HashMap<String, String>();
-		List<Map<String, String>> temporaryPackages = new ArrayList<Map<String, String>>();
-		
-		String temporaryPackageId = createTemporaryPackage(customModules);
-		// Turn discovered custom modules into a new temporary package, allowing reference 
-		// when building. 		
-		packageDetails.put("name", temporaryPackageId);
-		
-		// Temporary package details, use arbitrary version for temporary packages.
-		packageDetails.put("version", "1.0.0");
-		
-		temporaryPackages.add(packageDetails);
-		
-		Iterator<String> modulesIter = webPage.getModules().iterator();
-		List<String> requiredDojoModules = new ArrayList<String>();
-		
-		// Find all DTK modules from module set.
-		while(modulesIter.hasNext()) {
-			String moduleName = modulesIter.next();
-			if (!customModuleNames.contains(moduleName)) {
-				requiredDojoModules.add(moduleName);
-			}
-		}
-		
-		// Store list of discovered modules within repsonse map.
-		moduleAnalysis.put("requiredDojoModules", requiredDojoModules);
-		
-		// Add discovered Dojo version
-		moduleAnalysis.put("dojoVersion", webPage.getDojoVersion().getValue());
-		
-		// Custom module list stored in temporary package
-		moduleAnalysis.put("availableModules", customModuleNames);
-		
-		// Store temporary package references into response
-		moduleAnalysis.put("packages", temporaryPackages);
-
-		logger.log(Level.INFO, String.format(webPageParseLogMsg, webPage.getModules().size(), temporaryPackageId, customModuleNames.size()));
-		
-		return moduleAnalysis;*/
+		return moduleAnalysis;					
 	}
 
 	/**

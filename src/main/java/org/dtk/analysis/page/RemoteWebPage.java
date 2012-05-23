@@ -227,6 +227,9 @@ public class RemoteWebPage extends RecursiveWebPage {
 	
 			if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				moduleContents = EntityUtils.toString(response.getEntity());	
+			} else {
+				EntityUtils.toString(response.getEntity());
+				logger.warning("Unable to retrieve URL: " + location);
 			}
 		} catch (IOException ioe) {
 			logger.warning("Unable to retrieve resource at location: " + location);

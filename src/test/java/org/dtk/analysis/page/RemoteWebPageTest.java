@@ -39,6 +39,7 @@ import org.dtk.analysis.exceptions.FatalAnalysisError;
 import org.dtk.analysis.exceptions.ModuleSourceNotAvailable;
 import org.dtk.analysis.exceptions.UnknownModuleIdentifier;
 import org.dtk.util.FileUtil;
+import org.dtk.util.MockHttpClient;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
@@ -324,113 +325,5 @@ public class RemoteWebPageTest {
 			return null;
 		}
 		return IOUtils.toString(is);
-	}
-		
-	/**
-	 * Mock implementation of the HTTP client, will return responses from 
-	 * a file system rather than a remote host.
-	 * 
-	 * @author James Thomas
-	 */
-	private class MockHttpClient implements HttpClient {
-		
-		public String hostPrefix;
-		public String appDir;
-		
-		@Override
-		public HttpResponse execute(HttpUriRequest request) throws IOException,
-			ClientProtocolException {
-			
-			String url = request.getURI().toString();
-			
-			if (!url.startsWith(hostPrefix)) {
-				throw new IOException("Trying to read non-local file");
-			}
-			
-			url = appDir + url.substring(hostPrefix.length());
-			String responseText = getResourceAsString(url);
-			
-			StatusLine statusLine;			
-			HttpResponse response;
-			
-			if (responseText != null) {
-				statusLine = new BasicStatusLine(new ProtocolVersion("HTTP", 2, 0), HttpStatus.SC_OK, null);			
-				response = new BasicHttpResponse(statusLine);				
-				response.setEntity(new StringEntity(responseText));
-			} else {
-				statusLine = new BasicStatusLine(new ProtocolVersion("HTTP", 2, 0), HttpStatus.SC_NOT_FOUND, null);			
-				response = new BasicHttpResponse(statusLine);
-			}
-			
-			return response;
-		}
-		
-		@Override
-		public HttpParams getParams() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ClientConnectionManager getConnectionManager() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public HttpResponse execute(HttpUriRequest request, HttpContext context)
-				throws IOException, ClientProtocolException {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public HttpResponse execute(HttpHost target, HttpRequest request)
-				throws IOException, ClientProtocolException {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public HttpResponse execute(HttpHost target, HttpRequest request,
-				HttpContext context) throws IOException,
-				ClientProtocolException {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public <T> T execute(HttpUriRequest request,
-				ResponseHandler<? extends T> responseHandler)
-				throws IOException, ClientProtocolException {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public <T> T execute(HttpUriRequest request,
-				ResponseHandler<? extends T> responseHandler,
-				HttpContext context) throws IOException,
-				ClientProtocolException {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public <T> T execute(HttpHost target, HttpRequest request,
-				ResponseHandler<? extends T> responseHandler)
-				throws IOException, ClientProtocolException {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public <T> T execute(HttpHost target, HttpRequest request,
-				ResponseHandler<? extends T> responseHandler,
-				HttpContext context) throws IOException,
-				ClientProtocolException {
-			// TODO Auto-generated method stub
-			return null;
-		}
-	}
+	}			
 }

@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 import org.dtk.analysis.script.node.ArrayLiteral;
 import org.dtk.analysis.script.node.ObjectLiteral;
@@ -21,6 +22,7 @@ public class LoaderConfigParserTest {
 	
 	private static Map<String, Object> getLoaderConfig(String source) {
 		LoaderConfigParser parser = new LoaderConfigParser(source);		
+		parser.logger.setLevel(Level.OFF);
 		return parser.getScriptConfig();		
 	}
 	

@@ -15,8 +15,7 @@ Usage
 -----
 
 Maven is used as the build manager for the project. It has been configured for
-quickstart with minimal configuration using either embedded Jetty or Tomcat
-plugins, see details below. 
+quickstart with minimal configuration using an embedded Jetty plugin, see details below. 
 
 To connect the application, once running, point your web browser 
 at [http://localhost:8080/](http://localhost:8080/).
@@ -28,18 +27,11 @@ server of your choice.
 ### Quickstart with Jetty
 	$ mvn -Ddojo.source=/some/path/to/dojo-1.6-source jetty:run
 
-### Quickstart with Tomcat
-	$ mvn -Ddojo.source=/some/path/to/dojo-1.6-source tomcat:run
-
 ### Quickstart with Jetty, using older Dojo release
 	$ mvn -Ddojo.source=/some/path/to/dojo-1.5-source -Ddojo.version=1.5.0 jetty:run
 
 ### Quickstart with Jetty, setting build cache path 
     $ mvn -Dcachepath=/tmp/ -Ddojo.source=/some/path/to/dojo-source jetty:run
-
-### Deploying to remote Tomcat server
-    Edit ~/.m2/settings.xml and fill out server details for server id, "dwb"
-	$ mvn -Ddojo.source=/some/path/to/dojo-source tomcat:deploy
 
 Configuration 
 -----

@@ -55,7 +55,6 @@ public class ModuleAnalysisDependenciesResponse implements DependenciesResponse 
 
 	@Override
 	public List<String> getAvailableModules() {
-		// TODO Auto-generated method stub
 		return availableModules;
 	}
 

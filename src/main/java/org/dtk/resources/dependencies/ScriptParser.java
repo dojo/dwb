@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.dtk.analysis.script.ScriptParserErrorReporter;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ErrorReporter;
