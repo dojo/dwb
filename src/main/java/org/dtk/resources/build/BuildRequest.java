@@ -181,6 +181,10 @@ public class BuildRequest {
 			while(modulesIter.hasNext()) {
 				dependencies.add(modulesIter.next().get("name"));
 			}
+			
+			if ("dojo.js".equals(layer.get("name"))) {
+				dependencies.add("dojo.selector.acme");
+			}
 						
 			// Create new layer objects in the map, just layer name
 			// and module dependencies
