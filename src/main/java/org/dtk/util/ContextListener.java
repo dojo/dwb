@@ -58,7 +58,7 @@ public class ContextListener implements ServletContextListener {
 	);
 	
 	/** Log filename format for application logs **/
-	protected static final String LOG_FILE_FORMAT = "logs/%1$s.log";
+	public static final String LOG_FILE_FORMAT = "logs/%1$s.log";
 	
 	/** Error message when exception caught adding log file handler **/
 	protected static final String LOG_HANDLER_ERROR = "Unable to add file handler to logger for %1$s. " +
