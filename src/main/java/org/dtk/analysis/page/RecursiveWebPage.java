@@ -22,6 +22,7 @@ import org.dtk.analysis.script.config.ScriptConfigParser;
 import org.dtk.analysis.script.dependency.AMDScriptParser;
 import org.dtk.analysis.script.dependency.NonAMDScriptParser;
 import org.dtk.analysis.script.dependency.ScriptDependencyParser;
+import org.dtk.analysis.script.node.ArrayLiteral;
 import org.dtk.analysis.script.node.ObjectLiteral;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -177,6 +178,10 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 			updateInternalPathsConfig((ObjectLiteral) parsedScriptConfig.get(DojoConfigAttrs.PATHS_CONFIG_FLAG));
 		}
 		
+		if (parsedScriptConfig.containsKey(DojoConfigAttrs.PACKAGES_CONFIG_FLAG)) {
+			updateInternalPathsConfig((ArrayLiteral) parsedScriptConfig.get(DojoConfigAttrs.PACKAGES_CONFIG_FLAG));
+		}		
+		
 		if (parsedScriptConfig.containsKey(DojoConfigAttrs.BASE_URL_CONFIG_FLAG)) {
 			baseUrl = (String) parsedScriptConfig.get(DojoConfigAttrs.BASE_URL_CONFIG_FLAG);
 		}
@@ -195,6 +200,27 @@ public abstract class RecursiveWebPage extends WebPage implements RecursiveModul
 				modulePaths.put(packageName, (String) packagePath);
 			}
 		}
+	}
+	/**
+	 * Update the internal loader configuration paths for packages declaration,  
+	 * contains list of object literals with "name" and "location" values. 
+	 * 
+	 * Will ignore any non-string values referenced.
+	 * 
+	 * @param packages - Module packages list
+	 */	
+	protected void updateInternalPathsConfig(ArrayLiteral packages) {
+		for(Object packageInfo: packages.getValueList()) {
+			if (packageInfo instanceof ObjectLiteral) {
+				ObjectLiteral packageInfoLit = (ObjectLiteral) packageInfo;
+				Object packagePath = packageInfoLit.getValue(DojoConfigAttrs.PACKAGES_LOCATION_CONFIG_FLAG),
+				 	packageName = packageInfoLit.getValue(DojoConfigAttrs.PACKAGES_NAME_CONFIG_FLAG);
+				
+				if (packagePath instanceof String && packageName instanceof String) {
+					modulePaths.put((String) packageName, (String) packagePath);
+				}
+			}
+		}		
 	}
 	
 	/**

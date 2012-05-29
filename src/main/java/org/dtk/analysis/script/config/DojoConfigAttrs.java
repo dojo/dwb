@@ -27,4 +27,10 @@ public final class DojoConfigAttrs {
 	static public final String PATHS_CONFIG_FLAG = "paths";
 	
 	static public final String MODULE_PATHS_CONFIG_FLAG = "modulePaths";
+	
+	static public final String PACKAGES_CONFIG_FLAG = "packages";
+	
+	static public final String PACKAGES_NAME_CONFIG_FLAG = "name";
+	
+	static public final String PACKAGES_LOCATION_CONFIG_FLAG = "location";
 }
