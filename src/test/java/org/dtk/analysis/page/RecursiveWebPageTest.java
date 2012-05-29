@@ -54,6 +54,19 @@ public class RecursiveWebPageTest {
 	}
 	
 	@Test
+	public void parsesPathsValueFromPackagesConfigAttrOnScriptTag() throws IOException {
+		MockWebPage webPage = new MockWebPage();
+		webPage.isDojoScript = true;
+		
+		Attributes attrs = new Attributes();
+		attrs.put("data-dojo-config", "'packages': [{'name': 'some', 'location': 'path'}, {'name': 'an', 'location':'other'}]");		
+		
+		Element dojoScript = new Element(Tag.valueOf("script"), "", attrs);
+		webPage.parsePreDojoScript(dojoScript);
+		assertEquals(LoaderConfigParserTest.getPrepopulatedMap("some", "path", "an", "other"), webPage.modulePaths);
+	}
+	
+	@Test
 	public void parsesPathsValueFromOldConfigAttrOnScriptTag() throws IOException {
 		MockWebPage webPage = new MockWebPage();
 		webPage.isDojoScript = true;
