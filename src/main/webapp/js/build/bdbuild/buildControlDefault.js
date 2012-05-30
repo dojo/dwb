@@ -192,7 +192,7 @@ define(["./buildControlBase"], function(bc) {
                     }
                     return false;
                 },
-                ["read", "write"]
+                ["copy"]
             ],
             
             [
