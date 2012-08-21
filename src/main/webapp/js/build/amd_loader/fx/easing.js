@@ -1,21 +1,16 @@
-define(["../main"], function(dojo) {
-	// module:
-	//		dojo/fx/easing
-	// summary:
-	//		TODOC:This module defines
+define(["../_base/lang"], function(lang){
 
-dojo.getObject("fx.easing", true, dojo);
+// module:
+//		dojo/fx/easing
 
-dojo.fx.easing = {
+var easingFuncs = {
 	// summary:
 	//		Collection of easing functions to use beyond the default
 	//		`dojo._defaultEasing` function.
-	//
 	// description:
-	//
 	//		Easing functions are used to manipulate the iteration through
 	//		an `dojo.Animation`s _Line. _Line being the properties of an Animation,
-	//		and the easing function progresses through that Line determing
+	//		and the easing function progresses through that Line determining
 	//		how quickly (or slowly) it should go. Or more accurately: modify
 	//		the value of the _Line based on the percentage of animation completed.
 	//
@@ -27,8 +22,7 @@ dojo.fx.easing = {
 	//
 	//		One does not call the easing function directly, it must be passed to
 	//		the `easing` property of an animation.
-	//
-	//	example:
+	// example:
 	//	|	dojo.require("dojo.fx.easing");
 	//	|	var anim = dojo.fadeOut({
 	//	|		node: 'node',
@@ -39,7 +33,8 @@ dojo.fx.easing = {
 	//
 
 	linear: function(/* Decimal? */n){
-		// summary: A linear easing function
+		// summary:
+		//		A linear easing function
 		return n;
 	},
 
@@ -161,7 +156,6 @@ dojo.fx.easing = {
 	backOut: function(/* Decimal? */n){
 		// summary:
 		//		An easing function that pops past the range briefly, and slowly comes back.
-		//
 		// description:
 		//		An easing function that pops past the range briefly, and slowly comes back.
 		//
@@ -176,7 +170,6 @@ dojo.fx.easing = {
 	backInOut: function(/* Decimal? */n){
 		// summary:
 		//		An easing function combining the effects of `backIn` and `backOut`
-		//
 		// description:
 		//		An easing function combining the effects of `backIn` and `backOut`.
 		//		Use caution when the easing will cause values to become negative
@@ -191,7 +184,6 @@ dojo.fx.easing = {
 	elasticIn: function(/* Decimal? */n){
 		// summary:
 		//		An easing function the elastically snaps from the start value
-		//
 		// description:
 		//		An easing function the elastically snaps from the start value
 		//
@@ -208,7 +200,6 @@ dojo.fx.easing = {
 		// summary:
 		//		An easing function that elasticly snaps around the target value,
 		//		near the end of the Animation
-		//
 		// description:
 		//		An easing function that elasticly snaps around the target value,
 		//		near the end of the Animation
@@ -225,7 +216,6 @@ dojo.fx.easing = {
 		// summary:
 		//		An easing function that elasticly snaps around the value, near
 		//		the beginning and end of the Animation.
-		//
 		// description:
 		//		An easing function that elasticly snaps around the value, near
 		//		the beginning and end of the Animation.
@@ -248,7 +238,7 @@ dojo.fx.easing = {
 	bounceIn: function(/* Decimal? */n){
 		// summary:
 		//		An easing function that 'bounces' near the beginning of an Animation
-		return (1 - dojo.fx.easing.bounceOut(1 - n)); // Decimal
+		return (1 - easingFuncs.bounceOut(1 - n)); // Decimal
 	},
 
 	bounceOut: function(/* Decimal? */n){
@@ -275,10 +265,12 @@ dojo.fx.easing = {
 	bounceInOut: function(/* Decimal? */n){
 		// summary:
 		//		An easing function that 'bounces' at the beginning and end of the Animation
-		if(n < 0.5){ return dojo.fx.easing.bounceIn(n * 2) / 2; }
-		return (dojo.fx.easing.bounceOut(n * 2 - 1) / 2) + 0.5; // Decimal
+		if(n < 0.5){ return easingFuncs.bounceIn(n * 2) / 2; }
+		return (easingFuncs.bounceOut(n * 2 - 1) / 2) + 0.5; // Decimal
 	}
 };
 
-return dojo.fx.easing;
+lang.setObject("dojo.fx.easing", easingFuncs);
+
+return easingFuncs;
 });

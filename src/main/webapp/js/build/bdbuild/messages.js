@@ -1,5 +1,13 @@
 define([], function(){
-	var messages = [
+	var categories = {
+			info:[[100, 199]],
+			warn:[[200, 299]],
+			error:[[300, 399]],
+			report:[[400, 499]]
+		},
+
+		messages = [
+		// [order, numeric-id, symbolic-id, message]
 		// info 100-199
 		[1, 100, "legacyAssumed", "Assumed module uses legacy loader API."],
 		[1, 101, "legacyUsingLoadInitPlug", "Using dojo/loadInit plugin for module."],
@@ -11,6 +19,11 @@ define([], function(){
 		[1, 107, "packageVersion", "Package Version:"],
 		[1, 108, "internStrings", "Interning strings."],
 		[1, 109, "processHtmlFiles", "Processing HTML files."],
+		[1, 110, "userTrace", "User trace:"],
+		[1, 111, "userInfo", "User info:"],
+		[1, 112, "cssOptimizeIgnored", "While optimizing a CSS file, an import directive was not expanded as instructed by the profile."],
+		[1, 113, "cssOptimizeIgnoredMultiMediaTypes", "While optimizing a CSS file, an import directive was not expanded because it indicated multiple media types."],
+
 
 		// warn 200-299
 		[1, 200, "configUnresolvedValues", "Configuration contains unsolved values."],
@@ -20,8 +33,8 @@ define([], function(){
 		[1, 205, "amdNotPureContainedNoLegacyApi", "Module not tagged as pure AMD yet it contains AMD API applications."],
 		[1, 206, "legacyMultipleProvides", "Module included multiple dojo.provide applications."],
 		[1, 207, "legacyImproperProvide", "dojo.provide application identifier inconsistent with module identifier."],
-		[1, 208, "inputDeprecatedProfileFile", "The \"profileFile\" switch has been deprecated; user \"profile\" instead."],
-		[1, 209, "inputMissingPackageJson", "Missing or empty package.json."],
+		[1, 208, "inputDeprecatedProfileFile", "The \"profileFile\" switch has been deprecated; use \"profile\" instead."],
+		[1, 209, "missingPackageJson", "Missing or empty package.json."],
 		[1, 210, "inputDeprecatedStripConsole", "Given strip console value is deprecated."],
 		[1, 211, "inputDeprecated", "Deprecated switch; ignored"],
 		[1, 212, "oddDojoPath", "No profile.basePath provided, yet dojo path is relative and running build with the current working directory different than util/buildscripts"],
@@ -29,6 +42,17 @@ define([], function(){
 		[1, 214, "ignoringReleaseDirName", "DestBasePath given; ignoring releaseDir and releaseName."],
 		[1, 215, "inputLoggerRemoved", "Logger has been removed; all calls ignored"],
 		[1, 216, "dojoHasUnresolvedMid", "dojo/has plugin resource could not be resolved during build-time."],
+		[1, 217, "cleanRemoved", "the clean action has been removed; use rm (*nix) or rmdir (Windows)"],
+		[1, 218, "inputProfileFileDeprecated", "the command line switch profileFile is deprectated; use profile for both files and profiles"],
+		[1, 219, "userWarn", "User warn:"],
+		[1, 220, "outputToProfileFileDeprecated", "Writing htmlFiles- or htmlDirs-derived profile via the profileFile option is deprecated; use the writeProfile option instead"],
+		[1, 221, "assumeLayerIsDojoModule", "Assumed layer is referencing a dojo module."],
+		[1, 222, "assumeLayerDependencyIsDojoModule", "Assumed layer is referencing a dojo module."],
+		[1, 223, "possibleLegacyModuleId", "Name in internStringsSkipList looks like a legacy module identifier."],
+		[1, 224, "missingPluginResolver", "A plugin dependency was encountered but there was no build-time plugin resolver."],
+		[1, 225, "missingDirDuringDiscovery", "A directory that was scheduled to be read during discovery did not exist."],
+		[1, 226, "missingProfile", "A package without a profile could throw errors or warnings."],
+		[1, 227, "symbolsLeak", "Inserting symbols (by setting the profile variable 'symbol') causes leaks in IE."],
 
 		// error 300-399
 		[1, 300, "dojoHasMissingPlugin", "Missing dojo/has module."],
@@ -67,9 +91,38 @@ define([], function(){
 		[1, 334, "amdCannotInstantiateLayer", "Cannot instantiate all modules in layer."],
 		[1, 335, "dojoPragmaEvalFail", "Failed to evaluate dojo pragma."],
 		[1, 336, "dojoPragmaInvalid", "Failed to find end marker for dojo pragma."],
+		[1, 337, "inputMissingPackageJson", "Missing or empty package.json file at location specified by package flag."],
+		[1, 337, "inputMalformedPackageJson", "Malformed package.json file."],
+		[1, 338, "inputProfileDoesNotExist", "Profile given for \"profile\" switch does not exist."],
+		[1, 339, "inputProfileFileDoesNotExist", "Profile file given for \"profileFile\" switch does not exist."],
+		[1, 340, "inputHTMLFileDoesNotExist", "HTML file given for \"htmlFiles\" switch does not exist."],
+		[1, 341, "inputHTMLDirDoesNotExist", "HTML directory given for \"htmlDir\" switch does not exist."],
+		[1, 342, "inputHTMLDirNoFiles","HTML directory given for \"htmlDir\" switch contains no HTML files."],
+		[1, 343, "inputIllegalCommandlineArg", "Illegal command line argument."],
+		[1, 344, "inputFileDoesNotExist", "File does not exist."],
+		[1, 345, "inputProcessingHtmlFileNotImplemented", "Pulling profiles from HTML files is not implemented."],
+		[1, 346, "inputFailedReadfile", "Failed to read input file."],
+		[1, 347, "inputFailedToEvalProfile", "Failed to evaluate profile file."],
+		[1, 348, "userError", "User error:"],
+		[1, 349, "missingPrefix", "Missing prefix for top-level module."],
+		[1, 350, "cannotDeduceModuleIdFrom16LayerName", "Cannot deduce module identifier from layer name"],
+		[1, 351, "cannotDeduceModuleIdFrom16LayerDependency", "Cannot deduce module identifier from layer dependency"],
+		[1, 352, "optimizerReportedErrors", "Optimizer reported errors; consult build report for details."],
+		[1, 352, "failedToReadLayerCopyrightFile", "Failed to read copyright file given with layer."],
+		[1, 353, "i18nUnevaluableBundle", "I18n bundle was not evaluable in the build environment; therefore it will not be included in the flattening computations."],
+		[1, 354, "missingL10n", "Root bundle indicates localized bundles that don't exist."],
+		[1, 355, "declarativeRequireFailed", "Unable to convert declarative require."],
+		[1, 356, "optimizeFailed", "The optimizer threw an exception; the module probably contains syntax errors."],
+		[1, 357, "cssOptimizeUnableToResolveURL", "While optimizing a CSS file, it was impossible to compute the destination location of a relative URL."],
+		[1, 358, "cssOptimizeImproperComment", "While optimizing a CSS file, an improper comment was encountered."],
+		[1, 359, "cssOptimizeIgnoredNoResource", "While optimizing a CSS file, an import directive was not expanded because the source for the import was not available to the builder."],
+
 		// reports 400-499
 		[1, 400, "hasReport", "Has Features Detected"],
 		[3, 499, "signoff", "Process completed normally:"]],
+
+		// 500-999, reserved by build programs
+		// 1000+, may be used by extension apps
 
 		lastReportId = 400,
 
@@ -101,24 +154,34 @@ define([], function(){
 			}
 		},
 
-		getPrefix = function(id){
-			if(100<id && id<199){
-				return "info(" + id + ")";
-			}else if(200<id && id<299){
-				return "warn(" + id + ")";
-			}else if(300<id && id<399){
-				return "error(" + id + ")";
-			}else if(400<id && id<499){
-				// reports
-				return "";
+		addCategory = function(name, range){
+			if(categories[name]){
+				categories[name].push(range);
 			}else{
-				return "message-id(" + id + ")";
+				categories[name] = [range];
 			}
+		},
+
+		getPrefix = function(id){
+			var result;
+			for(var p in categories){
+				if(categories[p].some(function(range){
+					if(range[0]<=id && id<range[1]){
+						return result = p + "(" + id + ")";
+					}
+					return 0;
+				})){
+					return result;
+				}
+			}
+			return "message-id(" + id + ")";
 		},
 
 		getArgs = function(args){
 			var result = "";
-			if(typeof args=="string"){
+			if(typeof args=="undefined"){
+				// nothing to decode
+			}else if(typeof args=="string"){
 				result+= args;
 			}else if(args.length==1){
 				result+= args[0];
@@ -136,7 +199,12 @@ define([], function(){
 			return result;
 		},
 
+		stop = 0,
+
 		log = function(id, args){
+			if(stop){
+				return;
+			}
 			if(id=="pacify"){
                 if (this.buildReference) {
                     var logger = Packages.org.dtk.resources.build.manager.BuildStatusManager.getInstance();
@@ -160,9 +228,22 @@ define([], function(){
 			}
 		},
 
+		optimizerReportedErrors = 0,
+
+		logOptimizerReportedErrors = function(){
+			if(!optimizerReportedErrors){
+				log("optimizerReportedErrors");
+				optimizerReportedErrors = 1;
+			}
+		},
+
 		optimizerOutput= "",
 
 		logOptimizerOutput = function(text){
+			if(/\sERROR\s/.test(text)){
+				// the google closure error format
+				logOptimizerReportedErrors();
+			}
 			optimizerOutput+= text;
 		},
 
@@ -213,17 +294,23 @@ define([], function(){
 	pacifySet.signoff = 1;
 
 	return {
+		stop:function(){stop = 1;},
 		messages:messages,
 		messageMap:messageMap,
 		pacifySet:pacifySet,
 		getNewMessageId:getNewMessageId,
 		addMessage:addMessage,
+		addCategory:addCategory,
 		log:log,
 		logOptimizerOutput:logOptimizerOutput,
 		getOptimizerOutput:getOptimizerOutput,
 		getAllNonreportMessages:getAllNonreportMessages,
 		getAllReportMessages:getAllReportMessages,
 		getWarnCount:function(){return warnCount;},
-		getErrorCount:function(){return errorCount;}
+		getErrorCount:function(){return errorCount;},
+		trace:function(message){log("userTrace", message);},
+		info:function(message){log("userInfo", message);},
+		warn:function(message){log("userWarn", message);},
+		error:function(message){log("userError", message);}
 	};
 });

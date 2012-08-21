@@ -1,16 +1,13 @@
-define(["../../_base/kernel", "../../_base/lang", "../../_base/Deferred"], function(dojo) {
-  //  module:
-  //    dojo/store/util/QueryResults
-  //  summary:
-  //    The module defines a query results wrapper 
+define(["../../_base/array", "../../_base/lang", "../../_base/Deferred"
+], function(array, lang, Deferred){
 
-dojo.getObject("store.util", true, dojo);
+// module:
+//		dojo/store/util/QueryResults
 
-dojo.store.util.QueryResults = function(results){
+var QueryResults = function(results){
 	// summary:
 	//		A function that wraps the results of a store query with additional
 	//		methods.
-	//
 	// description:
 	//		QueryResults is a basic wrapper that allows for array-like iteration
 	//		over any kind of returned data from a query.  While the simplest store
@@ -19,10 +16,10 @@ dojo.store.util.QueryResults = function(results){
 	//		the same.
 	//
 	//		Additional methods include `forEach`, `filter` and `map`.
-	//
-	// returns: Object
+	// results: Array|dojo/promise/Promise
+	//		The result set as an array, or a promise for an array.
+	// returns:
 	//		An array-like object that can be used for iterating over.
-	//
 	// example:
 	//		Query a store and iterate over the results.
 	//
@@ -35,15 +32,15 @@ dojo.store.util.QueryResults = function(results){
 	}
 	// if it is a promise it may be frozen
 	if(results.then){
-		results = dojo.delegate(results);
+		results = lang.delegate(results);
 	}
 	function addIterativeMethod(method){
 		if(!results[method]){
 			results[method] = function(){
 				var args = arguments;
-				return dojo.when(results, function(results){
+				return Deferred.when(results, function(results){
 					Array.prototype.unshift.call(args, results);
-					return dojo.store.util.QueryResults(dojo[method].apply(dojo, args));
+					return QueryResults(array[method].apply(array, args));
 				});
 			};
 		}
@@ -52,12 +49,15 @@ dojo.store.util.QueryResults = function(results){
 	addIterativeMethod("filter");
 	addIterativeMethod("map");
 	if(!results.total){
-		results.total = dojo.when(results, function(results){
+		results.total = Deferred.when(results, function(results){
 			return results.length;
 		});
 	}
-	return results;
+	return results; // Object
 };
 
-return dojo.store.util.QueryResults;
+lang.setObject("dojo.store.util.QueryResults", QueryResults);
+
+return QueryResults;
+
 });

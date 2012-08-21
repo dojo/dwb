@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
@@ -59,7 +61,9 @@ public class BuildRequest {
 		"cdn=%2$s, optimise=%3$s, cssOptimise=%4$s, platforms=%5$s, themes=%6$s, layers=%7$s";
 	
 	/** Dojo build profile format */
-	protected static final String profileFormat = "dependencies = %1$s;";
+	protected static final String profileFormat = "dependencies = %1$s; %2$s;";
+	
+	protected static final String transformJobsPaths = "src/main/resources/transform_jobs.txt";
 	
 	/** Empty theme identifier */
 	protected static final String MISSING_THEME_NAME = "none";
@@ -131,10 +135,8 @@ public class BuildRequest {
 		// from JavaScript execution.
 		buildProfile.put("buildReference", buildReference);
 		
-		// How do we do platform?????
-		// How do we do CDN???? Not sure this is relevant for AMD modules? 
-		
-		String profileText = String.format(profileFormat, JsonUtil.writeJavaToJson(buildProfile));
+		String transformJobs = FileUtils.readFileToString(new File(transformJobsPaths));		
+		String profileText = String.format(profileFormat, JsonUtil.writeJavaToJson(buildProfile), transformJobs);
 		
 		return profileText;
 	}
