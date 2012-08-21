@@ -1,8 +1,14 @@
 define(["./kernel", "../json"], function(dojo, json){
-  // module:
-  //    dojo/_base/json
-  // summary:
-  //    This module defines the dojo JSON API.
+
+// module:
+//		dojo/_base/json
+
+/*=====
+return {
+	// summary:
+	//		This module defines the dojo JSON API.
+};
+=====*/
 
 dojo.fromJson = function(/*String*/ js){
 	// summary:
@@ -15,7 +21,7 @@ dojo.fromJson = function(/*String*/ js){
 	//		implementation uses the (faster) native JSON parse when available.
 	// js:
 	//		a string literal of a JavaScript expression, for instance:
-	//			`'{ "foo": [ "bar", 1, { "baz": "thud" } ] }'`
+	//		`'{ "foo": [ "bar", 1, { "baz": "thud" } ] }'`
 
 	return eval("(" + js + ")"); // Object
 };
@@ -31,7 +37,7 @@ dojo._escapeString = function(){
 dojo._escapeString = json.stringify; // just delegate to json.stringify
 
 dojo.toJsonIndentStr = "\t";
-dojo.toJson = function(/*Object*/ it, /*Boolean?*/ prettyPrint, /*String?*/ _indentStr){
+dojo.toJson = function(/*Object*/ it, /*Boolean?*/ prettyPrint){
 	// summary:
 	//		Returns a [JSON](http://json.org) serialization of an object.
 	// description:
@@ -54,8 +60,8 @@ dojo.toJson = function(/*Object*/ it, /*Boolean?*/ prettyPrint, /*String?*/ _ind
 	//		before calling dojo.toJson().
 	//		Note that if native JSON support is available, it will be used for serialization,
 	//		and native implementations vary on the exact spacing used in pretty printing.
-	//	_indentStr:
-	//		private variable for recursive calls when pretty printing, do not use.
+	// returns:
+	//		A JSON string serialization of the passed-in object.
 	// example:
 	//		simple serialization of a trivial object
 	//		|	var jsonStr = dojo.toJson({ howdy: "stranger!", isStrange: true });
@@ -78,7 +84,7 @@ dojo.toJson = function(/*Object*/ it, /*Boolean?*/ prettyPrint, /*String?*/ _ind
 			}
 		}
 		return value;
-	}, prettyPrint && dojo.toJsonIndentStr);
+	}, prettyPrint && dojo.toJsonIndentStr);	// String
 };
 
 return dojo;

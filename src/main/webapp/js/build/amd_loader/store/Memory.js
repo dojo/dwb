@@ -1,20 +1,22 @@
-define(["../_base/declare", "./util/QueryResults", "./util/SimpleQueryEngine"], function(declare, QueryResults, SimpleQueryEngine) {
-  //  module:
-  //    dojo/store/Memory
-  //  summary:
-  //    The module defines an in-memory object store.
+define(["../_base/declare", "./util/QueryResults", "./util/SimpleQueryEngine" /*=====, "./api/Store" =====*/],
+function(declare, QueryResults, SimpleQueryEngine /*=====, Store =====*/){
 
+// module:
+//		dojo/store/Memory
 
-return declare("dojo.store.Memory", null, {
+// No base class, but for purposes of documentation, the base class is dojo/store/api/Store
+var base = null;
+/*===== base = Store; =====*/
+
+return declare("dojo.store.Memory", base, {
 	// summary:
-	//		This is a basic in-memory object store. It implements dojo.store.api.Store.
-	constructor: function(/*dojo.store.Memory*/ options){
+	//		This is a basic in-memory object store. It implements dojo/store/api/Store.
+	constructor: function(options){
 		// summary:
 		//		Creates a memory object store.
-		// options:
+		// options: dojo/store/Memory
 		//		This provides any configuration information that will be mixed into the store.
-		// 		This should generally include the data property to provide the starting set of data.
-		this.index = {};
+		//		This should generally include the data property to provide the starting set of data.
 		for(var i in options){
 			this[i] = options[i];
 		}
@@ -30,94 +32,98 @@ return declare("dojo.store.Memory", null, {
 	idProperty: "id",
 
 	// index: Object
-	//		An index of data by id
+	//		An index of data indices into the data array by id
 	index:null,
 
 	// queryEngine: Function
 	//		Defines the query engine to use for querying the data store
 	queryEngine: SimpleQueryEngine,
 	get: function(id){
-		//	summary:
+		// summary:
 		//		Retrieves an object by its identity
-		//	id: Number
+		// id: Number
 		//		The identity to use to lookup the object
-		//	returns: Object
+		// returns: Object
 		//		The object in the store that matches the given id.
-		return this.index[id];
+		return this.data[this.index[id]];
 	},
 	getIdentity: function(object){
-		// 	summary:
+		// summary:
 		//		Returns an object's identity
-		// 	object: Object
+		// object: Object
 		//		The object to get the identity from
-		//	returns: Number
+		// returns: Number
 		return object[this.idProperty];
 	},
 	put: function(object, options){
-		// 	summary:
+		// summary:
 		//		Stores an object
-		// 	object: Object
+		// object: Object
 		//		The object to store.
-		// 	options: dojo.store.api.Store.PutDirectives??
+		// options: Store.PutDirectives??
 		//		Additional metadata for storing the data.  Includes an "id"
 		//		property if a specific id is to be used.
-		//	returns: Number
+		// returns: Number
 		var data = this.data,
+			index = this.index,
 			idProperty = this.idProperty;
-		var id = (options && "id" in options) ? options.id : idProperty in object ? object[idProperty] : Math.random();
-		this.index[id] = object;
-		for(var i = 0, l = data.length; i < l; i++){
-			if(data[i][idProperty] == id){
-				data[i] = object;
-				return id;
+		var id = object[idProperty] = (options && "id" in options) ? options.id : idProperty in object ? object[idProperty] : Math.random();
+		if(id in index){
+			// object exists
+			if(options && options.overwrite === false){
+				throw new Error("Object already exists");
 			}
+			// replace the entry in data
+			data[index[id]] = object;
+		}else{
+			// add the new object
+			index[id] = data.push(object) - 1;
 		}
-		this.data.push(object);
 		return id;
 	},
 	add: function(object, options){
-		// 	summary:
+		// summary:
 		//		Creates an object, throws an error if the object already exists
-		// 	object: Object
+		// object: Object
 		//		The object to store.
-		// 	options: dojo.store.api.Store.PutDirectives??
+		// options: Store.PutDirectives??
 		//		Additional metadata for storing the data.  Includes an "id"
 		//		property if a specific id is to be used.
-		//	returns: Number
-		if(this.index[(options && "id" in options) ? options.id : object[this.idProperty]]){
-			throw new Error("Object already exists");
-		}
+		// returns: Number
+		(options = options || {}).overwrite = false;
+		// call put with overwrite being false
 		return this.put(object, options);
 	},
 	remove: function(id){
-		// 	summary:
+		// summary:
 		//		Deletes an object by its identity
-		// 	id: Number
+		// id: Number
 		//		The identity to use to delete the object
-		delete this.index[id];
-		var data = this.data,
-			idProperty = this.idProperty;
-		for(var i = 0, l = data.length; i < l; i++){
-			if(data[i][idProperty] == id){
-				data.splice(i, 1);
-				return;
-			}
+		// returns: Boolean
+		//		Returns true if an object was removed, falsy (undefined) if no object matched the id
+		var index = this.index;
+		var data = this.data;
+		if(id in index){
+			data.splice(index[id], 1);
+			// now we have to reindex
+			this.setData(data);
+			return true;
 		}
 	},
 	query: function(query, options){
-		// 	summary:
+		// summary:
 		//		Queries the store for objects.
-		// 	query: Object
+		// query: Object
 		//		The query to use for retrieving objects from the store.
-		//	options: dojo.store.api.Store.QueryOptions?
+		// options: Store.QueryOptions?
 		//		The optional arguments to apply to the resultset.
-		//	returns: dojo.store.api.Store.QueryResults
+		// returns: Store.QueryResults
 		//		The results of the query, extended with iterative methods.
 		//
-		// 	example:
-		// 		Given the following store:
+		// example:
+		//		Given the following store:
 		//
-		// 	|	var store = new dojo.store.Memory({
+		// 	|	var store = new Memory({
 		// 	|		data: [
 		// 	|			{id: 1, name: "one", prime: false },
 		//	|			{id: 2, name: "two", even: true, prime: true},
@@ -137,9 +143,9 @@ return declare("dojo.store.Memory", null, {
 		return QueryResults(this.queryEngine(query, options)(this.data));
 	},
 	setData: function(data){
-		// 	summary:
+		// summary:
 		//		Sets the given data as the source for this store, and indexes it
-		//	data: Object[]
+		// data: Object[]
 		//		An array of objects to use as the source of data.
 		if(data.items){
 			// just for convenience with the data format IFRS expects
@@ -148,10 +154,9 @@ return declare("dojo.store.Memory", null, {
 		}else{
 			this.data = data;
 		}
-
+		this.index = {};
 		for(var i = 0, l = data.length; i < l; i++){
-			var object = data[i];
-			this.index[object[this.idProperty]] = object;
+			this.index[data[i][this.idProperty]] = i;
 		}
 	}
 });

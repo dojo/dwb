@@ -173,9 +173,8 @@ public class BuildRequestProcessor implements Runnable {
 		Iterator<File> artifactFilesIter = extractBuildArtifactFiles().iterator();
 		
 		while(artifactFilesIter.hasNext()) {
-			File artifactFile = artifactFilesIter.next();			
-			//String layerContent = FileUtil.readFromFile(artifactFile.getAbsolutePath(), null);
 			
+			File artifactFile = artifactFilesIter.next();
 			byte[] contents = FileUtils.readFileToByteArray(artifactFile);
 			// Path must be relative to base directory.....
 			archiveContents.put(artifactArchivePath(artifactFile), contents);			
@@ -194,11 +193,14 @@ public class BuildRequestProcessor implements Runnable {
 		// Default archive name is just last path entry
 		String artifactArchivePath = artifactFile.getName();
 		
-		// Non JS files are theme files, index those from the start of
+		// Non JS files are theme files and images, index those from the start of
 		// the themes directory. 
 		if (!artifactArchivePath.endsWith(".js")) {
+			String absPath = artifactFile.getAbsolutePath();			
+			artifactArchivePath = absPath.substring(absPath.lastIndexOf("dijit") + 5);
+		} else if (artifactFile.getAbsolutePath().indexOf("nls") > -1) {
 			String absPath = artifactFile.getAbsolutePath();
-			artifactArchivePath = absPath.substring(absPath.lastIndexOf("themes"));
+			artifactArchivePath = absPath.substring(absPath.lastIndexOf("nls"));
 		}
 		
 		return artifactArchivePath; 

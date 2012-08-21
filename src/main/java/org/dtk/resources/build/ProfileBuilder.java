@@ -30,10 +30,10 @@ public class ProfileBuilder {
 	/** Script arguments, key value pairs, which are translated to a 
 	 * single string with key=value attributes. All arguments are used
 	 * to control the build scripts. */
-	protected Map<String, String> scriptArguments = new HashMap<String, String>() {
+	protected List<String> scriptArguments = new ArrayList<String>() {
 		{
-			put("load", "build");
-			put("action", "release");
+			add("load=build");
+			add("action=release");
 		}
 	};
 	
@@ -45,9 +45,6 @@ public class ProfileBuilder {
 	
 	/** Unique reference for this build, used for logging */
 	protected String buildReference;
-	
-	/** All script arguments should be key=value format */
-	protected static final String scriptArgFormat = "%1$s=%2$s";
 	
 	/** Local AMD package descriptors format, picked up by AMD module loader */
 	protected static final String djConfigPrefixFormat 
@@ -75,9 +72,9 @@ public class ProfileBuilder {
 		this.buildPackagePath = santisePath(buildPackagePath);
 		this.buildReference = buildReference;
 		
-		scriptArguments.put("profile", santisePath(profileFile));
-		scriptArguments.put("releaseDir", santisePath(resultDir));
-		scriptArguments.put("baseUrl", santisePath(baseUrl));
+		scriptArguments.add("profile=" + santisePath(profileFile));
+		scriptArguments.add("releaseDir=" + santisePath(resultDir));
+		scriptArguments.add("baseUrl=" + santisePath(baseUrl));
 	}
 	
 	/**
@@ -112,7 +109,7 @@ public class ProfileBuilder {
 			// Pretend these arguments came from the command line by stuffing them into the top context,
 			// module loader expects to read them from here. 
 			ScriptableObject.putConstProperty(topScope, "arguments", getBuildScriptArguments());
-
+			
 			// Execute the build system scripts to generate optimised dojo builds
 			moduleLoader.exec(cx, topScope);	
 		} catch (Exception buildError) {
@@ -154,15 +151,7 @@ public class ProfileBuilder {
 	 * @return String[] Script arguments array 
 	 */
 	protected String[] getBuildScriptArguments() {
-		Iterator<Entry<String, String>> scriptArgsIter = scriptArguments.entrySet().iterator();
-		List<String> scriptArgsList = new ArrayList<String>();
-		
-		while(scriptArgsIter.hasNext()) {
-			Map.Entry<String, String> scriptArg = scriptArgsIter.next();
-			scriptArgsList.add(String.format(scriptArgFormat, scriptArg.getKey(), scriptArg.getValue()));
-		}
-		
-		return scriptArgsList.toArray(new String[0]);
+		return scriptArguments.toArray(new String[0]);
 	}
 	
 	/**

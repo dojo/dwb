@@ -1,9 +1,9 @@
 // TODO: this file needs to be converted to the v1.7 loader
 
-
-/*
- * SpiderMonkey host environment
- */
+// module:
+//		configSpidermonkey
+// summary:
+//		 SpiderMonkey host environment
 
 if(dojo.config["baseUrl"]){
 	dojo.baseUrl = dojo.config["baseUrl"];
@@ -13,11 +13,7 @@ if(dojo.config["baseUrl"]){
 
 dojo._name = 'spidermonkey';
 
-/*=====
-dojo.isSpidermonkey = {
-	// summary: Detect spidermonkey
-};
-=====*/
+
 
 dojo.isSpidermonkey = true;
 dojo.exit = function(exitcode){
@@ -68,7 +64,8 @@ dojo._loadUri = function(uri){
 	// is what we want).
 	// TODO: sigh, load() does not return a useful value.
 	// Perhaps it is returning the value of the last thing evaluated?
-	var ok = load(uri);
+	// var ok =
+	load(uri);
 	// console.log("spidermonkey load(", uri, ") returned ", ok);
 	return 1;
 };
