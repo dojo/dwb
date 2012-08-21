@@ -1,13 +1,11 @@
-///
-// \module build/plugins/loadInit
-//
-define(["../buildControl"], function(bc) {
+define(function() {
 	return {
 		start:function(
 			mid,
-			referenceModule
+			referenceModule,
+			bc
 		){
-			return bc.amdResources[bc.getSrcModuleInfo(mid, referenceModule).mid];
+			return [bc.amdResources["dojo/require"], bc.amdResources[bc.getSrcModuleInfo(mid, referenceModule).mid]];
 		}
 	};
 });

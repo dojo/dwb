@@ -1,5 +1,6 @@
 define([
 	"require",
+	"dojo/_base/lang",
 	"./argv",
 	"./fs",
 	"./fileUtils",
@@ -7,179 +8,189 @@ define([
 	"./v1xProfiles",
 	"./stringify",
 	"./process",
-	"dojo/text!./help.txt"], function(require, args, fs, fileUtils, bc, v1xProfiles, stringify, process, helpText) {
+	"./messages",
+	"dojo/text!./help.txt"
+], function(require, lang, argv, fs, fileUtils, bc, v1xProfiles, stringify, process, messages, helpText){
 	//
-	// Process the arguments given on the command line to build up a build control object that is used to instruct and control
+	// Process the arguments given on the command line to build up a profile object that is used to instruct and control
 	// the build process.
 	//
 	// This modules is a bit tedious. Is methodically goes through each option set, cleaning and conditioning user input making it
 	// easy to use for the remainder of the program. Readers are advised to tackle it top-to-bottom. There is no magic...just
 	// a whole bunch of imperative programming.
 	//
+
+	if(!isNaN(argv)){
+		// if argv is a number, then it's an exit code
+		bc.exitCode = argv;
+		return bc;
+	}
+
 	eval(require.scopeify("./fs, ./fileUtils, ./v1xProfiles"));
 	var
-		isString= function(it) {
+		isString = function(it){
 			return typeof it === "string";
 		},
 
-		cleanupFilenamePair= function(item, srcBasePath, destBasePath, hint) {
+		isNonemptyString = function(it){
+			return isString(it) && it.length;
+		},
+
+		isDefined = function(it){
+			return typeof it !="undefined";
+		},
+
+		cleanupFilenamePair = function(item, srcBasePath, destBasePath, hint){
 			var result;
-			if (isString(item)) {
-				result= [computePath(item, srcBasePath), computePath(item, destBasePath)];
-			} else {
-				result= [computePath(item[0], srcBasePath), computePath(item[1], destBasePath)].concat(item.slice(2));
+			if(isString(item)){
+				result = [computePath(item, srcBasePath), computePath(item, destBasePath)];
+			}else{
+				result = [computePath(item[0], srcBasePath), computePath(item[1], destBasePath)].concat(item.slice(2));
 			}
-			if (!isAbsolutePath(result[0]) || !isAbsolutePath(result[1])) {
-				bc.log("inputInvalidPath" ["path", item, "hint", hint]);
+			if(!isAbsolutePath(result[0]) || !isAbsolutePath(result[1])){
+				bc.log("inputInvalidPath", ["path", item, "hint", hint]);
 			}
 			return result;
 		},
 
-		slashTerminate= function(path){
+		slashTerminate = function(path){
 			return path + /\/$/.test(path) ? "" : "/";
 		},
 
-		isEmpty= function(it) {
-			for (var p in it) return false;
+		isEmpty = function(it){
+			for(var p in it) return false;
 			return true;
 		},
 
-		mix= function(dest, src) {
-			dest= dest || {};
-			src= src || {};
-			for (var p in src) dest[p]= src[p];
+		cleanDeprecated = function(o, inputFile){
+			var deprecated = [];
+			for(p in o){
+				if(/^(log|loader|xdDojoPath|scopeDjConfig|xdScopeArgs|xdDojoScopeName|expandProvide|buildLayers|query|removeDefaultNameSpaces|addGuards)$/.test(p)){
+					deprecated.push(p);
+					bc.log("inputDeprecated", ["switch", p, inputFile]);
+				}
+			}
+			deprecated.forEach(function(p){
+				delete o[p];
+			});
+		},
+
+		mix = function(dest, src){
+			dest = dest || {};
+			src = src || {};
+			for(var p in src) dest[p] = src[p];
 			return dest;
 		},
 
-		mixPackage= function(packageInfo) {
-			var name= packageInfo.name;
-			bc.packageMap[name]= mix(bc.packageMap[name], packageInfo);
+		mixPackage = function(packageInfo){
+			var name = packageInfo.name;
+			bc.packageMap[name] = mix(bc.packageMap[name], packageInfo);
 		},
 
-		// mix a build control object into the global build control object
-		mixBuildControlObject= function(src) {
-			// the build control properties...
-			//	 paths, pluginProcs, transforms, staticHasFeatures
-			// ...are mixed one level deep; packages and packagePaths require special handling; all others are over-written
+		// mix a profile object into the global profile object
+		mixProfileObject = function(src){
+			cleanDeprecated(src, src.selfFilename);
+
+			// the profile properties...
+			//	 paths, plugins, transforms, staticHasFeatures
+			// ...are mixed one level deep; messageCategories, messages, packages, and packagePaths require special handling; all others are over-written
 			// FIXME: the only way to modify the transformJobs vector is to create a whole new vector?
-			for (var p in src) {
-				if (!/(paths)|(pluginProcs)|(transforms)|(staticHasFeatures)|(packages)|(packagePaths)/.test(p)) {
-					bc[p]= src[p];
+			for(var p in src){
+				if(!/paths|plugins|messages|transforms|staticHasFeatures|packages|packagePaths|defaultConfig/.test(p)){
+					bc[p] = src[p];
 				}
 			}
+
 			// the one-level-deep mixers
-			["paths","pluginProcs","transforms","staticHasFeatures"].forEach(function(p) {
-				bc[p]= mix(bc[p], src[p]);
+			["paths","plugins","transforms","staticHasFeatures"].forEach(function(p){
+				bc[p] = mix(bc[p], src[p]);
 			});
+
+			// messages require special handling
+			if(src.messageCategories){
+				for(p in src.messageCategories){
+					bc.addCategory(p, src.messageCategories[p]);
+				}
+			}
+			(src.messages || []).forEach(function(item){bc.addMessage.apply(bc, item);});
+
 
 			// packagePaths and packages require special processing to get their contents into packageMap; do that first...
 			// process packagePaths before packages before packageMap since packagePaths is less specific than
 			// packages is less specific than packageMap. Notice that attempts to edit an already-existing package
 			// only edits specific package properties given (see mixPackage, above)
-			for (var base in src.packagePaths) {
-				src.packagePaths[base].forEach(function(packageInfo) {
-					if (isString(packageInfo)) {
-						packageInfo= {name:packageInfo};
+			for(var base in src.packagePaths){
+				src.packagePaths[base].forEach(function(packageInfo){
+					if(isString(packageInfo)){
+						packageInfo = {name:packageInfo};
 					}
-					packageInfo.location= catPath(base, packageInfo.name);
+					packageInfo.location = catPath(base, packageInfo.name);
 					mixPackage(packageInfo);
 				});
 			};
-			(src.packages || []).forEach(function(packageInfo) {
-					if (isString(packageInfo)) {
-						packageInfo= {name:packageInfo};
+			(src.packages || []).forEach(function(packageInfo){
+					if(isString(packageInfo)){
+						packageInfo = {name:packageInfo};
 					}
 					mixPackage(packageInfo);
 			});
+
+			// defaultConfig requires special handling
+			for(p in src.defaultConfig){
+				if(p=="hasCache"){
+					mix(bc.defaultConfig.hasCache, src.defaultConfig.hasCache);
+				}else{
+					bc.defaultConfig[p] = src.defaultConfig[p];
+				}
+			}
 		};
 
-	if(!args.buildControlScripts.length){
-		bc.log("pacify", "no profile or build control script provided; use the option --help for help");
-		process.exit(0);
-	}
-
-	// for each build control object or v1.6- profile in args, mix into bc in the order they appeared on the command line
-	// FIXME: rename "buildControlScript et al to profile...keep the peace
-	args.buildControlScripts.forEach(function(item) {
-		if (item instanceof Array) {
-			switch (item[0]) {
-				case "htmlDir":
-					var htmlFiles= [];
-					fs.readdirSync(item[1]).forEach(function(filename){
-						if(/\.html$/.test(filename)){
-							htmlFiles.push(filename);
-						}
-					});
-					processHtmlFiles(htmlFiles);
-					break;
-
-				case "htmlFiles":
-					processHtmlFiles(item[1].split(","));
-					break;
-				case "profile":
-					// more relaxed than v1.6-; if it looks like a file, assume the profileFile behavior; this makes profileFile redundant
-					if(/\//.test(item[1])){
-						item= processProfileFile(item[1], args);
-					}else{
-						item= processProfileFile(require.baseUrl + "../util/buildscripts/profiles/" + item[1] + ".profile.js", args);
-					}
-					break;
-				case "profileFile":
-					bc.log("inputDeprecatedProfileFile");
-					item= processProfileFile(item[1], args);
-					break;
-			}
-		}
-		var
-			temp= mix({}, item),
-			build= item.build;
+	argv.args.profiles.forEach(function(item){
+		var temp = mix({}, item),
+			build = item.build;
 		delete temp.build;
-		mixBuildControlObject(temp);
-		build && mixBuildControlObject(build);
+		mixProfileObject(temp);
+		build && mixProfileObject(build);
 	});
 
-	// lastly, explicit command line switches override any evaluated build control objects
-	for (var argName in args) if (argName!="buildControlScripts") {
-		bc[argName]= args[argName];
+	cleanDeprecated(argv.args, "command line");
+
+	// lastly, explicit command line switches override any evaluated profile objects
+	for(var argName in argv.args) if(argName!="profiles"){
+		bc[argName] = argv.args[argName];
 	}
 
-	//
-	// at this point the raw build control object has been fully initialized; clean it up and look for errors...
-	//
-	bc.basePath= computePath(bc.basePath, process.cwd());
-	bc.destBasePath= computePath(bc.destBasePath || (bc.basePath + (bc.basePathSuffix || "-build")), bc.basePath);
-	bc.destPackageBasePath= computePath(bc.destPackageBasePath || "./packages", bc.destBasePath);
+	// at this point the raw profile object has been fully initialized; clean it up and look for errors...
+	bc.basePath = computePath(bc.basePath, process.cwd());
+	var releaseDir = catPath(bc.releaseDir || "../release", bc.releaseName || "");
+	bc.destBasePath = computePath(releaseDir, bc.basePath);
+
+	// compute global copyright, if any
+	bc.copyright = isNonemptyString(bc.copyright) ? (maybeRead(computePath(bc.copyright, bc.basePath)) || bc.copyright) : "";
+	bc.copyrightLayers = !!bc.copyrightLayers;
+	bc.copyrightNonlayers = !!bc.copyrightNonlayers;
 
 	// compute files, dirs, and trees
-	(function () {
-		for (var property in {files:1, dirs:1, trees:1}) {
-			bc[property]= bc[property].map(function(item) {
-				return cleanupFilenamePair(item, bc.basePath, bc.destBasePath, property);
-			});
+	(function(){
+		for(var property in {files:1, dirs:1, trees:1}){
+			if(bc[property] instanceof Array){
+				bc[property] = bc[property].map(function(item){
+					return cleanupFilenamePair(item, bc.basePath, bc.destBasePath, property);
+				});
+			}
 		}
-	})();
-
-	// cleanup the compactCssSet (if any)
-	(function() {
-		var cleanSet= {}, src, dest;
-		for (src in bc.compactCssSet) {
-			dest= bc.compactCssSet[src];
-			cleanSet[computePath(src, bc.basePath)]= isString(dest) ? computePath(dest, bc.destBasePath) : dest;
-		}
-		bc.compactCssSet= cleanSet;
 	})();
 
 	// cleanup the replacements (if any)
-	(function() {
-		var cleanSet= {}, src, dest;
-		for (src in bc.replacements) {
-			cleanSet[computePath(src, bc.basePath)]= bc.replacements[src];
+	(function(){
+		var cleanSet = {}, src, dest;
+		for(src in bc.replacements){
+			cleanSet[computePath(src, bc.basePath)] = bc.replacements[src];
 		}
-		bc.replacements= cleanSet;
+		bc.replacements = cleanSet;
 	})();
 
-	// explicit mini and/or copyTests wins;
-	// in particular, explicit copyTests ignores explicit mini with regard to tests
+	// explicit mini and/or copyTests wins; explicit copyTests ignores explicit mini
 	if(!("mini" in bc)){
 		bc.mini = true;
 	}
@@ -193,369 +204,477 @@ define([
 		// convert to pure boolean
 		bc.copyTests = !!bc.copyTests;
 	}
-	if(bc.copyTests && !bc.packageMap.doh){
-		bc.packageMap.doh= bc.dohPackageInfo;
+
+	function getDiscreteLocales(locale){
+		for(var locales = locale.split("-"), result = [], current = "", i = 0; i<locales.length; i++){
+			result.push(current += (i ? "-" : "") + locales[i]);
+		}
+		return result;
+	}
+	if(isString(bc.localeList)){
+		bc.localeList = bc.localeList.split(",");
+	}
+	if(bc.localeList && bc.localeList.length){
+		if(bc.localeList.indexOf("ROOT")==-1){
+			bc.localeList.push("ROOT");
+		}
+		var localeList = {};
+		bc.localeList.forEach(function(locale){
+			locale = lang.trim(locale);
+			localeList[locale] = getDiscreteLocales(locale);
+		});
+		bc.localeList.discreteLocales = localeList;
+	}else{
+		bc.localeList = false;
 	}
 
-	// clean up bc.packageMap and bc.paths so they can be used just as in bdLoad
-	(function() {
-		// so far, we've been using bc.packageMap to accumulate package info as it is provided by packagePaths and/or packages
-		// in zero to many build control scripts. This routine moves each package config into bc.packages which is a map
-		// from package name to package config (this is different from the array the user uses to pass package config info). Along
-		// the way, each package config object is cleaned up and all default values are calculated. Finally, the bdLoad-required
-		// global packageMap (a map from package name to package name) is computed.
-		bc.packages= bc.packageMap;
-		bc.destPackages= {};
-		bc.packageMap= {};
-		bc.destPackageMap= {};
-		for (var packageName in bc.packages) {
-			var pack= bc.packages[packageName];
 
-			var filename = catPath(pack.location, "package.json"),
-				packageJson= readAndEval(filename, "package.json"),
-				defaultProfileFilename = pack.name + ".profile.js";
-			if(isEmpty(packageJson)){
-				bc.log("inputMissingPackageJson", ["filename", filename]);
-			}else{
+	(function(){
+		function processPackage(pack){
+			var packName = pack.name,
+				basePath = pack.basePath || bc.basePath;
+			if(!pack.packageJson){
+				pack.packageJson = argv.readPackageJson(catPath(computePath(pack.location || ("./" + packName), basePath), "package.json"), "missingPackageJson");
+			}
+			var packageJson = pack.packageJson;
+			if(packageJson){
+				if(packageJson.version){
+					bc.log("packageVersion", ["package", packName, "version", packageJson.version]);
+
+					// new for 1.7, if version is not provided, the version of the dojo package is used
+					if(typeof bc.version=="undefined" && packName=="dojo"){
+						bc.version = packageJson.version;
+					}
+				}
 				if(packageJson.main && !pack.main){
 					pack.main= packageJson.main;
 				}
+				if(packageJson.directories && packageJson.directories.lib && !pack.location){
+					pack.location = catPath(getFilepath(packageJson.selfFilename), packageJson.directories.lib);
+				}
 				if("dojoBuild" in packageJson){
-					// notice this allows setting defaultProfileFilename to "" which will prevent a default profile from being processed
-					defaultProfileFilename = packageJson.dojoBuild;
-				}
-				if(packageJson.version){
-					bc.log("packageVersion", ["package", packageName, "version", packageJson.version]);
-				}
-			}
-			if(defaultProfileFilename){
-				var defaultProfile = readAndEval(catPath(pack.location, defaultProfileFilename), "default profile");
-				for (var p in defaultProfile) {
-					if (!(p in pack)) {
-						pack[p]= defaultProfile[p];
-					}else if(p in {resourceTags:1}){
-						// these are mixed one level deep
-						// TODO: review all profile properties and see if there are any others than resourceTags that ought to go here
-						mix(pack[p], defaultProfile[p]);
+					var defaultProfile = argv.readProfile("profile", catPath(getFilepath(packageJson.selfFilename), packageJson.dojoBuild));
+					for(var p in defaultProfile){
+						if(!(p in pack)){
+							pack[p] = defaultProfile[p];
+						}else if(p in {resourceTags:1}){
+							// these are mixed one level deep
+							// TODO: review all profile properties and see if there are any others than resourceTags that ought to go here
+							mix(pack[p], defaultProfile[p]);
+						}
 					}
+				}else{
+					bc.log("missingProfile", ["package", packageJson.name]);
 				}
 			}
 
-			// build up info to tell all about a package; all properties semantically identical to definitions used by bdLoad
-			// note: pack.name=="" for default package
-			pack.main= isString(pack.main) ? pack.main : "main";
-			if(!pack.main.indexOf("./")){
+			// build up info to tell all about a package; all properties semantically identical to definitions used by dojo loader/bdLoad
+			pack.main = isString(pack.main) ? pack.main : "main";
+			if(pack.main.indexOf("./")==0){
 				pack.main = pack.main.substring(2);
 			}
+			if(pack.destMain && pack.destMain.indexOf("./")==0){
+				pack.destMain = pack.destMain.substring(2);
+			}
 
-			pack.location= computePath(pack.location || (pack.name ? "./" + pack.name : bc.basePath), bc.basePath);
-			pack.packageMap= pack.packageMap || 0;
-			require.computeMapProg(pack.packageMap, (pack.mapProg= []));
+			pack.location = computePath(pack.location || ("./" + packName), basePath);
+
+			pack.copyright = isNonemptyString(pack.copyright) ?
+				(maybeRead(computePath(pack.copyright, pack.location)) || maybeRead(computePath(pack.copyright, bc.basePath)) || pack.copyright) :
+				(pack.copyright ? bc.copyright : "");
+			pack.copyrightLayers = isDefined(pack.copyrightLayers) ? !!pack.copyrightLayers : bc.copyrightLayers;
+			pack.copyrightNonlayers = isDefined(pack.copyrightNonlayers) ? !!pack.copyrightNonlayers : bc.copyrightNonlayers;
 
 			// dest says where to output the compiled code stack
-			var destPack= bc.destPackages[pack.name]= {
-				name:pack.destName || pack.name,
+			var destPack = bc.destPackages[packName] = {
+				name:pack.destName || packName,
 				main:pack.destMain || pack.main,
-				location:computePath(pack.destLocation || ("./" + (pack.destName || pack.name)), bc.destPackageBasePath),
-				packageMap:pack.destPackageMap || pack.packageMap
+				location:computePath(pack.destLocation || ("./" + (pack.destName || packName)), bc.destBasePath)
 			};
-			require.computeMapProg(pack.destPackageMap, (destPack.mapProg= []));
-			delete pack.destname;
+			delete pack.destName;
 			delete pack.destMain;
 			delete pack.destLocation;
-			delete pack.destPackageMap;
 
-			if (!pack.trees) {
+
+			if(!pack.trees){
 				// copy the package tree; don't copy any hidden directorys (e.g., .git, .svn) or temp files
-				pack.trees= [[pack.location, destPack.location, /(\/\.)|(~$)/]];
+				pack.trees = [[pack.location, destPack.location, /(\/\.)|(^\.)|(~$)/]];
 			} // else the user has provided explicit copy instructions
 
 			// filenames, dirs, trees just like global, except relative to the pack.(src|dest)Location
-			for (var property in {files:1, dirs:1, trees:1}) {
-				pack[property]= (pack[property] || []).map(function(item) {
-					return cleanupFilenamePair(item, pack.location, destPack.location, property + " in package " + pack.name);
+			for(var property in {files:1, dirs:1, trees:1}){
+				pack[property] = (pack[property] || []).map(function(item){
+					return cleanupFilenamePair(item, pack.location, destPack.location, property + " in package " + packName);
 				});
 			}
-			if (pack.name) {
-				// don't try to put the default package (named "") in the packageMap
-				bc.packageMap[pack.name]= pack.name;
-				bc.destPackageMap[destPack.name]= destPack.name;
-			}
 		}
-		// now that bc.packageMap is initialized...
-		require.computeMapProg(bc.packageMap, (bc.packageMapProg= []));
-		require.computeMapProg(bc.destPackageMap, (bc.destPackageMapProg= []));
+
+		// so far, we've been using bc.packageMap to accumulate package info as it is provided by packagePaths and/or packages
+		// in zero to many profile scripts. This routine moves each package config into bc.packages which is a map
+		// from package name to package config (this is different from the array the user uses to pass package config info). Along
+		// the way, each package config object is cleaned up and all default values are calculated.
+		bc.packages = bc.packageMap;
+		delete bc.packageMap;
+		bc.destPackages = {};
+		for(var packageName in bc.packages){
+			var pack = bc.packages[packageName];
+			pack.name = pack.name || packageName;
+			processPackage(pack);
+		}
+
+		// now that we know the dojo path, we can automatically add DOH, if required
+		if(bc.copyTests && !bc.packages.doh){
+			bc.packages.doh = {
+				name:"doh",
+				location:compactPath(bc.packages.dojo.location + "/../util/doh"),
+				destLocation:"util/doh"
+			};
+			processPackage(bc.packages.doh);
+		}
 
 		// get this done too...
-		require.computeMapProg(bc.paths, (bc.pathsMapProg= []));
-		require.computeMapProg(bc.destPaths || bc.paths, (bc.destPathsMapProg= []));
-
-		bc.srcModules= {};
-		bc.destModules= {};
+		require.computeMapProg(bc.paths, (bc.pathsMapProg = []));
+		require.computeMapProg(bc.destPaths || bc.paths, (bc.destPathsMapProg = []));
 
 		// add some methods to bc to help with resolving AMD module info
-		var trimLastFiveChars= function(text){
-			return text.substring(0, text.length-5);
+		bc.srcModules = {};
+		bc.destModules = {};
+
+		var trimLastChars = function(text, n){
+			return text.substring(0, text.length-n);
 		};
 
-		bc.getSrcModuleInfo= function(mid, referenceModule, ignoreFileType) {
+		bc.getSrcModuleInfo = function(mid, referenceModule, ignoreFileType){
 			if(ignoreFileType){
-				var result= require.getModuleInfo(mid+"/x", referenceModule, bc.packages, bc.srcModules, bc.basePath + "/", bc.packageMapProg, bc.pathsMapProg, true);
-				// trim /x.js
-				result.mid= trimLastFiveChars(result.mid);
-				result.url= trimLastFiveChars(result.url);
+				var result = require.getModuleInfo(mid+"/x", referenceModule, bc.packages, bc.srcModules, bc.basePath + "/", {}, [], true);
+				result.mid = trimLastChars(result.mid, 2);
+				if(result.pid!==0){
+					// trim /x.js
+					result.url = trimLastChars(result.url, 5);
+				}
 				return result;
 			}else{
-				return require.getModuleInfo(mid, referenceModule, bc.packages, bc.srcModules, bc.basePath + "/", bc.packageMapProg, bc.pathsMapProg, true);
+				return require.getModuleInfo(mid, referenceModule, bc.packages, bc.srcModules, bc.basePath + "/", {}, [], true);
 			}
 		};
 
-		bc.getDestModuleInfo= function(mid, referenceModule, ignoreFileType) {
+
+		bc.getDestModuleInfo = function(mid, referenceModule, ignoreFileType){
 			// note: bd.destPagePath should never be required; but it's included for completeness and up to the user to provide it if some transform does decide to use it
 			if(ignoreFileType){
-				var result= require.getModuleInfo(mid+"/x", referenceModule, bc.destPackages, bc.destModules, bc.destBasePath + "/", bc.destPackageMapProg, bc.destPathsMapProg, true);
-				// trim /x.js
-				result.mid= trimLastFiveChars(result.mid);
-				result.url= trimLastFiveChars(result.url);
+				var result = require.getModuleInfo(mid+"/x", referenceModule, bc.destPackages, bc.destModules, bc.destBasePath + "/", {}, [], true);
+				result.mid = trimLastChars(result.mid, 2);
+				if(result.pid!==0){
+					// trim /x.js
+					result.url = trimLastChars(result.url, 5);
+				}
 				return result;
 			}else{
-				return require.getModuleInfo(mid, referenceModule, bc.destPackages, bc.destModules, bc.destBasePath + "/", bc.destPackageMapProg, bc.destPathsMapProg, true);
+				return require.getModuleInfo(mid, referenceModule, bc.destPackages, bc.destModules, bc.destBasePath + "/", {}, [], true);
 			}
 		};
 	})();
 
-	(function() {
+
+	if(bc.selectorEngine && bc.defaultConfig && bc.defaultConfig.hasCache){
+		bc.defaultConfig.hasCache["config-selectorEngine"] = bc.selectorEngine;
+	}
+
+	(function(){
 		// a layer is a module that should be written with all of its dependencies, as well as all modules given in
 		// the include vector together with their dependencies, excluding modules contained in the exclude vector and their dependencies
-		var fixedLayers= {};
-		for (var mid in bc.layers) {
-			var layer= bc.layers[mid];
-			if (layer instanceof Array) {
-				layer= {
-					exclude: layer,
-					include: []
-				};
-			} else {
-				layer.exclude= layer.exclude || [];
-				layer.include= layer.include || [];
+		var layer, fixedLayers = {};
+		for(var mid in bc.layers){
+			layer = bc.layers[mid];
+			layer.exclude = layer.exclude || [];
+			layer.include = layer.include || [];
+			layer.boot = !!layer.boot;
+			layer.discard = !!layer.discard;
+			layer.noref = !!(layer.noref!==undefined ? layer.noref : bc.noref);
+			layer.compat = layer.compat!==undefined ? layer.compat : (bc.layerCompat ||"");
+
+			var tlm = mid.split("/")[0],
+				pack = bc.packages[tlm],
+				packLocation = pack && pack.location,
+				packCopyright = pack && pack.copyright,
+				packCopyrightLayers = pack && pack.copyrightLayers;
+			if(isNonemptyString(layer.copyright)){
+				// if relative, first try basePath, then try package location, otherwise, just use what's given
+				layer.copyright = (packLocation && maybeRead(computePath(layer.copyright, packLocation))) || maybeRead(computePath(layer.copyright, bc.basePath)) || layer.copyright;
+			}else if(isDefined(layer.copyright)){
+				// some kind of truthy other than a string
+				layer.copyright = layer.copyright ? (packCopyright || bc.copyright) : "";
+			}else{
+				layer.copyright = pack ? (packCopyrightLayers && (packCopyright || bc.copyright)) : (bc.copyrightLayers && bc.copyright);
 			}
-			// boot is just boolean to say "prefix with the loader"
-			fixedLayers[mid]= layer;
+			if(!layer.copyright){
+				layer.copyright = "";
+			}
+			fixedLayers[mid] = layer;
 		}
-		bc.layers= fixedLayers;
+		bc.layers = fixedLayers;
+
+		// if (and only if) we're doing a build that includes the dojo tree, then ensure the loader layer is defined correctly
+		// and make sure all other layers exclude the loader unless they are marked with custome base
+		if(bc.packages.dojo){
+			if(!bc.layers["dojo/dojo"]){
+				bc.layers["dojo/dojo"] = {name:"dojo/dojo", copyright:bc.defaultCopyright + bc.defaultBuildNotice, include:["dojo/main"], exclude:[]};
+			}
+			for(var p in bc.layers){
+				layer = bc.layers[p];
+				if(p=="dojo/dojo"){
+					if(!layer.customBase){
+						// the purpose of the layer is to simply add some additional modules to a standard dojo boot
+						if(layer.include.indexOf("dojo/main")==-1){
+							layer.include.push("dojo/main");
+						}
+					}else{
+						// this is a custom base dojo.js; it's up the the user to say exactly what they want
+					}
+				}else{
+					if((layer.boot || !layer.customBase) && layer.exclude.indexOf("dojo/dojo")==-1){
+						// the layer has dojo/dojo if it is booting, or assumes dojo/dojo if its not explicitly saying customBase
+						layer.exclude.push("dojo/dojo");
+					}
+					// by definition...
+					layer.customBase = layer.boot;
+				}
+			}
+		}
 	})();
 
-	bc.locales= bc.loaderConfig.locales || bc.locales || [];
 
 	// for the static has flags, -1 means its not static; this gives a way of combining several static has flag sets
 	// and still allows later sets to delete flags set in earlier sets
-	var deleteStaticHasFlagSet= [];
-	for (var p in bc.staticHasFeatures) if (bc.staticHasFeatures[p]==-1) deleteStaticHasFlagSet.push(p);
+	var deleteStaticHasFlagSet = [];
+	for(var p in bc.staticHasFeatures) if(bc.staticHasFeatures[p]==-1) deleteStaticHasFlagSet.push(p);
 	deleteStaticHasFlagSet.forEach(function(flag){delete bc.staticHasFeatures[flag];});
 
 	if(bc.action){
 		bc.action.split(/\W|\s/).forEach(function(action){
-			action= action.match(/\s*(\S+)\s*/)[1];
+			action = action.match(/\s*(\S+)\s*/)[1];
 			switch(action){
 				case "check":
-					bc.check= true;
+					bc.check = true;
 					break;
 				case "clean":
-					bc.clean= true;
+					bc.clean = true;
 					break;
 				case "release":
-					bc.release= true;
+					bc.release = true;
 					break;
 				default:
-					bc.log("inputUnknownAction" ["action", action]);
-					process.exit(0);
-
+					bc.log("inputUnknownAction", ["action", action]);
 			}
 		});
 	}
 
-	if(!bc.check && !bc.clean && !bc.release){
-		bc.log("pacify", "Nothing to do; you must explicitly instruct the application to do something; use the option --help for help.");
-		process.exit(0);
-	}
-
-	if(bc.clean!==undefined && !bc.clean){
-		// user said do NOT clean; honor that
-	}else if(bc.release && !bc.buildLayers){
-		// doing a complete build; therefore, autoclean unless told otherwise
-		bc.clean= true;
+	if(bc.clean){
+		bc.log("cleanRemoved");
 	}
 
 	// understand stripConsole from dojo 1.3 and before
-	var stripConsole= bc.stripConsole;
-	if (!stripConsole || stripConsole=="none") {
-		stripConsole= false;
-	} else if (stripConsole == "normal,warn") {
+	var stripConsole = bc.stripConsole;
+	if(!stripConsole || stripConsole=="none"){
+		stripConsole = false;
+	}else if(stripConsole == "normal,warn"){
 		bc.log("inputDeprecatedStripConsole", ["deprecated", "normal,warn", "use", "warn"]);
 		stripConsole = "warn";
-	} else if (stripConsole == "normal,error") {
+	}else if(stripConsole == "normal,error"){
 		bc.log("inputDeprecatedStripConsole", ["deprecated", "normal,error", "use", "all"]);
 		stripConsole = "all";
-	} else if (!/normal|warn|all|none/.test(stripConsole)){
+	}else if(!/normal|warn|all|none/.test(stripConsole)){
 		bc.log("inputUnknownStripConsole", ["value", stripConsole]);
 	}
-	bc.stripConsole= stripConsole;
+	bc.stripConsole = stripConsole;
 
-	if(bc.optimize){
-		bc.optimize= bc.optimize.toLowerCase();
-		if(!/^(comments|shrinksafe(\.keeplines)?|closure(\.keeplines)?)$/.test(bc.optimize)){
-			bc.log("inputUnknownOptimize" ["value", bc.optimize]);
-		}else{
-			if(/shrinksafe/.test(bc.optimize) && stripConsole){
-				bc.optimize+= "." + stripConsole;
+	function fixupOptimize(value){
+		if(value){
+			value = value + "";
+			value = value.toLowerCase();
+			if(!/^((comments|shrinksafe)(\.keeplines)?)|(closure(\.keeplines)?)$/.test(value)){
+				bc.log("inputUnknownOptimize", ["value", value]);
+				value = 0;
+			}else{
+				if(/shrinksafe/.test(value) && stripConsole){
+					value+= "." + stripConsole;
+				}
 			}
 		}
+		return value;
 	}
-	if(bc.layerOptimize){
-		bc.layerOptimize= bc.layerOptimize.toLowerCase();
-		if(!/^(comments|shrinksafe(\.keeplines)?|closure(\.keeplines)?)$/.test(bc.layerOptimize)){
-			bc.log("inputUnknownLayerOptimize" ["value", bc.layerOptimize]);
-		}else{
-			if(/shrinksafe/.test(bc.layerOptimize) && stripConsole){
-				bc.layerOptimize+= "." + stripConsole;
+	bc.optimize = fixupOptimize(bc.optimize);
+	bc.layerOptimize = fixupOptimize(bc.layerOptimize);
+
+	(function(){
+		var fixedScopeMap = {dojo:"dojo", dijit:"dijit", dojox:"dojox"};
+		(bc.scopeMap || []).forEach(function(pair){
+			if(!pair[1]){
+				delete fixedScopeMap[pair[0]];
+			}else{
+				fixedScopeMap[pair[0]] = pair[1];
 			}
-		}
-	}
+		});
+		bc.scopeMap = fixedScopeMap;
 
-	var fixedScopeMap = {};
-	bc.scopeNames = [];
-	(bc.scopeMap || [["dojo", "dojo"], ["dijit", "dijit"], ["dojox", "dojox"]]).forEach(function(pair){
-		fixedScopeMap[pair[0]] = pair[1];
-		bc.scopeNames.push(pair[0]);
-	});
-	bc.scopeMap = fixedScopeMap;
-
-	var fixedInternStringsSkipList = {};
-	(bc.internSkipList || bc.internStringsSkipList || []).forEach(function(mid){
-		fixedInternStringsSkipList[mid.replace(/\./g, "/")] = 1;
-	});
-	bc.internStringsSkipList = fixedInternStringsSkipList;
-
-	var deprecated= [];
-	for(p in bc){
-		if(/^(loader|xdDojoPath|symbol|scopeDjConfig|xdScopeArgs|xdDojoScopeName|expandProvide|buildLayers|query|removeDefaultNameSpaces|addGuards)$/.test(p)){
-			deprecated.push(p);
-			bc.log("inputDeprecated", ["switch", p]);
+		bc.scopeNames = [];
+		for(var p in fixedScopeMap){
+			bc.scopeNames.push(p);
 		}
-	}
-	deprecated.forEach(function(p){
-		delete bc[p];
-	});
-
-	// dump bc (if requested) before changing gateNames to gateIds below
-	if (bc.check) (function() {
-		bc.log("pacify", stringify(bc));
-if(0){
-		// don't dump out private properties used by build--they'll just generate questions
-		var
-			dump= {},
-			internalProps= {
-				buildControlScripts:1,
-				check:1,
-				destModules:1,
-				destPackageMapProg:1,
-				destPackages:1,
-				destPathsMapProg:1,
-				errorCount:1,
-				getDestModuleInfo:1,
-				getSrcModuleInfo:1,
-				logInfo:1,
-				logError:1,
-				logWarn:1,
-				messages:1,
-				packageMap:1,
-				packageMapProg:1,
-				packages:1,
-				pathsMapProg:1,
-				resources:1,
-				resourcesByDest:1,
-				srcModules:1,
-				startTimestamp:1,
-				version:1,
-				warnCount:1
-			};
-		for (var p in bc) if (!internalProps[p]) {
-			dump[p]= bc[p];
-		}
-		var packages= dump.packages= [];
-		for (p in bc.packages) {
-			var
-				pack= bc.packages[p],
-				destPack= bc.destPackages[p];
-			packages.push({
-				name:pack.name, main:pack.main, location:pack.location, modules:pack.modules||{}, trees:pack.trees,
-				destName:destPack.name, destMain:destPack.main, destLocation:destPack.location
-			});
-		}
-		bc.log("pacify", stringify(dump));
-}
 	})();
 
+	bc.internSkip = function(){return false;};
+	if(bc.internSkipList){
+		bc.internSkip = function(mid, referenceModule){
+			return bc.internSkipList.some(function(item){
+				var result = false;
+				if(item instanceof RegExp){
+					result = item.test(mid);
+				}else if(item instanceof Function){
+					result = item(mid, referenceModule);
+				}else{
+					result = item==mid;
+				}
+				if(result){
+					bc.log("internStrings", ["module", referenceModule.mid, "skipping", mid]);
+				}
+				return result;
+			});
+		};
+	}
+
+	// dump bc (if requested) before changing gate names to gate ids below
+	if(bc.check){
+		(function(){
+			var toDump = {
+				basePath:1,
+				buildReportDir:1,
+				buildReportFilename:1,
+				closureCompilerPath:1,
+				copyright:1,
+				copyrightLayers:1,
+				copyrightNonlayers:1,
+				copyTests:1,
+				destBasePath:1,
+				destModules:1,
+				destPackages:1,
+				destPathTransforms:1,
+				destPathsMapProg:1,
+				dirs:1,
+				discoveryProcs:1,
+				files:1,
+				internStringsSkipList:1,
+				layers:1,
+				localeList:1,
+				maxOptimizationProcesses:1,
+				mini:1,
+				optimize:1,
+				layerOptimize:1,
+				"package":1,
+				packages:1,
+				paths:1,
+				pathsMapProg:1,
+				plugins:1,
+				replacements:1,
+				startTimestamp:1,
+				staticHasFeatures:1,
+				stripConsole:1,
+				trees:1
+			};
+			for(var p in toDump){
+				toDump[p] = bc[p];
+			}
+			bc.log("pacify", stringify(toDump));
+		})();
+		bc.release = 0;
+	}
+
+	if(bc.writeProfile){
+		// TODO
+		// fs.writeFileSync(bc.writeProfile, "dependencies = " + dojo.toJson(profileProperties, true), "utf8");
+	}
+
+	if(bc.debugCheck){
+		(function(){
+			var toDump = {};
+			for(var p in bc){
+				if(bc[p]!==messages[p] && typeof bc[p]!="function"){
+					toDump[p] = bc[p];
+				}
+			}
+			console.log("profile:");
+			console.log(stringify(toDump));
+			toDump = {};
+			for(p in require){
+				if(p!="modules" && p!="module" && p!="rawConfig" && typeof require[p]!="function"){
+					toDump[p] = require[p];
+				}
+			}
+			console.log("require config:");
+			console.log(stringify(toDump));
+		})();
+		bc.release = 0;
+	}
 
 	// clean up the gates and transforms
-	(function() {
+	(function(){
 		// check that each transform references a valid gate
-		for (var gates= {}, i= 0; i<bc.gates.length; i++) {
-			gates[bc.gates[i][1]]= i;
+		for(var gates = {}, i = 0; i<bc.gates.length; i++){
+			gates[bc.gates[i][1]] = i;
 		}
 		var
-			transforms= bc.transforms,
+			transforms = bc.transforms,
 			gateId;
-		for (var transformId in transforms) {
+		for(var transformId in transforms){
 			// each item is a [AMD-MID, gateName] pair
-			gateId= gates[transforms[transformId][1]];
-			if (typeof gateId == "undefined") {
+			gateId = gates[transforms[transformId][1]];
+			if(typeof gateId == "undefined"){
 				bc.log("inputUnknownGate", ["transform", transformId, "gate", transforms[transformId][1]]);
-			} else {
-				transforms[transformId][1]= gateId;
+			}else{
+				transforms[transformId][1] = gateId;
 			}
 		}
 	})();
 
 	// clean up the transformJobs
-	(function() {
+	(function(){
 		// check that that each transformId referenced in transformJobs references an existing item in transforms
 		// ensure proper gate order of the transforms given in transformJobs; do not disturb order within a given
 		// gate--this is the purview of the user
-		var transforms= bc.transforms;
-		bc.transformJobs.forEach(function(item) {
+		var transforms = bc.transforms;
+		bc.transformJobs.forEach(function(item){
 			// item is a [predicate, vector of transformId] pairs
-			var error= false;
-			var tlist= item[1].map(function(id) {
+			var error = false;
+			var tlist = item[1].map(function(id){
 				// item is a transformId
-				if (transforms[id]) {
+				if(transforms[id]){
 					// return a [trandformId, gateId] pair
 					return [id, transforms[id][1]];
-				} else {
-					error= true;
+				}else{
+					error = true;
 					bc.log("inputUnknownTransform", ["transform", id]);
 					return 0;
 				}
 			});
 			// tlist is a vector of [transformId, gateId] pairs than need to be checked for order
-			if (!error) {
-				for (var i= 0, end= tlist.length - 1; i<end;) {
-					if (tlist[i][1]>tlist[i+1][1]) {
-						var t= tlist[i];
-						tlist[i]= tlist[i+1];
-						tlist[i+1]= t;
+			if(!error){
+				for(var i = 0, end = tlist.length - 1; i<end;){
+					if(tlist[i][1]>tlist[i+1][1]){
+						var t = tlist[i];
+						tlist[i] = tlist[i+1];
+						tlist[i+1] = t;
 						i && i--;
-					} else {
+					}else{
 						i++;
 					}
 				}
 				// now replace the vector of transformIds with the sorted list
-				item[1]= tlist;
+				item[1] = tlist;
 			}
 		});
 	})();
 
-	if (args.unitTest=="dumpbc") {
+	if(argv.args.unitTest=="dumpbc"){
 		console.log(stringify(bc) + "\n");
 	}
 
@@ -571,6 +690,16 @@ if(0){
 				delete bc.pacifySet[p];
 			}
 		})();
+	}
+
+	if(bc.unitTestComputedProfile){
+		bc.unitTestComputedProfile();
+		// stop the build
+		bc.release = 0;
+	}
+
+	if(!bc.unitTestComputedProfile && !bc.check && !bc.debugCheck && !bc.clean && !bc.release){
+		bc.log("pacify", "Nothing to do; you must explicitly instruct the application to do something; use the option --help for help.");
 	}
 
 	return bc;

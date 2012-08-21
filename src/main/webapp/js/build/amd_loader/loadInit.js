@@ -1,3 +1,7 @@
 define(["./_base/loader"], function(loader){
-	return {load:loader.loadInit};
+	return {
+		dynamic:0,
+		normalize:function(id){return id;},
+		load:loader.loadInit
+	};
 });

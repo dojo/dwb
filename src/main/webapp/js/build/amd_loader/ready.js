@@ -1,11 +1,9 @@
-define(["./_base/kernel", "./has", "require", "./domReady", "./_base/lang"], function(dojo, has, require, domReady, lang) {
+define(["./_base/kernel", "./has", "require", "./has!host-browser?./domReady", "./_base/lang"], function(dojo, has, require, domReady, lang){
 	// module:
 	//		dojo/ready
-	// summary:
-	//		This module defines the dojo.ready API.
-	//
 	// note:
 	//		This module should be unnecessary in dojo 2.0
+
 	var
 		// truthy if DOMContentLoaded or better (e.g., window.onload fired) has been achieved
 		isDomReady = 0,
@@ -19,6 +17,14 @@ define(["./_base/kernel", "./has", "require", "./domReady", "./_base/lang"], fun
 		// prevent recursion in onLoad
 		onLoadRecursiveGuard = 0,
 
+		handleDomReady = function(){
+			isDomReady = 1;
+			dojo._postLoad = dojo.config.afterOnLoad = true;
+			if(loadQ.length){
+				requestCompleteSignal(onLoad);
+			}
+		},
+
 		// run the next function queued with dojo.ready
 		onLoad = function(){
 			if(isDomReady && !onLoadRecursiveGuard && loadQ.length){
@@ -27,9 +33,9 @@ define(["./_base/kernel", "./has", "require", "./domReady", "./_base/lang"], fun
 				var f = loadQ.shift();
 					try{
 						f();
-					}catch(e){
+					}
 						// FIXME: signal the error via require.on
-					}finally{
+					finally{
 						onLoadRecursiveGuard = 0;
 					}
 				onLoadRecursiveGuard = 0;
@@ -39,25 +45,17 @@ define(["./_base/kernel", "./has", "require", "./domReady", "./_base/lang"], fun
 			}
 		};
 
-	// define requireCompleteSignal; impl depends on loader
-	if(has("dojo-loader")){
-		require.on("idle", onLoad);
-		requestCompleteSignal = function(){
-			if(require.idle()){
-				onLoad();
-			} // else do nothing, onLoad will be called with the next idle signal
-		};
-	}else{
-		// RequireJS or similar
-		requestCompleteSignal = function(){
-			// the next function call will fail if you don't have a loader with require.ready
-			// in that case, either fix your loader, use dojo's loader, or don't call dojo.ready;
-			require.ready(onLoad);
-		};
-	}
+	require.on("idle", onLoad);
+	requestCompleteSignal = function(){
+		if(require.idle()){
+			onLoad();
+		} // else do nothing, onLoad will be called with the next idle signal
+	};
 
 	var ready = dojo.ready = dojo.addOnLoad = function(priority, context, callback){
-		// summary: Add a function to execute on DOM content loaded and all requested modules have arrived and been evaluated.
+		// summary:
+		//		Add a function to execute on DOM content loaded and all requested modules have arrived and been evaluated.
+		//		In most cases, the `domReady` plug-in should suffice and this method should not be needed.
 		// priority: Integer?
 		//		The order in which to exec this callback relative to other callbacks, defaults to 1000
 		// context: Object?|Function
@@ -67,22 +65,30 @@ define(["./_base/kernel", "./has", "require", "./domReady", "./_base/lang"], fun
 		//
 		// example:
 		//	Simple DOM and Modules ready syntax
-		//	|	dojo.ready(function(){ alert("Dom ready!"); });
+		//	|	require(["dojo/ready"], function(ready){
+		//	|		ready(function(){ alert("Dom ready!"); });
+		//	|	});
 		//
 		// example:
 		//	Using a priority
-		//	|	dojo.ready(2, function(){ alert("low priority ready!"); })
+		//	|	require(["dojo/ready"], function(ready){
+		//	|		ready(2, function(){ alert("low priority ready!"); })
+		//	|	});
 		//
 		// example:
 		//	Using context
-		//	|	dojo.ready(foo, function(){
-		//	|		// in here, this == foo
-		//	|	})
+		//	|	require(["dojo/ready"], function(ready){
+		//	|		ready(foo, function(){
+		//	|			// in here, this == foo
+		//	|		});
+		//	|	});
 		//
 		// example:
-		//	Using dojo.hitch style args:
-		//	|	var foo = { dojoReady: function(){ console.warn(this, "dojo dom and modules ready."); } };
-		//	|	dojo.ready(foo, "dojoReady");
+		//	Using dojo/hitch style args:
+		//	|	require(["dojo/ready"], function(ready){
+		//	|		var foo = { dojoReady: function(){ console.warn(this, "dojo dom and modules ready."); } };
+		//	|		ready(foo, "dojoReady");
+		//	|	});
 
 		var hitchArgs = lang._toArray(arguments);
 		if(typeof priority != "number"){
@@ -111,14 +117,6 @@ define(["./_base/kernel", "./has", "require", "./domReady", "./_base/lang"], fun
 		}
 	}
 
-	domReady(function(){
-		isDomReady = 1;
-		dojo._postLoad = dojo.config.afterOnLoad = true;
-		if(loadQ.length){
-			requestCompleteSignal(onLoad);
-		}
-	});
-
 	if(has("dojo-sync-loader") && dojo.config.parseOnLoad && !dojo.isAsync){
 		ready(99, function(){
 			if(!dojo.parser){
@@ -126,6 +124,12 @@ define(["./_base/kernel", "./has", "require", "./domReady", "./_base/lang"], fun
 				require(["dojo/parser"]);
 			}
 		});
+	}
+
+	if(has("host-browser")){
+		domReady(handleDomReady);
+	}else{
+		handleDomReady();
 	}
 
 	return ready;

@@ -1,6 +1,7 @@
-(function(){
+var profile = (function(){
 	var testResourceRe = /^dojo\/tests\//,
-		copyOnly = function(mid){
+
+		copyOnly = function(filename, mid){
 			var list = {
 				"dojo/dojo.profile":1,
 				"dojo/package.json":1,
@@ -14,26 +15,26 @@
 				"dojo/tests/_base/loader/requirejs/relative/relative-tests":1,
 				"dojo/tests/_base/loader/requirejs/exports/exports-tests":1
 			};
-			return (mid in list) ||  /^dojo\/_base\/config\w+$/.test(mid) || /^dojo\/resources\//.test(mid);
+			return (mid in list) ||
+				/^dojo\/_base\/config\w+$/.test(mid) ||
+				(/^dojo\/resources\//.test(mid) && !/\.css$/.test(filename)) ||
+				/(png|jpg|jpeg|gif|tiff)$/.test(filename) ||
+				/built\-i18n\-test\/152\-build/.test(mid);
 		};
 
 	return {
 		resourceTags:{
 			test: function(filename, mid){
-				return testResourceRe.test(mid) || mid=="dojo/tests";
+				return testResourceRe.test(mid) || mid=="dojo/tests" || mid=="dojo/robot" || mid=="dojo/robotx";
 			},
 
 			copyOnly: function(filename, mid){
-				return copyOnly(mid);
+				return copyOnly(filename, mid);
 			},
 
 			amd: function(filename, mid){
-				return !testResourceRe.test(mid) && !copyOnly(mid) && /\.js$/.test(filename);
+				return !testResourceRe.test(mid) && !copyOnly(filename, mid) && /\.js$/.test(filename);
 			}
-		},
-
-		trees:[
-			[".", ".", /(\/\.)|(~$)/]
-		]
+		}
 	};
-})()
+})();

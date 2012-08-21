@@ -1,27 +1,26 @@
-define(["./main"], function(dojo) {
-	// module:
-	//		dojo/behavior
-	// summary:
-	//		TODOC
+define(["./_base/kernel", "./_base/lang", "./_base/array", "./_base/connect", "./query", "./ready"],
+function(dojo, lang, darray, connect, query, ready){
 
+// module:
+//		dojo/behavior
 
-dojo.behavior = new function(){
+dojo.deprecated("dojo.behavior", "Use dojo/on with event delegation (on.selector())");
+
+var Behavior = function(){
 	// summary:
-	//		Utility for unobtrusive/progressive event binding, DOM traversal,
-	//		and manipulation.
-	//
+	//		Deprecated.   dojo/behavior's functionality can be achieved using event delegation using dojo/on
+	//		and on.selector().
 	// description:
-	//
 	//		A very simple, lightweight mechanism for applying code to
-	//		existing documents, based around `dojo.query` (CSS3 selectors) for node selection,
-	//		and a simple two-command API: `dojo.behavior.add()` and `dojo.behavior.apply()`;
+	//		existing documents, based around `dojo/query` (CSS3 selectors) for node selection,
+	//		and a simple two-command API: `add()` and `apply()`;
 	//
 	//		Behaviors apply to a given page, and are registered following the syntax
-	//		options described by `dojo.behavior.add` to match nodes to actions, or "behaviors".
+	//		options described by `add()` to match nodes to actions, or "behaviors".
 	//
 	//		Added behaviors are applied to the current DOM when .apply() is called,
 	//		matching only new nodes found since .apply() was last called.
-	//
+
 	function arrIn(obj, name){
 		if(!obj[name]){ obj[name] = []; }
 		return obj[name];
@@ -45,11 +44,13 @@ dojo.behavior = new function(){
 	// FIXME: need a better test so we don't exclude nightly Safari's!
 	this._behaviors = {};
 	this.add = function(/* Object */behaviorObj){
-		//	summary:
+		// summary:
 		//		Add the specified behavior to the list of behaviors, ignoring existing
 		//		matches.
-		//
-		//	description:
+		// behaviorObj: Object
+		//		The behavior object that will be added to behaviors list. The behaviors
+		//		in the list will be applied the next time apply() is called.
+		// description:
 		//		Add the specified behavior to the list of behaviors which will
 		//		be applied the next time apply() is called. Calls to add() for
 		//		an already existing behavior do not replace the previous rules,
@@ -66,18 +67,18 @@ dojo.behavior = new function(){
 		//		If the value corresponding to the ID key is a function and not a
 		//		list, it's treated as though it was the value of "found".
 		//
-		// 		dojo.behavior.add() can be called any number of times before
-		//		the DOM is ready. `dojo.behavior.apply()` is called automatically
+		//		dojo/behavior.add() can be called any number of times before
+		//		the DOM is ready. `dojo/behavior.apply()` is called automatically
 		//		by `dojo.addOnLoad`, though can be called to re-apply previously added
 		//		behaviors anytime the DOM changes.
 		//
 		//		There are a variety of formats permitted in the behaviorObject
 		//
-		//	example:
+		// example:
 		//		Simple list of properties. "found" is special. "Found" is assumed if
 		//		no property object for a given selector, and property is a function.
 		//
-		//	|	dojo.behavior.add({
+		//	|	behavior.add({
 		//	|		"#id": {
 		//	|			"found": function(element){
 		//	|				// node match found
@@ -91,26 +92,26 @@ dojo.behavior = new function(){
 		//	|		}
 		//	|	});
 		//
-		//	example:
+		// example:
 		//		 If property is a string, a dojo.publish will be issued on the channel:
 		//
-		//	|	dojo.behavior.add({
-		//	|		// dojo.publish() whenever class="noclick" found on anchors
+		//	|	behavior.add({
+		//	|		// topic.publish() whenever class="noclick" found on anchors
 		//	|		"a.noclick": "/got/newAnchor",
 		//	|		"div.wrapper": {
 		//	|			"onclick": "/node/wasClicked"
 		//	|		}
 		//	|	});
-		//	|	dojo.subscribe("/got/newAnchor", function(node){
-		//	|		// handle node finding when dojo.behavior.apply() is called,
+		//	|	topic.subscribe("/got/newAnchor", function(node){
+		//	|		// handle node finding when dojo/behavior.apply() is called,
 		//	|		// provided a newly matched node is found.
 		//	|	});
 		//
-		//	example:
+		// example:
 		//		Scoping can be accomplished by passing an object as a property to
 		//		a connection handle (on*):
 		//
-		//	|	dojo.behavior.add({
+		//	|	behavior.add({
 		//	|		 	"#id": {
 		//	|				// like calling dojo.hitch(foo,"bar"). execute foo.bar() in scope of foo
 		//	|				"onmouseenter": { targetObj: foo, targetFunc: "bar" },
@@ -118,10 +119,10 @@ dojo.behavior = new function(){
 		//	|			}
 		//	|	});
 		//
-		//	example:
-		//		Bahaviors match on CSS3 Selectors, powered by dojo.query. Example selectors:
+		// example:
+		//		Behaviors match on CSS3 Selectors, powered by dojo/query. Example selectors:
 		//
-		//	|	dojo.behavior.add({
+		//	|	behavior.add({
 		//	|		// match all direct descendants
 		//	|		"#id4 > *": function(element){
 		//	|			// ...
@@ -159,7 +160,7 @@ dojo.behavior = new function(){
 			}
 			var cversion = [];
 			tBehavior.push(cversion);
-			if((dojo.isString(behavior))||(dojo.isFunction(behavior))){
+			if((lang.isString(behavior))||(lang.isFunction(behavior))){
 				behavior = { found: behavior };
 			}
 			forIn(behavior, function(rule, ruleName){
@@ -169,19 +170,19 @@ dojo.behavior = new function(){
 	};
 
 	var _applyToNode = function(node, action, ruleSetName){
-		if(dojo.isString(action)){
+		if(lang.isString(action)){
 			if(ruleSetName == "found"){
-				dojo.publish(action, [ node ]);
+				connect.publish(action, [ node ]);
 			}else{
-				dojo.connect(node, ruleSetName, function(){
-					dojo.publish(action, arguments);
+				connect.connect(node, ruleSetName, function(){
+					connect.publish(action, arguments);
 				});
 			}
-		}else if(dojo.isFunction(action)){
+		}else if(lang.isFunction(action)){
 			if(ruleSetName == "found"){
 				action(node);
 			}else{
-				dojo.connect(node, ruleSetName, action);
+				connect.connect(node, ruleSetName, action);
 			}
 		}
 	};
@@ -201,7 +202,7 @@ dojo.behavior = new function(){
 		//		will be added to the nodes.
 		//
 		//		apply() is called once automatically by `dojo.addOnLoad`, so
-		//		registering behaviors with `dojo.behavior.add` before the DOM is
+		//		registering behaviors with `dojo/behavior.add()` before the DOM is
 		//		ready is acceptable, provided the dojo.behavior module is ready.
 		//
 		//		Calling appy() manually after manipulating the DOM is required
@@ -210,7 +211,7 @@ dojo.behavior = new function(){
 		//		the DOM.
 		//
 		forIn(this._behaviors, function(tBehavior, id){
-			dojo.query(id).forEach(
+			query(id).forEach(
 				function(elem){
 					var runFrom = 0;
 					var bid = "_dj_behavior_"+tBehavior.id;
@@ -224,8 +225,8 @@ dojo.behavior = new function(){
 
 					for(var x=runFrom, tver; tver = tBehavior[x]; x++){
 						forIn(tver, function(ruleSet, ruleSetName){
-							if(dojo.isArray(ruleSet)){
-								dojo.forEach(ruleSet, function(action){
+							if(lang.isArray(ruleSet)){
+								darray.forEach(ruleSet, function(action){
 									_applyToNode(elem, action, ruleSetName);
 								});
 							}
@@ -240,7 +241,9 @@ dojo.behavior = new function(){
 	};
 };
 
-dojo.ready(dojo.behavior, "apply"); // FIXME: should this use a priority? before/after parser priority?
+dojo.behavior = new Behavior();
+
+ready(dojo.behavior, "apply"); // FIXME: should this use a priority? before/after parser priority?
 
 return dojo.behavior;
 });

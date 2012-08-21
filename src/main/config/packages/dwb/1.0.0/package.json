@@ -1,6 +1,0 @@
-{
-  "name": "Custom Package",
-  "description": "This is a custom package and contains custom modules",
-  "location": "/Users/james/IBM/Code/dwb/src/main/webapp/js",
-  "modules": [["dwb.Main","Could not find summary for this module"], ["dwb.service.Package","Could not find summary for this module"], ["dwb.ui.AutoAnalysisModuleTab","Could not find summary for this module"], ["dwb.ui.BuildConfigPanel","Could not find summary for this module"], ["dwb.ui.FeedbackDialog","Could not find summary for this module"], ["dwb.ui.IntroDialog","Could not find summary for this module"], ["dwb.ui.ModuleGrid","Could not find summary for this module"], ["dwb.ui.ModuleTab","Could not find summary for this module"], ["dwb.ui.PositionableDialog","Position modal dialog in the viewport. If no relative offset in the viewport has been determined (by dragging, for instance), center the node. Otherwise, use the Dialog's stored relative offset, and position the node to top: left: values based on the viewport. "], ["dwb.ui.ValidationTextBox","Could not find summary for this module"], ["dwb.util.Config","Could not find summary for this module"], ["dwb.util.Util","Could not find summary for this module"]]
-}

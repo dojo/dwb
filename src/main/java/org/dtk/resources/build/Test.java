@@ -44,11 +44,25 @@ public class Test {
 		try {
 			String scriptContents = FileUtils.readFileToString(new File("/Users/james/IBM/Code/dwb/src/main/webapp/js/build/amd_loader/dojo.js"));
 		
-			scriptContents = "djConfig = {buildReference: '1111', packages:[{name:'build', lib:'.', location:'/Users/james/IBM/Code/dwb/src/main/webapp/js/build/bdbuild'}]};" + scriptContents;
+			scriptContents = "djConfig = {buildReference: false, packages:[{name:'build', lib:'.', location:'/Users/james/IBM/Code/dwb/src/main/webapp/js/build/bdbuild'}]};" + scriptContents;
 			
 			Script script = cx.compileString(scriptContents, "testing", 1, null);
 		
-			String[] test = {"baseUrl=/Users/james/Code/DTK/dojotoolkit/dojo", "load=build", "profile=dtkapi", "releaseDir=/tmp", "action=release"};
+			String[] test = {
+					"load=build",
+					"baseUrl=/Users/james/Code/JavaScript/Libraries/DTK/gh/dojo", 
+					"action=release",
+					"releaseDir=/tmp",					
+					
+					"profile=/var/folders/vW/vWWvubkrGQigEDaT1bf7mk+++TI/-Tmp-/dojo_web_builder2882495873173706775.tmp/Rb9dt193EcK9g6GjQjJOhhuL0NE_/build.profile.js",
+					};
+			/*
+			baseUrl=
+			action=release
+			releaseDir=/var/folders/vW/vWWvubkrGQigEDaT1bf7mk+++TI/-Tmp-/dojo_web_builder176030933906566663.tmp/Rb9dt193EcK9g6GjQjJOhhuL0NE_
+			load=build
+			profile=/var/folders/vW/vWWvubkrGQigEDaT1bf7mk+++TI/-Tmp-/dojo_web_builder176030933906566663.tmp/Rb9dt193EcK9g6GjQjJOhhuL0NE_/build.profile.js
+			*/
 			
 			ScriptableObject.putConstProperty(topScope, "arguments", test);
 			

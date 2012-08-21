@@ -19,20 +19,20 @@ define(['./has'], function(has){
 				if(fixReadyState){ doc.readyState = "complete"; }
 
 				while(readyQ.length){
-					(readyQ.shift())();
+					(readyQ.shift())(doc);
 				}
 			},
-			add = "addEventListener", remove = "removeEventListener", prefix = "",
 			on = function(node, event){
-				event = prefix + event;
-				node[add](event, detectReady, false);
-				readyQ.push(function(){ node[remove](event, detectReady, false); });
+				node.addEventListener(event, detectReady, false);
+				readyQ.push(function(){ node.removeEventListener(event, detectReady, false); });
 			};
 
 		if(!has("dom-addeventlistener")){
-			add = "attachEvent";
-			remove = "detachEvent";
-			prefix = "on";
+			on = function(node, event){
+				event = "on" + event;
+				node.attachEvent(event, detectReady);
+				readyQ.push(function(){ node.detachEvent(event, detectReady); });
+			};
 
 			var div = doc.createElement("div");
 			try{
@@ -81,8 +81,10 @@ define(['./has'], function(has){
 	}
 
 	function domReady(callback){
+		// summary:
+		//		Plugin to delay require()/define() callback from firing until the DOM has finished loading.
 		if(ready){
-			callback(1);
+			callback(doc);
 		}else{
 			readyQ.push(callback);
 		}
