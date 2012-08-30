@@ -124,9 +124,12 @@ public class BuildRequest {
 			
 			// Need to force reference to dijit or the theme resources won't be 
 			// copied across. 			
-			if (!containsDijitPrefix(modulePrefixes)) {				
+			if (!containsModulePrefix("dijit", modulePrefixes)) {				
 				modulePrefixes.add(Arrays.asList("dijit", new File(getDojoLocation(), "dijit").getAbsolutePath()));
 			}
+		// DojoX modules often depend on dijit
+		} else if (containsModulePrefix("dojox", modulePrefixes)) {
+			modulePrefixes.add(Arrays.asList("dijit", new File(getDojoLocation(), "dijit").getAbsolutePath()));	
 		}
 				
 		buildProfile.put("prefixes", modulePrefixes);
@@ -141,26 +144,17 @@ public class BuildRequest {
 		return profileText;
 	}
 	
-	// REMOVE ME. This should be removed when we figure out how to specify CSS includes
-	// properly.
-	/**
-	 * Checks whether the module prefix lists contain a reference to dijit.
-	 * 
-	 * @param modulePrefixes - List of module prefixes, form ["prefix", "location"] 
-	 * @return Module prefix lookup contains dijit prefix
-	 */
-	protected boolean containsDijitPrefix(List<List<String>> modulePrefixes) {
+	protected boolean containsModulePrefix(String prefix, List<List<String>> modulePrefixes) {
 		Iterator<List<String>> iter = modulePrefixes.iterator();
-		boolean hasDijitPrefix = false;
-		while(iter.hasNext() && !hasDijitPrefix) {
+		while(iter.hasNext()) {
 			List<String> prefixAndLocation = iter.next();
 			// Format is ["prefix", "location"]
-			if ("dijit".equals(prefixAndLocation.get(0))) {
-				hasDijitPrefix = true;
+			if (prefix.equals(prefixAndLocation.get(0))) {
+				return true;
 			}
 		}
 		
-		return hasDijitPrefix;
+		return false;
 	}
 	
 	/**
