@@ -16,6 +16,7 @@ import javax.servlet.ServletContextListener;
 import org.dtk.resources.Build;
 import org.dtk.resources.Dependencies;
 import org.dtk.resources.Packages;
+import org.dtk.resources.build.BuildRequest;
 import org.dtk.resources.build.manager.BuildStatusManager;
 import org.dtk.resources.packages.PackageRepository;
 
@@ -48,6 +49,9 @@ public class ContextListener implements ServletContextListener {
 
 	/** Relative directory path for default package details directory */
 	protected static final String defaultPackageRepoPath = "/WEB-INF/config/packages/";
+	
+	/** Relative directory path for transform jobs profile text */
+	protected static final String transformJobsRelativePath = "/WEB-INF/resources/transform_jobs.txt";
 	
 	/** Class loggers which should be logged to a file **/
 	protected static final List<String> fileLoggingClasses = Arrays.asList(
@@ -93,6 +97,7 @@ public class ContextListener implements ServletContextListener {
 		
 		String builderModulePath = currentContext.getRealPath(buildModulePathParam);
 		String loaderModulePath = currentContext.getRealPath(loaderModulePathParam);
+		BuildRequest.transformJobsPaths = currentContext.getRealPath(transformJobsRelativePath);
 
 		PackageRepository packageRepo = PackageRepository.getInstance();
 		packageRepo.setPackageBaseLocation(packagePath);

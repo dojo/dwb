@@ -63,7 +63,7 @@ public class BuildRequest {
 	/** Dojo build profile format */
 	protected static final String profileFormat = "dependencies = %1$s; %2$s;";
 	
-	protected static final String transformJobsPaths = "src/main/resources/transform_jobs.txt";
+	public static String transformJobsPaths;
 	
 	/** Empty theme identifier */
 	protected static final String MISSING_THEME_NAME = "none";
