@@ -2,11 +2,14 @@ package org.dtk.analysis.script.dependency;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.io.FileUtils;
 import org.dtk.analysis.script.ScriptParserErrorReporter;
 import org.dtk.analysis.script.dependency.AMDScriptParser;
 import org.dtk.resources.Dependencies;
@@ -55,6 +58,7 @@ public class AMDScriptParserTest {
 	@Test 
 	public void returnsEmptyListWithRequireAndNoArguments() {		
 		assertEquals(Arrays.asList(), getScriptDeps("require();"));
+		assertEquals(Arrays.asList(), getScriptDeps("require({});"));
 		assertEquals(Arrays.asList(), getScriptDeps("require([], function () {});"));
 		assertEquals(Arrays.asList(), getScriptDeps("require(null, function () {});"));
 		assertEquals(Arrays.asList(), getScriptDeps("require({}, [], function () {});"));
@@ -110,5 +114,11 @@ public class AMDScriptParserTest {
 		assertEquals(Arrays.asList("some/module/id", "another/module/id"), 
 			getScriptDeps("define(function (require, exports, module) " +
 				"{ var a = require('some/module/id'), b = require('another/module/id')});"));		
+	}
+	
+	@Test
+	public void detectRequireCallWithConfigurationOnlyArgument() throws IOException {
+		assertEquals(Arrays.asList("some/module/id", "another/module/id"), 
+				getScriptDeps("define('this/module/id', ['some/module/id', 'another/module/id'], function () {});"));
 	}
 }

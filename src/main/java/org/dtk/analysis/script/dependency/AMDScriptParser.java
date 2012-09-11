@@ -101,7 +101,9 @@ public class AMDScriptParser extends BaseScriptDependencyParser {
 					dependencyArguments.addAll(getNodeStringChildren(firstFnArgument));
 					break;
 				case Token.OBJECTLIT:
-					dependencyArguments.addAll(getNodeStringChildren(firstFnArgument.getNext()));
+					if (firstFnArgument.getNext() != null) {
+						dependencyArguments.addAll(getNodeStringChildren(firstFnArgument.getNext()));
+					}
 				default:
 					break;
 			}
