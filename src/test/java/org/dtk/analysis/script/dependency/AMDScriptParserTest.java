@@ -75,6 +75,12 @@ public class AMDScriptParserTest {
 	}	
 	
 	@Test 
+	public void returnsEmptyListWithBuiltLayerFileDetected() {		
+		assertEquals(Arrays.asList(), getScriptDeps("//>>built\ndefine(['some/module/id'], function () {});"));
+		assertEquals(Arrays.asList(), getScriptDeps("/** some copyright */\n//>>built\ndefine(['some/module/id'], function () {});"));
+	}	
+	
+	@Test 
 	public void detectRequireCallWithSingleStringArgument() {
 		assertEquals(Arrays.asList("some/module/id"), getScriptDeps("var module = require('some/module/id');"));
 	}
