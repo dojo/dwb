@@ -3,6 +3,7 @@ package org.dtk.analysis.script.dependency;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Node;
 import org.mozilla.javascript.Token;
 
@@ -42,6 +43,18 @@ public class AMDScriptParser extends BaseScriptDependencyParser {
 	public AMDScriptParser(String scriptSoure) {
 		super(scriptSoure);
 	}
+	
+	/**
+	 * Ignore script sources that are already built layers, 
+	 * we just want to include those rather than descend into 
+	 * the source, there be dragons.....
+	 */
+	@Override
+	protected void parse() throws EvaluatorException {
+		if (!isScriptSourceBuiltLayer()) {
+			super.parse();
+		}						
+	}	
 
 	/**
 	 * AST Node is an AMD API call that may contain module 
@@ -159,5 +172,15 @@ public class AMDScriptParser extends BaseScriptDependencyParser {
 	 */
 	protected boolean isAmdDefineCall(Node node) {		
 		return AMD_DEFINE_METHOD.equals(getFunctionName(node));
+	}
+	
+	/**
+	 * Detect whether script source contain a built layer,
+	 * indicated by custom comment at the beginning of the file.
+	 *  
+	 * @return Script is a build layer
+	 */
+	protected boolean isScriptSourceBuiltLayer() {
+		return (this.scriptSource.indexOf("//>>built") > -1);
 	}
 }
