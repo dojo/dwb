@@ -242,11 +242,11 @@ public class Dependencies {
 				textUrl = "http://" + textUrl;
 			}
 			url = new URL(textUrl);
-			RecursiveModuleAnalysis remotePage = new RemoteWebPage(Jsoup.connect(url.toString()).get(), url, new DefaultHttpClient(), new HashSet<String>() {{
+			RecursiveModuleAnalysis remotePage = new RemoteWebPage(Jsoup.connect(url.toString()).timeout(30 * 1000).get(), url, new DefaultHttpClient(), new HashSet<String>() {{
 				add("dojo");
 				add("dojox");
 				add("dijit");
-			}});
+			}});					
 			
 			return remotePage;
 		} catch (MalformedURLException e) {
