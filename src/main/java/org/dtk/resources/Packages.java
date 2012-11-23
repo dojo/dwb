@@ -263,11 +263,11 @@ public class Packages {
 		while (iter.hasNext()) {
 			final String resourceId = iter.next();
 			// Make sure we end with a slash
-			String requestURL = request.getRequestURL().toString();
+			String requestURL = request.getRequestURI();			
 			if (!requestURL.endsWith("/")) {
 				requestURL += "/";
 			}
-			final String resourcePath = String.format(resourcePathFormat, requestURL, resourceId);
+			final String resourcePath = String.format(resourcePathFormat, requestURL, resourceId);			
 			packageDetails.add(new HashMap<String, String>() {{
 				put("name", resourceId);
 				put("link", resourcePath);
