@@ -294,13 +294,7 @@ public class Build {
 	 * @throws MalformedURLException 
 	 */
 	protected String layersBuildResourcePath(HttpServletRequest request, String digest) throws ConfigurationException {
-		String absolutePath; 
-		try {
-			absolutePath = HttpUtil.constructFullURLPath(request, "/build/" + digest);
-		} catch (MalformedURLException e) {
-			throw new ConfigurationException(urlConstructionErrorText);
-		}
-		return absolutePath;
+		return "/api/build/" + digest;		
 	}
 
 	/**
@@ -312,13 +306,8 @@ public class Build {
 	 * @throws MalformedURLException 
 	 */
 	protected String buildRequestStatusPath(HttpServletRequest request, String reference) throws ConfigurationException {
-		String absolutePath; 
-		try {
-			absolutePath = HttpUtil.constructFullURLPath(request, "/build/status/" + reference);
-		} catch (MalformedURLException e) {
-			throw new ConfigurationException(urlConstructionErrorText);
-		}
-		return absolutePath;
+		return request.getRequestURI() + "/status/" + reference;
+		
 	}
 	
 	/**
