@@ -97,12 +97,12 @@ dynamically. To achieve this, ensure you have downloaded local copies of all the
 versions of the toolkit you want to expose and then configure the application using 
 the steps below.... 
 
-Currently, package descriptor files are included for Dojo 1.6.0, 1.5.0 and
-1.4.3. If you need to expose an older version, please generate the package
+Currently, package descriptor files are included for Dojo 1.8.0. If you need to expose an older version, please generate the package
 descriptor, as per the instructions above. 
 
 ### (Optional) Generate package descriptors for older versions of Dojo 
-    See description above and package in src/main/config/packages/dojo/X.Y.Z/
+    See description above and package in src/main/config/packages/dojo/X.Y.Z/. Note 
+    that you need to uncomment the "DOJO-CONFIG" lines in generateNewPackageMetaData.js.
 
 ### Fill in location parameter for all version packages
     $ vim src/main/config/packages/dojo/${dojo.version}/package.json
