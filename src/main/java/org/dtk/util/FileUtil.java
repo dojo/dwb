@@ -221,7 +221,11 @@ public class FileUtil {
 					File dirFile = new File(baseDirectory, zipEntry.getName());	
 					dirFile.mkdir();
 				} else {
-					FileOutputStream fout = new FileOutputStream(new File(baseDirectory, zipEntry.getName()));		        	
+					final File zipEntryFile = new File(baseDirectory, zipEntry.getName());
+					if (!zipEntryFile.toPath().normalize().startsWith(baseDirectory)) {
+						throw new IOException("Bad zip entry");
+					}
+					FileOutputStream fout = new FileOutputStream(zipEntryFile);		        	
 					for (int c = zis.read(); c != -1; c = zis.read()) {
 						fout.write(c);
 					}
