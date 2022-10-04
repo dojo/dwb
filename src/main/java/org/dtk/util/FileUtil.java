@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.file.Files;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -128,15 +129,7 @@ public class FileUtil {
 	}
 
 	public static File createTempDirectory() throws IOException {
-		final File temp = File.createTempFile("dojo_web_builder", null);
-
-		if(!(temp.delete())) {
-			throw new IOException("Could not delete temp file: " + temp.getAbsolutePath());
-		}
-
-		if(!(temp.mkdir())) {
-			throw new IOException("Could not create temp directory: " + temp.getAbsolutePath());
-		}
+		final File temp = Files.createTempDirectory("dojo_web_builder").toFile();
 
 		return (temp);
 	}
